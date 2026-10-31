@@ -24,8 +24,8 @@ How we get there:
   `engine/mod.rs::execute_signed_intent`).
 - The **only** key we register for `vault.near` on `intents.near` is an
   **MPC-derived ed25519 key** that belongs to the vault contract itself via
-  Chain Signatures (`v1.signer`, domain 1 = Ed25519) **[V: domain exists]**
-  **[U: exact `sign` args, payload limits, deposit, response shape]**.
+  Chain Signatures (`v1.signer`, domain 1 = Ed25519)
+  **[V: proven end to end, see [spikes/R1.md](spikes/R1.md)]**.
 - MPC signs only for its predecessor account, so only the vault contract
   can obtain signatures for that key, and it does so only after its own
   checks pass.
@@ -131,8 +131,8 @@ Claims we do **not** make:
 
 | # | Risk | Impact | Mitigation / fallback | Spike day |
 |---|---|---|---|---|
-| R1 | MPC eddsa sign from contract unusable for intents (args, payload size, derived key format) | **Critical**: core invariant | Validate with `simulate_intents` (view, free) on mainnet. Fallback: per-trade escrow sub-account with TEE-held key; blast radius = one mandate-checked trade, documented honestly | 1 |
-| R2 | Payload hash/serialization mismatch (NEP-413 vs `raw_ed25519`) | High | Golden-vector tests against `simulate_intents` | 1–2 |
+| R1 | MPC eddsa sign from contract unusable for intents (args, payload size, derived key format) | **Critical**: core invariant | **Retired 2026-10-31: confirmed end to end, see [spikes/R1.md](spikes/R1.md).** Contract → MPC signature accepted by mainnet `simulate_intents` | 1 ✅ |
+| R2 | Payload hash/serialization mismatch (NEP-413 vs `raw_ed25519`) | High | **Retired: `raw_ed25519` signs exact payload bytes; tamper test rejects** ([spikes/R1.md](spikes/R1.md)) | 1 ✅ |
 | R3 | Solver relay access (partner key) / no quotes for tiny amounts | High | Get key on Day 1; test pairs USDC↔wNEAR first; 1Click as alternate quote source | 1 |
 | R4 | OutLayer: HTTPS from WASM to relay/NEAR AI, cost, latency, 900-byte output | Medium | Hello-world project on testnet Day 2; output is a compact struct | 2 |
 | R5 | `price-oracle.near` missing assets / stale | Medium | Restrict v1 universe to assets it serves; fail closed | 1 |

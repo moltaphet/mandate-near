@@ -1,0 +1,23 @@
+[package]
+name = "r1-mpc-contract"
+description = "R1 spike: a contract that asks the MPC network for an Ed25519 signature"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+# Standalone: not part of the contract workspace or its CI.
+[workspace]
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+near-sdk = "5.30.0"
+
+[profile.release]
+codegen-units = 1
+opt-level = "z"
+lto = true
+debug = false
+panic = "abort"
+overflow-checks = true
