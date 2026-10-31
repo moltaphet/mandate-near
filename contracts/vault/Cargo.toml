@@ -1,0 +1,17 @@
+[package]
+name = "mandate-vault"
+description = "Treasury vault that only signs NEAR Intents trades which satisfy an owner-defined mandate"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+near-sdk.workspace = true
+
+[dev-dependencies]
+near-sdk = { workspace = true, features = ["unit-testing"] }

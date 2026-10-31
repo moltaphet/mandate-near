@@ -1,0 +1,23 @@
+# Rust
+/target/
+
+# Node
+node_modules/
+.next/
+dist/
+
+# Secrets: keys live in environment variables, never in the repo
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+neardev/
+
+# Hackathon submission payload contains personal data
+submission*.json
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/

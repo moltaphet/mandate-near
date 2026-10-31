@@ -1,0 +1,7 @@
+# near-sdk 5.30 requires Rust >= 1.95. Pinned (not "stable") so builds are
+# reproducible and newer compilers cannot emit wasm features nearcore rejects.
+[toolchain]
+channel = "1.95.0"
+components = ["rustfmt", "clippy"]
+targets = ["wasm32-unknown-unknown"]
+profile = "minimal"
