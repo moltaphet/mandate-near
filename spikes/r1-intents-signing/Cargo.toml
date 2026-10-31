@@ -1,0 +1,19 @@
+[package]
+name = "r1-intents-signing"
+description = "R1 spike: prove raw_ed25519 intents built like the vault will build them are accepted by intents.near"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+# Standalone: not part of the contract workspace or its CI.
+[workspace]
+
+[dependencies]
+base64 = "0.22"
+bs58 = "0.5"
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+ed25519-dalek = "2.1"
+hex = "0.4"
+rand = "0.8"
+serde_json = "1"
+ureq = { version = "2", features = ["json"] }

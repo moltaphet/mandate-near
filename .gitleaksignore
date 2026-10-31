@@ -1,0 +1,8 @@
+# Placeholder `Bearer YOUR_API_KEY` in curl examples of the vendored, unmodified
+# NEAR agent skill docs (near/agent-skills@cb32b6a). Not secrets.
+.claude/skills/near-ai-cloud/references/specialized-endpoints.md:curl-auth-header:15
+.claude/skills/near-ai-cloud/references/specialized-endpoints.md:curl-auth-header:31
+.claude/skills/near-ai-cloud/references/specialized-endpoints.md:curl-auth-header:48
+.claude/skills/near-ai-cloud/references/specialized-endpoints.md:curl-auth-header:65
+.claude/skills/near-ai-cloud/references/specialized-endpoints.md:curl-auth-header:80
+.claude/skills/near-ai-cloud/references/specialized-endpoints.md:curl-auth-header:104

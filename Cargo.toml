@@ -10,6 +10,21 @@ rust-version = "1.95"
 
 [workspace.dependencies]
 near-sdk = "5.30.0"
+# Integration testing stack recommended by the NEAR agent skill
+# (near-smart-contracts/rules/testing-integration-tests.md) and the
+# `cargo near new` template.
+# 0.3.x, as in the template: near-sandbox 0.4 moved to near-account-id 3 while
+# near-api 0.8 still uses 2.x, so the two do not interoperate yet.
+near-sandbox = "0.3.12"
+near-api = "0.8.7"
+cargo-near-build = "0.11.5"
+tokio = { version = "1", features = ["full"] }
+testresult = "0.4.2"
+
+# `cfg(near)` is set by near-sdk >= 5.27 (from the `cargo near new` template).
+[workspace.lints.rust.unexpected_cfgs]
+level = "warn"
+check-cfg = ['cfg(near)']
 
 # Contract-size and safety settings recommended for NEAR wasm.
 [profile.release]
