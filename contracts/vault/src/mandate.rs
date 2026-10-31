@@ -15,6 +15,8 @@ pub const BPS_DENOMINATOR: u16 = 10_000;
 pub const MAX_SLIPPAGE_BPS_CAP: u16 = 500;
 /// Hard ceiling on accepted oracle price age.
 pub const MAX_PRICE_AGE_SEC_CAP: u32 = 300;
+/// Bounds per-trade loops over the universe and the mandate's storage cost.
+pub const MAX_ASSETS: usize = 32;
 
 /// USD amounts are integer micro-dollars (1 USD = 1_000_000).
 #[near(serializers = [json, borsh])]
@@ -39,6 +41,7 @@ pub struct Mandate {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum MandateError {
     NoAssets,
+    TooManyAssets,
     InvalidAssetId(String),
     DuplicateAsset(String),
     NoStableAsset,
@@ -54,6 +57,7 @@ impl fmt::Display for MandateError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::NoAssets => write!(f, "mandate must allow at least one asset"),
+            Self::TooManyAssets => write!(f, "mandate may allow at most {MAX_ASSETS} assets"),
             Self::InvalidAssetId(id) => write!(f, "invalid asset id: {id}"),
             Self::DuplicateAsset(id) => write!(f, "duplicate asset id: {id}"),
             Self::NoStableAsset => write!(f, "mandate must name at least one stable asset"),
@@ -78,6 +82,10 @@ impl Mandate {
     pub fn validate(&self) -> Result<(), MandateError> {
         if self.allowed_assets.is_empty() {
             return Err(MandateError::NoAssets);
+        }
+        // stable_assets must be a subset, so this bounds both lists.
+        if self.allowed_assets.len() > MAX_ASSETS {
+            return Err(MandateError::TooManyAssets);
         }
         let mut seen = BTreeSet::new();
         for id in &self.allowed_assets {
@@ -182,6 +190,17 @@ pub(crate) mod tests {
     fn rejects_empty_assets() {
         let m = Mandate { allowed_assets: vec![], ..sample() };
         assert_eq!(m.validate(), Err(MandateError::NoAssets));
+    }
+
+    #[test]
+    fn caps_asset_count() {
+        let mut m = sample();
+        let at_cap = MAX_ASSETS - m.allowed_assets.len();
+        m.allowed_assets.extend((0..at_cap).map(|i| format!("nep141:token{i}.near")));
+        assert_eq!(m.validate(), Ok(()));
+
+        m.allowed_assets.push("nep141:one-too-many.near".into());
+        assert_eq!(m.validate(), Err(MandateError::TooManyAssets));
     }
 
     #[test]

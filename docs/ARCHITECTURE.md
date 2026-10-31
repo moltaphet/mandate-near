@@ -136,7 +136,7 @@ Claims we do **not** make:
 | R3 | Solver relay access (partner key) / no quotes for tiny amounts | High | Get key on Day 1; test pairs USDC↔wNEAR first; 1Click as alternate quote source | 1 |
 | R4 | OutLayer: HTTPS from WASM to relay/NEAR AI, cost, latency, 900-byte output | Medium | Hello-world project on testnet Day 2; output is a compact struct | 2 |
 | R5 | `price-oracle.near` missing assets / stale | Medium | Restrict v1 universe to assets it serves; fail closed | 1 |
-| R6 | Gas across callbacks | Medium | Already split into TX-1 / TX-2; measure in sandbox | 3 |
+| R6 | Gas across callbacks | Medium | Already split into TX-1 / TX-2; measure in sandbox. MPC `sign`: on-chain minimum is 15 TGas and 30 TGas worked in R1. The NEAR agent skill suggests 250 TGas, which would not fit TX-2, so the attachment is set from measurement | 3 |
 | R7 | Intents is mainnet-only **[V]** | Medium | Sandbox runs the **real defuse contract** with mock MPC/oracle/OutLayer; mainnet only for the final demo with a few dollars | — |
 | R8 | Our own contract bugs | High | Mandate engine pure and property-tested; `#[private]` callbacks; no panics in callbacks; threat model doc | ongoing |
 
@@ -182,7 +182,9 @@ docs/                  ARCHITECTURE.md, THREAT_MODEL.md
 
 ## 12. Tooling versions (checked 2026-10-31) [V]
 
-near-sdk 5.30.0 (Rust ≥1.95), cargo-near 0.22.0, near-workspaces 0.24.0,
+near-sdk 5.30.0 (Rust ≥1.95), cargo-near 0.22.0, near-sandbox 0.4.0 +
+near-api 0.8.7 for integration tests (per the NEAR agent skill
+`near-smart-contracts/rules/testing-integration-tests.md`),
 near-cli-rs 0.30.1, near-api-js 7.4.0, @hot-labs/near-connect 0.12.0,
 @defuse-protocol/one-click-sdk-typescript ≥0.1.24 (quote signature
 verification), @nearai/inference-sdk.

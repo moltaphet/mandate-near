@@ -36,7 +36,12 @@ installs automatically from `rust-toolchain.toml`.
    tests pass, ending with `All checks passed.`
 2. Run `cargo test -p mandate-vault mandate::`. You should see the mandate
    validation rules exercised one by one (invalid asset ids, duplicate assets,
-   slippage cap, price-age bounds, and so on).
+   asset-count cap, slippage cap, price-age bounds, and so on).
+3. Run `./scripts/verify.sh --integration`. You should see the contract
+   deployed to a local NEAR sandbox, with `owner_controls_on_a_real_chain`
+   passing. That test covers re-init blocked, non-owner rejected,
+   `set_mandate` without 1 yocto rejected, an invalid mandate rejected, and
+   pause/unpause. The first run downloads the sandbox binary.
 
 ## What exists today
 
@@ -59,7 +64,9 @@ scripts/verify.sh  one-command check
 - All code in this repository was written during the NEAR HACKATHON window,
   starting 2026-10-31. There is no pre-hackathon baseline.
 - Third-party libraries: `near-sdk` (MIT/Apache-2.0).
-- Development is AI-assisted (Claude Code).
+- Development is AI-assisted (Claude Code). It uses the official NEAR agent
+  skills (`npx skills add near/agent-skills`), vendored unmodified in
+  `.claude/skills/` and pinned in `skills-lock.json` (near/agent-skills@cb32b6a, MIT).
 
 ## License
 
