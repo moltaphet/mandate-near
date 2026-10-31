@@ -100,6 +100,40 @@ amounts, deadline and nonce. `token_diff` guarantees we receive at least
 | Oracle staleness bound; fail closed | `execute_proposal` |
 | Owner kill switch; owner-only withdraw via `intents.near.ft_withdraw` (predecessor auth) **[V]** | owner methods |
 
+**Implemented (2026-10-31)** as the pure function `engine::check_trade`. It
+checks in a fixed order, and the first violation wins:
+
+1. structure
+2. signed-intent lock + cooldown
+3. fresh prices for every traded or held asset
+4. balance
+5. size
+6. turnover (UTC day)
+7. slippage
+8. drawdown
+9. position
+
+Precise choices:
+
+- USD math is exact 256-bit integer arithmetic (`math::usd_micros`).
+  Notional and positions round up; receipts and NAV round down, so every
+  boundary errs toward rejection.
+- Position uses the worst case on both sides. The received asset is valued
+  at max(value of `min_out`, notional), because a solver may over-deliver.
+  NAV is valued with only `min_out` received.
+- Prices are accepted up to 5 s ahead of block time (clock skew). A zero
+  price or an exponent > 0 is a valuation error, never a panic.
+- NAV counts only mandate assets. Tokens airdropped into the account cannot
+  inflate it.
+- Covered by unit tests at every boundary and by a property test. The
+  property test re-derives each rule for random trades and is guarded by a
+  coverage test (≈27% approvals; every rejection type produced).
+
+Intent bytes come from `intent::token_diff_payload`, with a V1 expirable
+nonce from `intent::v1_nonce`. Legacy random nonces are marked for removal
+upstream. A payload built by this code is accepted by mainnet `intents.near`
+([spikes/R1.md](spikes/R1.md#follow-up-payloads-built-by-the-vaults-own-code-passed)).
+
 v1 is **single owner**: an individual or a Sputnik DAO account. Pooled
 depositor shares are deliberately out of scope. They add an inflation attack
 and NAV-manipulation surface, and we do not ship that half-done.

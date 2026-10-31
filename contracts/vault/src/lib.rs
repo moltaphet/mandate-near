@@ -1,14 +1,25 @@
 //! Mandate vault.
 //!
 //! Holds a treasury on NEAR Intents and will be the only signer for it
-//! (see docs/ARCHITECTURE.md). This first cut contains state, the mandate
-//! and owner controls; trading flows land in later milestones.
+//! (see docs/ARCHITECTURE.md).
+//!
+//! - `mandate`: owner-defined rules and their validation.
+//! - `math`: exact USD valuation (256-bit, conservative rounding).
+//! - `engine`: applies the mandate to one proposed trade.
+//! - `intent`: builds the exact `raw_ed25519` payload MPC will sign.
+//!
+//! The on-chain flow that feeds the engine (Intents balances, oracle
+//! prices) and requests the MPC signature lands in the next milestone.
 
+pub mod engine;
+pub mod intent;
 pub mod mandate;
+pub mod math;
 
 use near_sdk::{AccountId, PanicOnDefault, assert_one_yocto, env, near, require};
 
-pub use crate::mandate::{Mandate, MandateError};
+pub use crate::engine::{TradingState, TradingStateView};
+pub use crate::mandate::{AssetConfig, Mandate, MandateError};
 
 #[near(contract_state)]
 #[derive(PanicOnDefault)]
@@ -16,6 +27,7 @@ pub struct Vault {
     owner: AccountId,
     mandate: Mandate,
     paused: bool,
+    trading: TradingState,
 }
 
 #[near]
@@ -23,7 +35,12 @@ impl Vault {
     #[init]
     pub fn new(owner: AccountId, mandate: Mandate) -> Self {
         validate_or_panic(&mandate);
-        Self { owner, mandate, paused: false }
+        Self { owner, mandate, paused: false, trading: TradingState::default() }
+    }
+
+    /// Cooldown, daily turnover, high-water mark and signed-intent expiry.
+    pub fn get_trading_state(&self) -> TradingStateView {
+        TradingStateView::from(&self.trading)
     }
 
     pub fn get_owner(&self) -> AccountId {
@@ -113,7 +130,17 @@ mod tests {
     #[should_panic(expected = "mandate must allow at least one asset")]
     fn init_rejects_invalid_mandate() {
         context(accounts(0), 0);
-        Vault::new(accounts(1), Mandate { allowed_assets: vec![], ..sample() });
+        Vault::new(accounts(1), Mandate { assets: vec![], ..sample() });
+    }
+
+    #[test]
+    fn trading_state_starts_empty() {
+        let v = vault();
+        let s = v.get_trading_state();
+        assert_eq!(s.last_trade_at_sec, None);
+        assert_eq!(s.day_turnover_usd.0, 0);
+        assert_eq!(s.high_water_mark_usd.0, 0);
+        assert_eq!(s.signed_intent_expires_at_sec, 0);
     }
 
     #[test]

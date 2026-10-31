@@ -22,9 +22,12 @@ container_build_command = ["cargo", "near", "build", "non-reproducible-wasm", "-
 
 [dependencies]
 near-sdk.workspace = true
+uint.workspace = true
 
 [dev-dependencies]
 near-sdk = { workspace = true, features = ["unit-testing"] }
+proptest.workspace = true
+chrono.workspace = true
 near-sandbox.workspace = true
 near-api.workspace = true
 cargo-near-build.workspace = true

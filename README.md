@@ -94,6 +94,8 @@ building anything on top of it
 | Wrong `verifying_contract` | mainnet | ✅ rejected |
 | **Contract → MPC (`v1.signer`) → signature accepted by `intents.near`** | testnet MPC + mainnet verifier | ✅ |
 | MPC-signed swap from an unfunded account | mainnet | ✅ fails on balance only; the signature itself was valid |
+| **Swap payload built by the vault's own code**, V1 nonce bound to the live salt | mainnet | ✅ passes signature, nonce and salt checks; fails on balance only |
+| Same payload with a salt `intents.near` never issued | mainnet | ✅ rejected: `invalid salt` (the V1 nonce is parsed, not treated as legacy) |
 
 Why it holds by construction: MPC verifies its own output with
 `env::ed25519_verify`, the same host function the Intents verifier uses
@@ -105,10 +107,14 @@ Requirement: [rustup](https://rustup.rs). The pinned toolchain (Rust 1.95.0)
 installs itself from `rust-toolchain.toml`. No keys are needed.
 
 1. **Run `./scripts/verify.sh`.** You should see formatting, clippy (warnings
-   as errors) and 19 unit tests pass, ending with `All checks passed.`
-2. **Run `cargo test -p mandate-vault mandate::`.** You should see each
-   mandate rule exercised: invalid asset ids, duplicates, a 32-asset cap,
-   the slippage cap (≤ 5%), price-age bounds and inconsistent limits.
+   as errors) and 55 unit and property tests pass, ending with
+   `All checks passed.`
+2. **Run `cargo test -p mandate-vault engine::`.** You should see every
+   per-trade rule exercised at its exact boundary: cooldown, signed-intent
+   lock, price staleness, trade size, UTC-day turnover, slippage, drawdown
+   breaker and position cap. A property test also re-derives every rule
+   for random trades. Add `-- --nocapture property_generator` to see the
+   outcome mix: roughly 27% approved, plus every rejection type.
 3. **Run `./scripts/verify.sh --integration`.** You should see the real wasm
    deployed to a local NEAR sandbox, with `owner_controls_on_a_real_chain`
    passing. That test covers:
@@ -121,22 +127,31 @@ installs itself from `rust-toolchain.toml`. No keys are needed.
 
    The first run downloads the sandbox (needs `cargo-near`).
 4. **Run `cd spikes/r1-intents-signing && cargo run --release`.** You should
-   see 4 PASS lines from live mainnet `simulate_intents`. This is a free view
-   call and needs no account.
+   see 6 PASS lines from live mainnet `simulate_intents`, a free view call
+   that needs no account. The last two use payloads built by
+   `mandate_vault::intent`, the contract's own code.
 
 ## Mandate rules
 
-| Rule | Purpose | Status |
-|---|---|---|
-| Asset allowlist (max 32), stable subset | the agent trades only what the owner chose | ✅ validated on set |
-| Max notional per trade, daily turnover | bounds the damage of any single decision | ✅ validated · 🛠 enforced per trade |
-| Max position weight | no all-in bets | ✅ validated · 🛠 enforced per trade |
-| Min-out ≥ oracle value − slippage (hard cap 5%) | blocks bad or manipulated quotes | ✅ validated · 🛠 enforced per trade |
-| Oracle price age (≤ 300 s), fail closed | no trading on stale prices | ✅ validated · 🛠 enforced per trade |
-| Cooldown between trades | stops drain-by-many-small-trades | ✅ validated · 🛠 enforced per trade |
-| Drawdown circuit breaker | after a loss, only de-risking trades are allowed | ✅ validated · 🛠 enforced per trade |
-| One outstanding signed intent | no stacked exposure from unpublished signatures | 🛠 |
-| Kill switch: `pause` works with a function-call key; `unpause` needs a full-access key | stop fast, resume deliberately | ✅ unit + sandbox tested |
+Enforced per trade by `contracts/vault/src/engine.rs`, a pure function
+that is unit- and property-tested. Every USD value is exact 256-bit
+integer math, rounded against the trade: exposure up, receipts down.
+"Wired on-chain" (feeding it live Intents balances and oracle prices, then
+signing via MPC) is the next milestone.
+
+| Rule | Purpose | Engine | On-chain wiring |
+|---|---|---|---|
+| Asset allowlist (max 32, each with decimals and price feed), stable subset | the agent trades only what the owner chose | ✅ | ✅ validated on `set_mandate` |
+| Max notional per trade | bounds the damage of any single decision | ✅ | 🛠 |
+| Daily turnover, resets 00:00 UTC | bounds damage per day | ✅ | 🛠 |
+| Min-out ≥ oracle value − slippage (hard cap 5%) | blocks bad or manipulated quotes | ✅ | 🛠 |
+| Every traded **or held** asset needs a fresh price (≤ max age, ≤ 5 s clock skew) | no trading or valuation on stale prices | ✅ | 🛠 |
+| Cooldown between trades | stops drain-by-many-small-trades | ✅ | 🛠 |
+| Drawdown breaker vs high-water mark | after a loss, only trades into stable assets | ✅ | 🛠 |
+| Max position weight, worst case (received value counted at max(min_out, notional)) | no all-in bets | ✅ | 🛠 |
+| One signed intent at a time (120 s TTL) | no stacked exposure from unpublished signatures | ✅ | 🛠 |
+| Exact intent bytes: `raw_ed25519` payload, V1 expirable nonce | the signature commits to amounts, deadline and nonce | ✅ proven on mainnet | 🛠 MPC call |
+| Kill switch: `pause` works with a function-call key; `unpause` needs a full-access key | stop fast, resume deliberately | — | ✅ unit + sandbox tested |
 
 ## Built on NEAR
 
@@ -154,7 +169,7 @@ installs itself from `rust-toolchain.toml`. No keys are needed.
 - [x] Architecture, trust model, risk register ([docs/ARCHITECTURE.md](docs/ARCHITECTURE.md))
 - [x] Vault contract: mandate config, owner controls, unit and sandbox tests, CI
 - [x] **R1 proven**: the contract is sole signer via MPC, accepted by mainnet Intents
-- [ ] Per-trade mandate engine and on-chain intent builder (V1 expirable nonces)
+- [x] Per-trade mandate engine (exact math, property-tested) and intent builder (V1 expirable nonces), accepted by mainnet `intents.near`
 - [ ] MPC sign flow in the vault + `add_public_key` on `intents.near`
 - [ ] Oracle integration with a staleness bound
 - [ ] OutLayer agent (Rust → `wasm32-wasip2`) with yield/resume decision flow
@@ -174,7 +189,10 @@ installs itself from `rust-toolchain.toml`. No keys are needed.
 
 ```
 contracts/vault/        vault contract (Rust, near-sdk 5.30)
-  src/mandate.rs        mandate rules (pure, exhaustively unit-tested)
+  src/mandate.rs        mandate config and validation
+  src/engine.rs         per-trade enforcement (pure; unit + property tests)
+  src/math.rs           exact USD valuation (256-bit, conservative rounding)
+  src/intent.rs         raw_ed25519 token_diff payload + V1 nonce builder
   tests/sandbox.rs      integration tests on a local NEAR sandbox
 spikes/                 R1 experiments (standalone crates, reproducible)
 docs/ARCHITECTURE.md    design, trust model, risk register
@@ -192,8 +210,9 @@ Primary **AI Security & Defense** and **Unstoppable DeFi**, also
 
 - All code was written during the NEAR HACKATHON window, starting
   2026-10-31. There is no pre-hackathon baseline.
-- Libraries: `near-sdk`; dev-only `near-sandbox`, `near-api`,
-  `cargo-near-build`, `tokio`, `testresult`. The spikes also use
+- Libraries: `near-sdk`, `uint` (256-bit integers); dev-only `near-sandbox`,
+  `near-api`, `cargo-near-build`, `tokio`, `testresult`, `proptest`, and
+  `chrono` (used only as a test oracle). The spikes also use
   `ed25519-dalek`, `ureq`, `serde_json`, `bs58`, `base64`, `chrono`, `rand`
   and `hex`.
 - Development is AI-assisted (Claude Code), using the official NEAR agent

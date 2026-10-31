@@ -95,6 +95,33 @@ fn local_golden_test() -> ExitCode {
         },
     ];
 
+    // Payloads built by the vault contract's own code (mandate_vault::intent)
+    // with a V1 expirable nonce bound to the live salt of intents.near.
+    let salt = match current_salt(rpc) {
+        Ok(salt) => salt,
+        Err(e) => {
+            println!("cannot read current_salt: {e}");
+            return ExitCode::FAILURE;
+        }
+    };
+    println!("intents.near current_salt: {}\n", hex::encode(salt));
+    let mut wrong_salt = salt;
+    wrong_salt[0] ^= 0xff;
+    let vault_cases = [
+        Case {
+            name: "vault-built token_diff, V1 nonce with live salt (must fail on balance only)",
+            signed: sign(&key, &vault_payload(&account, salt)),
+            expect: Expect::ErrContains("balance"),
+        },
+        Case {
+            name: "vault-built token_diff, V1 nonce with a salt intents.near never issued",
+            signed: sign(&key, &vault_payload(&account, wrong_salt)),
+            expect: Expect::ErrContains("salt"),
+        },
+    ];
+    let cases: Vec<Case> = cases.into_iter().chain(vault_cases).collect();
+    let total = cases.len();
+
     let mut failures = 0;
     for case in cases {
         let outcome = simulate(rpc, &case.signed);
@@ -114,7 +141,7 @@ fn local_golden_test() -> ExitCode {
     }
 
     if failures == 0 {
-        println!("R1 part 1: all {} cases behaved as expected.", 4);
+        println!("R1 part 1: all {total} cases behaved as expected.");
         ExitCode::SUCCESS
     } else {
         println!("R1 part 1: {failures} case(s) did not behave as expected.");
@@ -236,7 +263,37 @@ fn sign(key: &SigningKey, payload: &str) -> Value {
 }
 
 fn simulate(rpc: &str, signed: &Value) -> Result<Value, String> {
-    let args = json!({ "signed": [signed] }).to_string();
+    view(rpc, "simulate_intents", &json!({ "signed": [signed] }))
+}
+
+/// Live `intents.near.current_salt()`, returned as hex (e.g. "252812b3").
+fn current_salt(rpc: &str) -> Result<[u8; 4], String> {
+    let hex_salt = view(rpc, "current_salt", &json!({}))?;
+    let bytes =
+        hex::decode(hex_salt.as_str().ok_or("salt is not a string")?).map_err(|e| e.to_string())?;
+    bytes.try_into().map_err(|_| "salt is not 4 bytes".to_string())
+}
+
+/// A token_diff payload produced by the vault's own builder, exactly as the
+/// contract will produce it, with a V1 nonce expiring in 2 minutes.
+fn vault_payload(signer: &str, salt: [u8; 4]) -> String {
+    use mandate_vault::intent::{TokenDiff, token_diff_payload, v1_nonce};
+    let deadline_sec = chrono::Utc::now().timestamp() as u64 + 120;
+    let nonce = v1_nonce(salt, deadline_sec, rand::random()).expect("deadline in range");
+    token_diff_payload(&TokenDiff {
+        signer_id: signer,
+        verifying_contract: INTENTS,
+        deadline_sec,
+        nonce,
+        asset_in: "nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1",
+        amount_in: 20_000_000,
+        asset_out: "nep141:wrap.near",
+        min_amount_out: 3_970_000_000_000_000_000_000_000,
+    })
+    .expect("valid token_diff")
+}
+
+fn view(rpc: &str, method: &str, args: &Value) -> Result<Value, String> {
     let body = json!({
         "jsonrpc": "2.0",
         "id": "r1",
@@ -245,8 +302,8 @@ fn simulate(rpc: &str, signed: &Value) -> Result<Value, String> {
             "request_type": "call_function",
             "finality": "final",
             "account_id": INTENTS,
-            "method_name": "simulate_intents",
-            "args_base64": BASE64.encode(args),
+            "method_name": method,
+            "args_base64": BASE64.encode(args.to_string()),
         },
     });
     let response: Value = ureq::post(rpc)

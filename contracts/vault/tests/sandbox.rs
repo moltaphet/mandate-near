@@ -19,9 +19,13 @@ struct Env {
 
 fn mandate(max_slippage_bps: u16) -> Value {
     json!({
-        "allowed_assets": [
-            "nep141:wrap.near",
-            "nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1",
+        "assets": [
+            { "asset_id": "nep141:wrap.near", "decimals": 24, "price_feed_id": "wrap.near" },
+            {
+                "asset_id": "nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1",
+                "decimals": 6,
+                "price_feed_id": "usdc",
+            },
         ],
         "stable_assets": [
             "nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1",
@@ -100,6 +104,16 @@ async fn owner_controls_on_a_real_chain() -> testresult::TestResult<()> {
     assert_eq!(env.view("get_owner").await, json!(owner));
     assert_eq!(env.view("get_mandate").await, mandate(100));
     assert_eq!(env.view("is_paused").await, json!(false));
+    assert_eq!(
+        env.view("get_trading_state").await,
+        json!({
+            "last_trade_at_sec": null,
+            "day_start_sec": 0,
+            "day_turnover_usd": "0",
+            "high_water_mark_usd": "0",
+            "signed_intent_expires_at_sec": 0,
+        })
+    );
 
     // NEP-330: cargo-near embeds source metadata so the deployed code can be
     // traced back to this repository and rebuilt reproducibly.
