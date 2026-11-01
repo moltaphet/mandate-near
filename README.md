@@ -107,7 +107,7 @@ Requirement: [rustup](https://rustup.rs). The pinned toolchain (Rust 1.95.0)
 installs itself from `rust-toolchain.toml`. No keys are needed.
 
 1. **Run `./scripts/verify.sh`.** You should see formatting, clippy (warnings
-   as errors) and 55 unit and property tests pass, ending with
+   as errors) and 75 unit and property tests pass, ending with
    `All checks passed.`
 2. **Run `cargo test -p mandate-vault engine::`.** You should see every
    per-trade rule exercised at its exact boundary: cooldown, signed-intent
