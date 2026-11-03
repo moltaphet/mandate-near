@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["contracts/vault", "contracts/mock-externals"]
+members = ["contracts/vault", "contracts/mock-externals", "contracts/mock-oracle", "contracts/mock-ft", "keeper"]
 
 [workspace.package]
 edition = "2024"

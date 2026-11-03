@@ -28,8 +28,8 @@ step "Unit tests (cargo test --lib)"
 cargo test --workspace --lib
 
 if $integration; then
-  step "Integration tests on a local NEAR sandbox (owner controls; key registration on the real intents.near)"
-  cargo test -p mandate-vault --test sandbox --test intents_registration
+  step "Integration tests on a local NEAR sandbox (owner controls; key registration, execute and the keeper on the real intents.near)"
+  cargo test -p mandate-vault --test sandbox --test intents_registration --test execute_path --test keeper
 fi
 
 printf '\nAll checks passed.\n'

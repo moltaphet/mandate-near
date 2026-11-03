@@ -14,23 +14,32 @@
 //! intent is still outstanding. A circuit breaker halts proposals after
 //! repeated rejections; only the owner can resume them.
 //!
-//! The execution path (live balances, prices, MPC call) lands in the next
-//! milestone; this module provides the state it will use.
+//! `execute` runs the whole decision on chain in one transaction: it reads
+//! balances from `intents.near` and prices from the oracle, applies the nine
+//! gates, builds the payload with a V1 nonce, and asks the MPC signer to sign
+//! it. The signed intent is stored for a keeper to publish.
 
 pub mod engine;
 pub mod intent;
 pub mod mandate;
 pub mod math;
+pub mod oracle;
+
+use std::collections::BTreeMap;
 
 use near_sdk::json_types::{U64, U128};
-use near_sdk::serde_json::json;
+use near_sdk::serde::de::DeserializeOwned;
+use near_sdk::serde_json::{self, json};
 use near_sdk::{
-    AccountId, Gas, NearToken, PanicOnDefault, Promise, PromiseError, assert_one_yocto, env, near,
-    require,
+    AccountId, Gas, NearToken, PanicOnDefault, Promise, PromiseError, PromiseOrValue,
+    assert_one_yocto, env, near, require,
 };
 
+use crate::engine::{Market, Trade, TradeError, check_trade};
 pub use crate::engine::{TradingState, TradingStateView};
+use crate::intent::{TokenDiff, token_diff_payload, v1_nonce};
 pub use crate::mandate::{AssetConfig, Mandate, MandateError};
+use crate::oracle::{AssetView, PriceData, prices_for};
 
 /// How long a pending proposal stays executable. Matches the 60 s target in docs/PROJECT.md.
 pub const PROPOSAL_TTL_SEC: u64 = 60;
@@ -40,14 +49,27 @@ pub const MAX_STRIKES: u32 = 3;
 /// Defaults for NEAR mainnet. Sandbox and testnet use `new_with_externals`.
 pub const MAINNET_SIGNER: &str = "v1.signer";
 pub const MAINNET_INTENTS: &str = "intents.near";
+pub const MAINNET_ORACLE: &str = "price-oracle.near";
 /// Derivation path for the vault's NEAR Intents key (the same path the R1 spike used).
 pub const INTENTS_KEY_PATH: &str = "intents";
 /// Domain 1 on the MPC signer is Ed25519.
 pub const ED25519_DOMAIN_ID: u32 = 1;
+/// `v1.signer` accepts EdDSA payloads of at most this many bytes.
+pub const MAX_MPC_PAYLOAD: usize = 1232;
+/// Largest oracle or intents answer a callback will read.
+const MAX_ANSWER_BYTES: usize = 64 * 1024;
+
 const GAS_DERIVE_KEY: Gas = Gas::from_tgas(10);
 const GAS_ADD_KEY_CALLBACK: Gas = Gas::from_tgas(60);
 const GAS_ADD_KEY: Gas = Gas::from_tgas(30);
 const GAS_KEY_REGISTERED_CALLBACK: Gas = Gas::from_tgas(10);
+const GAS_READ_BALANCES: Gas = Gas::from_tgas(10);
+const GAS_READ_PRICES: Gas = Gas::from_tgas(10);
+const GAS_READ_ASSET: Gas = Gas::from_tgas(8);
+const GAS_READ_SALT: Gas = Gas::from_tgas(5);
+/// `v1.signer` needs at least 15 TGas attached; 30 leaves room for the signer.
+const GAS_SIGN: Gas = Gas::from_tgas(30);
+const GAS_CALLBACK: Gas = Gas::from_tgas(15);
 
 /// A trade the agent wants executed. Deliberately has no payload field.
 #[near(serializers = [json, borsh])]
@@ -64,6 +86,43 @@ pub struct Proposal {
     pub expires_sec: u64,
 }
 
+/// An intent the MPC signer has signed. A keeper publishes it off chain; the
+/// verifier (`intents.near`) settles it only if the signature and nonce check out.
+#[near(serializers = [json, borsh])]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SignedIntent {
+    pub proposal_id: U64,
+    /// The exact string the signature covers (`raw_ed25519`).
+    pub payload: String,
+    /// `ed25519:<base58>`, the key registered on `intents.near`.
+    pub public_key: String,
+    /// `ed25519:<base58>` over `payload`.
+    pub signature: String,
+    /// Unix seconds after which the intent can no longer settle.
+    pub expires_sec: u64,
+}
+
+/// Result of one `execute` call.
+#[near(serializers = [json])]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ExecutionOutcome {
+    /// Every gate passed and the intent is signed and stored.
+    Executed { proposal_id: U64, expires_sec: U64 },
+    /// A gate closed. The proposal is consumed and a strike is counted.
+    Rejected { code: String, reason: String },
+    /// A read or the signature failed. The proposal stays pending until it
+    /// expires, and no strike is counted.
+    Failed { reason: String },
+}
+
+/// `v1.signer` response: `{"scheme": "Ed25519", "signature": [64 bytes]}`.
+#[near(serializers = [json])]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SignatureResponse {
+    pub scheme: String,
+    pub signature: Vec<u8>,
+}
+
 #[near(contract_state)]
 #[derive(PanicOnDefault)]
 pub struct Vault {
@@ -76,18 +135,23 @@ pub struct Vault {
     next_proposal_id: u64,
     strikes: u32,
     halted: bool,
-    /// MPC signer contract and NEAR Intents verifier this vault talks to.
+    /// MPC signer, NEAR Intents verifier and price oracle this vault talks to.
     signer: AccountId,
     intents: AccountId,
+    oracle: AccountId,
     /// The vault's MPC-derived Ed25519 key, as returned by the signer.
     intents_key: Option<String>,
     /// True once `intents` confirmed `add_public_key` for `intents_key`.
     key_registered: bool,
+    /// True between `execute` and its final callback. Blocks a second run.
+    in_flight: bool,
+    /// The latest signed intent. Replaced by each approved trade.
+    signed_intent: Option<SignedIntent>,
 }
 
 #[near]
 impl Vault {
-    /// For mainnet: talks to `v1.signer` and `intents.near`.
+    /// For mainnet: talks to `v1.signer`, `intents.near` and `price-oracle.near`.
     #[init]
     pub fn new(owner: AccountId, mandate: Mandate) -> Self {
         Self::init(
@@ -95,18 +159,20 @@ impl Vault {
             mandate,
             MAINNET_SIGNER.parse().unwrap_or_else(|_| env::panic_str("bad signer id")),
             MAINNET_INTENTS.parse().unwrap_or_else(|_| env::panic_str("bad intents id")),
+            MAINNET_ORACLE.parse().unwrap_or_else(|_| env::panic_str("bad oracle id")),
         )
     }
 
-    /// For testnet and sandbox, where the signer and verifier live at other accounts.
+    /// For testnet and sandbox, where the signer, verifier and oracle live at other accounts.
     #[init]
     pub fn new_with_externals(
         owner: AccountId,
         mandate: Mandate,
         signer: AccountId,
         intents: AccountId,
+        oracle: AccountId,
     ) -> Self {
-        Self::init(owner, mandate, signer, intents)
+        Self::init(owner, mandate, signer, intents, oracle)
     }
 
     /// Cooldown, daily turnover, high-water mark and signed-intent expiry.
@@ -152,8 +218,18 @@ impl Vault {
         self.key_registered
     }
 
-    pub fn get_externals(&self) -> (AccountId, AccountId) {
-        (self.signer.clone(), self.intents.clone())
+    /// `(signer, intents, oracle)`.
+    pub fn get_externals(&self) -> (AccountId, AccountId, AccountId) {
+        (self.signer.clone(), self.intents.clone(), self.oracle.clone())
+    }
+
+    /// The latest signed intent, if any. Keepers publish it to the solver relay.
+    pub fn get_signed_intent(&self) -> Option<SignedIntent> {
+        self.signed_intent.clone()
+    }
+
+    pub fn is_in_flight(&self) -> bool {
+        self.in_flight
     }
 
     /// Registers the vault's MPC-derived key on `intents.near`, so that
@@ -309,10 +385,273 @@ impl Vault {
         self.assert_owner();
         self.paused = false;
     }
+
+    /// Decides the pending proposal and, if every gate passes, has the MPC
+    /// signer sign the intent. Permissionless: anyone may trigger it, because
+    /// the vault builds every signed byte itself.
+    ///
+    /// The calls run as one chain: vault balances, oracle prices, the oracle's
+    /// publish time for each feed, the intents salt, then `sign`. A closed
+    /// gate rejects the proposal and counts a strike. A failed read or
+    /// signature leaves the proposal pending until it expires, with no strike.
+    pub fn execute(&mut self) -> Promise {
+        self.assert_not_paused();
+        require!(!self.halted, "proposals are halted by the circuit breaker");
+        require!(!self.in_flight, "an execution is already in progress");
+        require!(self.key_registered, "the intents key is not registered");
+        let proposal =
+            self.pending.clone().unwrap_or_else(|| env::panic_str("no pending proposal"));
+        let now = now_sec();
+        require!(now < proposal.expires_sec, "the pending proposal has expired");
+        require!(
+            self.trading.signed_intent_expires_at_sec <= now,
+            "a signed intent is still outstanding"
+        );
+        self.in_flight = true;
+
+        let token_ids: Vec<String> =
+            self.mandate.assets.iter().map(|a| a.asset_id.clone()).collect();
+        Promise::new(self.intents.clone())
+            .function_call(
+                "mt_batch_balance_of".to_string(),
+                json!({ "account_id": env::current_account_id(), "token_ids": token_ids })
+                    .to_string()
+                    .into_bytes(),
+                NearToken::from_yoctonear(0),
+                GAS_READ_BALANCES,
+            )
+            .then(
+                Self::ext(env::current_account_id())
+                    .with_static_gas(GAS_CALLBACK)
+                    .on_balances(proposal),
+            )
+    }
+
+    #[private]
+    pub fn on_balances(
+        &mut self,
+        #[callback_result] balances: Result<Vec<U128>, PromiseError>,
+        proposal: Proposal,
+    ) -> PromiseOrValue<ExecutionOutcome> {
+        let balances = match balances {
+            Ok(b) if b.len() == self.mandate.assets.len() => b,
+            _ => return PromiseOrValue::Value(self.failed("could not read vault balances")),
+        };
+        let held: Vec<(String, U128)> = self
+            .mandate
+            .assets
+            .iter()
+            .zip(balances)
+            .map(|(a, b)| (a.asset_id.clone(), b))
+            .collect();
+
+        // Price every asset the trade touches or the vault holds, as the engine checks.
+        let mut feeds = Vec::new();
+        for (asset, (id, balance)) in self.mandate.assets.iter().zip(&held) {
+            if balance.0 > 0 || *id == proposal.asset_in || *id == proposal.asset_out {
+                feeds.push(asset.price_feed_id.clone());
+            }
+        }
+        PromiseOrValue::Promise(
+            Promise::new(self.oracle.clone())
+                .function_call(
+                    "get_price_data".to_string(),
+                    json!({ "asset_ids": feeds.clone() }).to_string().into_bytes(),
+                    NearToken::from_yoctonear(0),
+                    GAS_READ_PRICES,
+                )
+                .then(
+                    Self::ext(env::current_account_id())
+                        .with_static_gas(GAS_CALLBACK)
+                        .on_price_data(proposal, held, feeds),
+                ),
+        )
+    }
+
+    #[private]
+    pub fn on_price_data(
+        &mut self,
+        #[callback_result] data: Result<PriceData, PromiseError>,
+        proposal: Proposal,
+        held: Vec<(String, U128)>,
+        feeds: Vec<String>,
+    ) -> PromiseOrValue<ExecutionOutcome> {
+        let data = match data {
+            Ok(d) => d,
+            Err(_) => return PromiseOrValue::Value(self.failed("could not read oracle prices")),
+        };
+        // One `get_asset` per feed, joined, so every publish time arrives in one callback.
+        let reads = feeds
+            .iter()
+            .map(|feed| {
+                Promise::new(self.oracle.clone()).function_call(
+                    "get_asset".to_string(),
+                    json!({ "asset_id": feed }).to_string().into_bytes(),
+                    NearToken::from_yoctonear(0),
+                    GAS_READ_ASSET,
+                )
+            })
+            .reduce(Promise::and);
+        let Some(reads) = reads else {
+            return PromiseOrValue::Value(self.failed("no price feeds to read"));
+        };
+        PromiseOrValue::Promise(
+            reads.then(
+                Self::ext(env::current_account_id())
+                    .with_static_gas(GAS_CALLBACK)
+                    .on_assets(proposal, held, feeds, data),
+            ),
+        )
+    }
+
+    #[private]
+    pub fn on_assets(
+        &mut self,
+        proposal: Proposal,
+        held: Vec<(String, U128)>,
+        feeds: Vec<String>,
+        data: PriceData,
+    ) -> PromiseOrValue<ExecutionOutcome> {
+        let mut assets = BTreeMap::new();
+        for (i, feed) in feeds.into_iter().enumerate() {
+            match read_promise::<Option<AssetView>>(i as u64) {
+                Ok(Some(view)) => {
+                    assets.insert(feed, view);
+                }
+                Ok(None) => {}
+                Err(reason) => return PromiseOrValue::Value(self.failed(&reason)),
+            }
+        }
+        let market = Market {
+            now_sec: now_sec(),
+            prices: prices_for(&self.mandate, &data, &assets),
+            balances: held.into_iter().map(|(id, b)| (id, b.0)).collect(),
+        };
+        let trade = Trade {
+            asset_in: proposal.asset_in.clone(),
+            asset_out: proposal.asset_out.clone(),
+            amount_in: proposal.amount_in.0,
+            min_amount_out: proposal.min_amount_out.0,
+        };
+        match check_trade(&self.mandate, &self.trading, &trade, &market) {
+            Err(err) => PromiseOrValue::Value(self.reject(&err)),
+            Ok(approval) => PromiseOrValue::Promise(
+                Promise::new(self.intents.clone())
+                    .function_call(
+                        "current_salt".to_string(),
+                        b"{}".to_vec(),
+                        NearToken::from_yoctonear(0),
+                        GAS_READ_SALT,
+                    )
+                    .then(
+                        Self::ext(env::current_account_id())
+                            .with_static_gas(GAS_CALLBACK)
+                            .on_salt(proposal, approval.next_state),
+                    ),
+            ),
+        }
+    }
+
+    #[private]
+    pub fn on_salt(
+        &mut self,
+        #[callback_result] salt: Result<String, PromiseError>,
+        proposal: Proposal,
+        next_state: TradingState,
+    ) -> PromiseOrValue<ExecutionOutcome> {
+        let salt = salt
+            .ok()
+            .and_then(|hex| from_hex(&hex))
+            .and_then(|bytes| <[u8; 4]>::try_from(bytes).ok());
+        let Some(salt) = salt else {
+            return PromiseOrValue::Value(self.failed("could not read the intents salt"));
+        };
+        let deadline_sec = next_state.signed_intent_expires_at_sec;
+        // Only needs to be unlikely to repeat: the salt and deadline do most of the work.
+        let random: [u8; 15] = env::random_seed_array()[..15].try_into().expect("15 bytes");
+        let nonce = match v1_nonce(salt, deadline_sec, random) {
+            Ok(nonce) => nonce,
+            Err(err) => return PromiseOrValue::Value(self.failed(&err.to_string())),
+        };
+        let signer_id = env::current_account_id().to_string();
+        let payload = match token_diff_payload(&TokenDiff {
+            signer_id: &signer_id,
+            verifying_contract: self.intents.as_str(),
+            deadline_sec,
+            nonce,
+            asset_in: &proposal.asset_in,
+            amount_in: proposal.amount_in.0,
+            asset_out: &proposal.asset_out,
+            min_amount_out: proposal.min_amount_out.0,
+        }) {
+            Ok(payload) if payload.len() <= MAX_MPC_PAYLOAD => payload,
+            Ok(_) => return PromiseOrValue::Value(self.failed("payload exceeds the MPC limit")),
+            Err(err) => return PromiseOrValue::Value(self.failed(&err.to_string())),
+        };
+
+        PromiseOrValue::Promise(
+            Promise::new(self.signer.clone())
+                .function_call(
+                    "sign".to_string(),
+                    json!({
+                        "request": {
+                            "path": INTENTS_KEY_PATH,
+                            "payload_v2": { "Eddsa": to_hex(payload.as_bytes()) },
+                            "domain_id": ED25519_DOMAIN_ID,
+                        }
+                    })
+                    .to_string()
+                    .into_bytes(),
+                    NearToken::from_yoctonear(1),
+                    GAS_SIGN,
+                )
+                .then(
+                    Self::ext(env::current_account_id())
+                        .with_static_gas(GAS_CALLBACK)
+                        .on_signed(proposal, payload, next_state),
+                ),
+        )
+    }
+
+    #[private]
+    pub fn on_signed(
+        &mut self,
+        #[callback_result] response: Result<SignatureResponse, PromiseError>,
+        proposal: Proposal,
+        payload: String,
+        next_state: TradingState,
+    ) -> ExecutionOutcome {
+        let signature = match response {
+            Ok(r) if r.scheme == "Ed25519" && r.signature.len() == 64 => r.signature,
+            _ => return self.failed("the MPC signer did not return an Ed25519 signature"),
+        };
+        let Some(public_key) = self.intents_key.clone() else {
+            return self.failed("the intents key is not recorded");
+        };
+        let expires_sec = next_state.signed_intent_expires_at_sec;
+        self.signed_intent = Some(SignedIntent {
+            proposal_id: proposal.id,
+            payload,
+            public_key,
+            signature: format!("ed25519:{}", bs58::encode(&signature).into_string()),
+            expires_sec,
+        });
+        self.trading = next_state;
+        self.pending = None;
+        self.record_approval();
+        self.in_flight = false;
+        ExecutionOutcome::Executed { proposal_id: proposal.id, expires_sec: U64(expires_sec) }
+    }
 }
 
 impl Vault {
-    fn init(owner: AccountId, mandate: Mandate, signer: AccountId, intents: AccountId) -> Self {
+    fn init(
+        owner: AccountId,
+        mandate: Mandate,
+        signer: AccountId,
+        intents: AccountId,
+        oracle: AccountId,
+    ) -> Self {
         validate_or_panic(&mandate);
         Self {
             owner,
@@ -326,9 +665,26 @@ impl Vault {
             halted: false,
             signer,
             intents,
+            oracle,
             intents_key: None,
             key_registered: false,
+            in_flight: false,
+            signed_intent: None,
         }
+    }
+
+    /// A closed gate: counts a strike, consumes the proposal.
+    fn reject(&mut self, err: &TradeError) -> ExecutionOutcome {
+        self.record_rejection();
+        self.pending = None;
+        self.in_flight = false;
+        ExecutionOutcome::Rejected { code: err.code().to_string(), reason: err.to_string() }
+    }
+
+    /// A failed read or signature: keeps the proposal, counts nothing.
+    fn failed(&mut self, reason: &str) -> ExecutionOutcome {
+        self.in_flight = false;
+        ExecutionOutcome::Failed { reason: reason.to_string() }
     }
 
     fn assert_owner(&self) {
@@ -343,8 +699,6 @@ impl Vault {
     }
 
     /// Counts a rejected trade. Three in a row halts new proposals.
-    /// Called by the execution path (next milestone) when a gate closes.
-    #[allow(dead_code)]
     pub(crate) fn record_rejection(&mut self) {
         self.strikes += 1;
         if self.strikes >= MAX_STRIKES {
@@ -353,7 +707,6 @@ impl Vault {
     }
 
     /// Clears the strike count after an approved trade.
-    #[allow(dead_code)]
     pub(crate) fn record_approval(&mut self) {
         self.strikes = 0;
     }
@@ -361,6 +714,26 @@ impl Vault {
 
 fn now_sec() -> u64 {
     env::block_timestamp() / 1_000_000_000
+}
+
+/// Result of the cross-contract call at `index` in the current callback.
+/// Joined calls (`Promise::and`) arrive as one callback, indexed in order.
+fn read_promise<T: DeserializeOwned>(index: u64) -> Result<T, String> {
+    // Bounded, so an oversized answer fails the callback cleanly instead of running out of gas.
+    let bytes = env::promise_result_checked(index, MAX_ANSWER_BYTES)
+        .map_err(|_| format!("cross-contract read {index} failed"))?;
+    serde_json::from_slice(&bytes).map_err(|e| format!("bad answer {index}: {e}"))
+}
+
+fn to_hex(bytes: &[u8]) -> String {
+    bytes.iter().map(|b| format!("{b:02x}")).collect()
+}
+
+fn from_hex(s: &str) -> Option<Vec<u8>> {
+    if !s.len().is_multiple_of(2) {
+        return None;
+    }
+    (0..s.len()).step_by(2).map(|i| u8::from_str_radix(&s[i..i + 2], 16).ok()).collect()
 }
 
 fn is_hex_digest(s: &str) -> bool {
@@ -432,7 +805,11 @@ mod tests {
         assert_eq!(v.get_agent(), None);
         assert_eq!(
             v.get_externals(),
-            (MAINNET_SIGNER.parse().unwrap(), MAINNET_INTENTS.parse().unwrap())
+            (
+                MAINNET_SIGNER.parse().unwrap(),
+                MAINNET_INTENTS.parse().unwrap(),
+                MAINNET_ORACLE.parse().unwrap(),
+            )
         );
         assert_eq!(v.get_intents_key(), None);
         assert!(!v.is_key_registered());
