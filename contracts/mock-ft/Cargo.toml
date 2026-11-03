@@ -1,0 +1,18 @@
+[package]
+name = "mock-ft"
+description = "Sandbox-only minimal NEP-141 token: mint and ft_transfer_call, enough to fund intents.near in tests"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+near-sdk.workspace = true
+
+[lints]
+workspace = true

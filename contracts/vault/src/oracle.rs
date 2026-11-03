@@ -118,7 +118,7 @@ mod tests {
     use near_sdk::serde_json;
 
     use super::*;
-    use crate::engine::{Market, Trade, TradingState, TradeError, check_trade};
+    use crate::engine::{Market, Trade, TradeError, TradingState, check_trade};
     use crate::mandate::tests::{USDC, WNEAR, sample};
 
     const USDC_FEED: &str = "17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1";
@@ -209,11 +209,7 @@ mod tests {
     }
 
     fn market(prices: BTreeMap<String, Price>, now_sec: u64) -> Market {
-        Market {
-            now_sec,
-            prices,
-            balances: BTreeMap::from([(USDC.to_owned(), 20_000_000)]),
-        }
+        Market { now_sec, prices, balances: BTreeMap::from([(USDC.to_owned(), 20_000_000)]) }
     }
 
     fn buy_near() -> Trade {

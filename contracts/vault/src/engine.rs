@@ -43,7 +43,7 @@ pub struct Market {
 }
 
 /// Persistent per-vault trading state, updated only by approved trades.
-#[near(serializers = [borsh])]
+#[near(serializers = [json, borsh])]
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct TradingState {
     pub last_trade_at_sec: Option<u64>,
