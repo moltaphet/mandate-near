@@ -7,9 +7,10 @@
 
 #![allow(dead_code)]
 
-use near_api::{AccountId, Contract, NearToken, NetworkConfig, Signer};
+use near_api::{AccountId, Contract, NearGas, NearToken, NetworkConfig, Signer};
 use near_sdk::serde_json::{Value, json};
 use std::sync::Arc;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 pub const INTENTS_WASM: &str =
     concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/intents-near-mainnet.wasm");
@@ -24,6 +25,11 @@ pub const USDC: &str = "nep141:usdc.sandbox";
 /// Price feed ids the mandate uses. The mock oracle is keyed by these.
 pub const WNEAR_FEED: &str = "wrap.near";
 pub const USDC_FEED: &str = "usdc";
+
+/// A proposal of 2 USDC for 0.45 wNEAR: at the test prices, slippage and size both pass.
+pub const REASON: &str = "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08";
+pub const AMOUNT_IN: &str = "2000000";
+pub const MIN_OUT: &str = "450000000000000000000000";
 
 pub struct World {
     pub _sandbox: near_sandbox::Sandbox,
@@ -244,6 +250,74 @@ pub async fn fund_vault(w: &World, amount: u128) -> testresult::TestResult<()> {
         .gas(near_api::NearGas::from_tgas(200))
         .deposit(NearToken::from_yoctonear(1))
         .with_signer(depositor, w.signer.clone())
+        .send_to(&w.network)
+        .await?
+        .assert_success();
+    Ok(())
+}
+
+pub fn now_sec() -> u64 {
+    SystemTime::now().duration_since(UNIX_EPOCH).expect("clock").as_secs()
+}
+
+pub async fn set_report(
+    w: &World,
+    feed: &str,
+    multiplier: &str,
+    timestamp_sec: u64,
+) -> testresult::TestResult<()> {
+    w.oracle
+        .call_function(
+            "set_report",
+            json!({
+                "asset_id": feed,
+                "multiplier": multiplier,
+                "decimals": 8,
+                "timestamp_sec": timestamp_sec.to_string(),
+            }),
+        )
+        .transaction()
+        .with_signer(w.stranger.clone(), w.signer.clone())
+        .send_to(&w.network)
+        .await?
+        .assert_success();
+    Ok(())
+}
+
+/// wNEAR at $4.50 and USDC at $1.00, both reported at `timestamp_sec`.
+pub async fn set_prices(w: &World, timestamp_sec: u64) -> testresult::TestResult<()> {
+    set_report(w, WNEAR_FEED, "450000000", timestamp_sec).await?;
+    set_report(w, USDC_FEED, "100000000", timestamp_sec).await
+}
+
+pub async fn propose(w: &World) -> testresult::TestResult<()> {
+    w.vault
+        .call_function(
+            "propose",
+            json!({
+                "asset_in": USDC,
+                "asset_out": WNEAR,
+                "amount_in": AMOUNT_IN,
+                "min_amount_out": MIN_OUT,
+                "reason_hash": REASON,
+            }),
+        )
+        .transaction()
+        .gas(NearGas::from_tgas(30))
+        .with_signer(w.agent.clone(), w.signer.clone())
+        .send_to(&w.network)
+        .await?
+        .assert_success();
+    Ok(())
+}
+
+/// Anyone may register the vault's key on `intents.near`; the vault's own state records it.
+pub async fn register_key(w: &World) -> testresult::TestResult<()> {
+    w.vault
+        .call_function("register_intents_key", json!({}))
+        .transaction()
+        .gas(NearGas::from_tgas(200))
+        .with_signer(w.stranger.clone(), w.signer.clone())
         .send_to(&w.network)
         .await?
         .assert_success();

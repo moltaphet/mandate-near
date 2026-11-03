@@ -5,70 +5,12 @@
 
 mod common;
 
-use common::{USDC, USDC_FEED, WNEAR, WNEAR_FEED, World, fund_vault, view, world};
+use common::{
+    AMOUNT_IN, MIN_OUT, REASON, USDC, WNEAR, World, fund_vault, now_sec, propose, register_key,
+    set_prices, view, world,
+};
 use near_api::NearGas;
 use near_sdk::serde_json::{Value, json};
-use std::time::{SystemTime, UNIX_EPOCH};
-
-const REASON: &str = "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08";
-/// 2 USDC for 0.45 wNEAR: at the test prices, slippage and size both pass.
-const AMOUNT_IN: &str = "2000000";
-const MIN_OUT: &str = "450000000000000000000000";
-
-fn now_sec() -> u64 {
-    SystemTime::now().duration_since(UNIX_EPOCH).expect("clock").as_secs()
-}
-
-async fn set_report(
-    w: &World,
-    feed: &str,
-    multiplier: &str,
-    timestamp_sec: u64,
-) -> testresult::TestResult<()> {
-    w.oracle
-        .call_function(
-            "set_report",
-            json!({
-                "asset_id": feed,
-                "multiplier": multiplier,
-                "decimals": 8,
-                "timestamp_sec": timestamp_sec.to_string(),
-            }),
-        )
-        .transaction()
-        .with_signer(w.stranger.clone(), w.signer.clone())
-        .send_to(&w.network)
-        .await?
-        .assert_success();
-    Ok(())
-}
-
-/// wNEAR at $4.50 and USDC at $1.00, both reported at `timestamp_sec`.
-async fn set_prices(w: &World, timestamp_sec: u64) -> testresult::TestResult<()> {
-    set_report(w, WNEAR_FEED, "450000000", timestamp_sec).await?;
-    set_report(w, USDC_FEED, "100000000", timestamp_sec).await
-}
-
-async fn propose(w: &World) -> testresult::TestResult<()> {
-    w.vault
-        .call_function(
-            "propose",
-            json!({
-                "asset_in": USDC,
-                "asset_out": WNEAR,
-                "amount_in": AMOUNT_IN,
-                "min_amount_out": MIN_OUT,
-                "reason_hash": REASON,
-            }),
-        )
-        .transaction()
-        .gas(NearGas::from_tgas(30))
-        .with_signer(w.agent.clone(), w.signer.clone())
-        .send_to(&w.network)
-        .await?
-        .assert_success();
-    Ok(())
-}
 
 /// Runs `execute` as a stranger (it is permissionless) and returns its outcome.
 async fn execute(w: &World) -> testresult::TestResult<Value> {
@@ -210,19 +152,6 @@ async fn a_paused_vault_does_not_execute() -> testresult::TestResult<()> {
     // The refused call changed nothing: the proposal is still pending, and no strike was counted.
     assert!(view(&w.vault, &w.network, "get_pending_proposal", json!({})).await.is_object());
     assert_eq!(strikes(&w).await, json!(0));
-    Ok(())
-}
-
-/// Anyone may register the vault's key on `intents.near`; the vault's own state records it.
-async fn register_key(w: &World) -> testresult::TestResult<()> {
-    w.vault
-        .call_function("register_intents_key", json!({}))
-        .transaction()
-        .gas(NearGas::from_tgas(200))
-        .with_signer(w.stranger.clone(), w.signer.clone())
-        .send_to(&w.network)
-        .await?
-        .assert_success();
     Ok(())
 }
 
