@@ -21,3 +21,6 @@ submission*.json
 .DS_Store
 .idea/
 .vscode/
+
+# Local preview config for the in-app browser
+.claude/launch.json

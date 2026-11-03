@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["contracts/vault"]
+members = ["contracts/vault", "contracts/mock-externals"]
 
 [workspace.package]
 edition = "2024"
@@ -10,12 +10,19 @@ rust-version = "1.95"
 
 [workspace.dependencies]
 near-sdk = "5.30.0"
+# 256-bit intermediates for exact USD math (no_std, no default features).
+uint = { version = "0.10.2", default-features = false }
+proptest = "1.12.0"
+# Test-only oracle for our own RFC 3339 date formatting.
+chrono = { version = "0.4.45", default-features = false, features = ["alloc"] }
 # Integration testing stack recommended by the NEAR agent skill
 # (near-smart-contracts/rules/testing-integration-tests.md) and the
 # `cargo near new` template.
-# 0.3.x, as in the template: near-sandbox 0.4 moved to near-account-id 3 while
-# near-api 0.8 still uses 2.x, so the two do not interoperate yet.
-near-sandbox = "0.3.12"
+# 0.4: its nearcore supports the host functions near-sdk 5.30 uses for promises
+# (0.3.x fails with "Link Error: unknown or invalid import"). It uses
+# near-account-id 3 (shared with near-sdk) while near-api 0.8 uses 2.x, so tests
+# create sandbox accounts with `near_sdk::AccountId` and hand out near-api ids as strings.
+near-sandbox = "0.4.0"
 near-api = "0.8.7"
 cargo-near-build = "0.11.5"
 tokio = { version = "1", features = ["full"] }

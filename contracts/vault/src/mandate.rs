@@ -1,7 +1,8 @@
 //! Owner-defined trading mandate.
 //!
-//! This module is pure: no `env` calls, no I/O. All rules the vault enforces
-//! live here so they can be tested exhaustively off-chain.
+//! This module is pure: no `env` calls, no I/O. It defines the rules and
+//! validates that a configuration is consistent; `engine` applies them to
+//! individual trades.
 
 use std::collections::BTreeSet;
 use std::fmt;
@@ -17,14 +18,29 @@ pub const MAX_SLIPPAGE_BPS_CAP: u16 = 500;
 pub const MAX_PRICE_AGE_SEC_CAP: u32 = 300;
 /// Bounds per-trade loops over the universe and the mandate's storage cost.
 pub const MAX_ASSETS: usize = 32;
+/// Token decimals above this are rejected; keeps USD math inside 256 bits.
+pub const MAX_DECIMALS: u8 = 30;
+const MAX_PRICE_FEED_ID_LEN: usize = 128;
+
+/// One tradable asset.
+#[near(serializers = [json, borsh])]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct AssetConfig {
+    /// NEAR Intents asset id, e.g. `nep141:wrap.near`.
+    pub asset_id: String,
+    /// Token decimals: `amount` base units = `amount / 10^decimals` tokens.
+    pub decimals: u8,
+    /// Identifier of this asset's USD price feed on the oracle.
+    pub price_feed_id: String,
+}
 
 /// USD amounts are integer micro-dollars (1 USD = 1_000_000).
 #[near(serializers = [json, borsh])]
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Mandate {
-    /// NEAR Intents asset ids the vault may hold or trade, e.g. `nep141:wrap.near`.
-    pub allowed_assets: Vec<String>,
-    /// Subset of `allowed_assets` treated as cash when de-risking.
+    /// Assets the vault may hold or trade.
+    pub assets: Vec<AssetConfig>,
+    /// Subset of `assets` (by id) treated as cash when de-risking.
     pub stable_assets: Vec<String>,
     pub max_trade_usd: U64,
     pub max_daily_turnover_usd: U64,
@@ -44,6 +60,8 @@ pub enum MandateError {
     TooManyAssets,
     InvalidAssetId(String),
     DuplicateAsset(String),
+    InvalidDecimals(String),
+    InvalidPriceFeedId(String),
     NoStableAsset,
     StableNotAllowed(String),
     ZeroTradeLimit,
@@ -60,8 +78,12 @@ impl fmt::Display for MandateError {
             Self::TooManyAssets => write!(f, "mandate may allow at most {MAX_ASSETS} assets"),
             Self::InvalidAssetId(id) => write!(f, "invalid asset id: {id}"),
             Self::DuplicateAsset(id) => write!(f, "duplicate asset id: {id}"),
+            Self::InvalidDecimals(id) => {
+                write!(f, "decimals of {id} must not exceed {MAX_DECIMALS}")
+            }
+            Self::InvalidPriceFeedId(id) => write!(f, "invalid price_feed_id for {id}"),
             Self::NoStableAsset => write!(f, "mandate must name at least one stable asset"),
-            Self::StableNotAllowed(id) => write!(f, "stable asset not in allowed_assets: {id}"),
+            Self::StableNotAllowed(id) => write!(f, "stable asset not in assets: {id}"),
             Self::ZeroTradeLimit => write!(f, "max_trade_usd must be greater than zero"),
             Self::TradeLimitAboveDailyTurnover => {
                 write!(f, "max_trade_usd must not exceed max_daily_turnover_usd")
@@ -80,20 +102,27 @@ impl fmt::Display for MandateError {
 impl Mandate {
     /// Rejects configurations that are internally inconsistent or unsafe.
     pub fn validate(&self) -> Result<(), MandateError> {
-        if self.allowed_assets.is_empty() {
+        if self.assets.is_empty() {
             return Err(MandateError::NoAssets);
         }
         // stable_assets must be a subset, so this bounds both lists.
-        if self.allowed_assets.len() > MAX_ASSETS {
+        if self.assets.len() > MAX_ASSETS {
             return Err(MandateError::TooManyAssets);
         }
         let mut seen = BTreeSet::new();
-        for id in &self.allowed_assets {
+        for asset in &self.assets {
+            let id = &asset.asset_id;
             if !is_valid_asset_id(id) {
                 return Err(MandateError::InvalidAssetId(id.clone()));
             }
             if !seen.insert(id.as_str()) {
                 return Err(MandateError::DuplicateAsset(id.clone()));
+            }
+            if asset.decimals > MAX_DECIMALS {
+                return Err(MandateError::InvalidDecimals(id.clone()));
+            }
+            if !is_valid_price_feed_id(&asset.price_feed_id) {
+                return Err(MandateError::InvalidPriceFeedId(id.clone()));
             }
         }
 
@@ -129,6 +158,14 @@ impl Mandate {
         }
         Ok(())
     }
+
+    pub fn asset(&self, asset_id: &str) -> Option<&AssetConfig> {
+        self.assets.iter().find(|a| a.asset_id == asset_id)
+    }
+
+    pub fn is_stable(&self, asset_id: &str) -> bool {
+        self.stable_assets.iter().any(|s| s == asset_id)
+    }
 }
 
 fn check_bps(value: u16, field: &'static str) -> Result<(), MandateError> {
@@ -140,7 +177,7 @@ fn check_bps(value: u16, field: &'static str) -> Result<(), MandateError> {
 
 /// Accepts `nep141:<account>` and `nep245:<account>:<token>` ids as used by
 /// the NEAR Intents verifier. Account part: lowercase `[a-z0-9._-]`.
-fn is_valid_asset_id(id: &str) -> bool {
+pub(crate) fn is_valid_asset_id(id: &str) -> bool {
     let Some((standard, rest)) = id.split_once(':') else {
         return false;
     };
@@ -158,19 +195,32 @@ fn is_valid_asset_id(id: &str) -> bool {
             .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b"._-".contains(&b))
 }
 
+/// Opaque oracle feed id: 1..=128 chars of `[A-Za-z0-9._:-]`.
+fn is_valid_price_feed_id(id: &str) -> bool {
+    (1..=MAX_PRICE_FEED_ID_LEN).contains(&id.len())
+        && id.bytes().all(|b| b.is_ascii_alphanumeric() || b"._:-".contains(&b))
+}
+
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
 
+    pub(crate) const WNEAR: &str = "nep141:wrap.near";
+    pub(crate) const USDC: &str =
+        "nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1";
+
+    pub(crate) fn asset(asset_id: &str, decimals: u8) -> AssetConfig {
+        AssetConfig {
+            asset_id: asset_id.into(),
+            decimals,
+            price_feed_id: asset_id.trim_start_matches("nep141:").into(),
+        }
+    }
+
     pub(crate) fn sample() -> Mandate {
         Mandate {
-            allowed_assets: vec![
-                "nep141:wrap.near".into(),
-                "nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1".into(),
-            ],
-            stable_assets: vec![
-                "nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1".into(),
-            ],
+            assets: vec![asset(WNEAR, 24), asset(USDC, 6)],
+            stable_assets: vec![USDC.into()],
             max_trade_usd: U64(50_000_000),
             max_daily_turnover_usd: U64(200_000_000),
             max_position_bps: 6_000,
@@ -187,19 +237,28 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn lookup_helpers() {
+        let m = sample();
+        assert_eq!(m.asset(WNEAR).map(|a| a.decimals), Some(24));
+        assert!(m.asset("nep141:other.near").is_none());
+        assert!(m.is_stable(USDC));
+        assert!(!m.is_stable(WNEAR));
+    }
+
+    #[test]
     fn rejects_empty_assets() {
-        let m = Mandate { allowed_assets: vec![], ..sample() };
+        let m = Mandate { assets: vec![], ..sample() };
         assert_eq!(m.validate(), Err(MandateError::NoAssets));
     }
 
     #[test]
     fn caps_asset_count() {
         let mut m = sample();
-        let at_cap = MAX_ASSETS - m.allowed_assets.len();
-        m.allowed_assets.extend((0..at_cap).map(|i| format!("nep141:token{i}.near")));
+        let at_cap = MAX_ASSETS - m.assets.len();
+        m.assets.extend((0..at_cap).map(|i| asset(&format!("nep141:token{i}.near"), 18)));
         assert_eq!(m.validate(), Ok(()));
 
-        m.allowed_assets.push("nep141:one-too-many.near".into());
+        m.assets.push(asset("nep141:one-too-many.near", 18));
         assert_eq!(m.validate(), Err(MandateError::TooManyAssets));
     }
 
@@ -207,7 +266,7 @@ pub(crate) mod tests {
     fn rejects_bad_asset_ids() {
         for bad in ["wrap.near", "nep141:", "nep141:Wrap.near", "erc20:0xabc", "nep245:mt.near"] {
             let mut m = sample();
-            m.allowed_assets.push(bad.into());
+            m.assets.push(AssetConfig { price_feed_id: "feed".into(), ..asset(bad, 18) });
             assert_eq!(m.validate(), Err(MandateError::InvalidAssetId(bad.into())), "{bad}");
         }
     }
@@ -215,15 +274,44 @@ pub(crate) mod tests {
     #[test]
     fn accepts_nep245_ids() {
         let mut m = sample();
-        m.allowed_assets.push("nep245:v2_1.omni.hot.tg:56_11111111111111111111".into());
+        m.assets.push(AssetConfig {
+            price_feed_id: "bnb-usd".into(),
+            ..asset("nep245:v2_1.omni.hot.tg:56_11111111111111111111", 18)
+        });
         assert_eq!(m.validate(), Ok(()));
     }
 
     #[test]
     fn rejects_duplicates() {
         let mut m = sample();
-        m.allowed_assets.push("nep141:wrap.near".into());
-        assert_eq!(m.validate(), Err(MandateError::DuplicateAsset("nep141:wrap.near".into())));
+        m.assets.push(asset(WNEAR, 24));
+        assert_eq!(m.validate(), Err(MandateError::DuplicateAsset(WNEAR.into())));
+
+        let mut m = sample();
+        m.stable_assets.push(USDC.into());
+        assert_eq!(m.validate(), Err(MandateError::DuplicateAsset(USDC.into())));
+    }
+
+    #[test]
+    fn decimals_bound() {
+        let mut m = sample();
+        m.assets[0].decimals = MAX_DECIMALS;
+        assert_eq!(m.validate(), Ok(()));
+        m.assets[0].decimals = MAX_DECIMALS + 1;
+        assert_eq!(m.validate(), Err(MandateError::InvalidDecimals(WNEAR.into())));
+    }
+
+    #[test]
+    fn price_feed_id_rules() {
+        for bad in ["", "has space", "quote\"", &"x".repeat(MAX_PRICE_FEED_ID_LEN + 1)] {
+            let mut m = sample();
+            m.assets[0].price_feed_id = bad.to_string();
+            assert_eq!(m.validate(), Err(MandateError::InvalidPriceFeedId(WNEAR.into())), "{bad}");
+        }
+        let mut m = sample();
+        m.assets[0].price_feed_id =
+            "0xc415de8d2eba7db216527dff4b60e8f3a5311c740dadb233e13e12547e226750".into();
+        assert_eq!(m.validate(), Ok(()));
     }
 
     #[test]

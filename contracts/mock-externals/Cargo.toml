@@ -1,0 +1,18 @@
+[package]
+name = "mock-externals"
+description = "Sandbox-only stand-in for v1.signer: enforces the derived_public_key calling convention"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+near-sdk.workspace = true
+
+[lints]
+workspace = true
