@@ -1,0 +1,555 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mandate · How a trade is checked</title>
+<meta name="description" content="Nine locks, checked in order. Each lock names its rule, the value it checked, the test that proves it, and the command to rerun that test.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --night: #0d1620; --panel: #142433; --panel-2: #1a2d3f; --line: #2b4052;
+    --ink: #e8eef3; --mute: #8da0b0; --open: #3ddba8; --shut: #ff6b5e; --hold: #f5b94a;
+    --display: "Bricolage Grotesque", "Inter", system-ui, sans-serif;
+    --body: "Inter", system-ui, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--night); color: var(--ink); font-family: var(--body); -webkit-font-smoothing: antialiased; }
+  body { min-height: 100vh; background: radial-gradient(900px 500px at 12% -10%, #17314a 0%, transparent 60%), var(--night); }
+  :focus-visible { outline: 2px solid var(--open); outline-offset: 3px; border-radius: 6px; }
+  button { font: inherit; }
+
+  .page { max-width: 1280px; margin: 0 auto; padding: 24px 36px 36px; display: grid; gap: 22px;
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); }
+
+  .banner { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+    border: 1px solid rgba(245,185,74,.45); background: rgba(245,185,74,.08); color: var(--hold); border-radius: 10px;
+    padding: 10px 16px; font-family: var(--mono); font-size: 12.5px; letter-spacing: .04em; }
+  .banner b { font-weight: 500; color: var(--ink); }
+
+  header.top { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: baseline; gap: 18px; flex-wrap: wrap; }
+  .word { font-family: var(--display); font-weight: 700; font-size: 26px; letter-spacing: -.01em; }
+  .word span { color: var(--open); }
+  .nav { display: flex; gap: 20px; font-family: var(--mono); font-size: 12px; color: var(--mute); flex-wrap: wrap; }
+  .nav a { color: var(--mute); text-decoration: none; }
+  .nav a:hover { color: var(--ink); }
+
+  .col { display: flex; flex-direction: column; gap: 22px; min-width: 0; }
+
+  .eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--mute); }
+  h1 { font-family: var(--display); font-weight: 700; font-size: clamp(34px, 4vw, 52px); line-height: 1.04; letter-spacing: -.02em; margin: 8px 0 0; text-wrap: balance; }
+  h1.open { color: var(--open); } h1.shut { color: var(--shut); }
+  .lede { color: var(--mute); font-size: 15px; line-height: 1.6; margin: 12px 0 0; max-width: 60ch; }
+
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .step { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; font-size: 13px; line-height: 1.5; color: var(--mute); }
+  .step b { display: block; color: var(--ink); font-weight: 600; margin-bottom: 4px; font-size: 13.5px; }
+  .step .n { font-family: var(--mono); color: var(--open); font-size: 11px; }
+
+  .lock { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 22px 20px 18px; }
+  .dials { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 4px; }
+  .dial { all: unset; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 6px 2px; border-radius: 10px; cursor: pointer; min-width: 0; }
+  .dial:focus-visible { outline: 2px solid var(--open); }
+  .dial[aria-pressed="true"] { background: var(--panel-2); }
+  .dial svg { width: 100%; max-width: 66px; height: auto; display: block; overflow: visible; }
+  .dial .ring { fill: none; stroke: var(--line); stroke-width: 8; }
+  .dial .arc { fill: none; stroke-width: 8; stroke-linecap: round; transition: stroke-dashoffset .6s cubic-bezier(.2,.8,.2,1), stroke .3s; }
+  .dial .pointer { transform-origin: 50px 50px; transition: transform .6s cubic-bezier(.2,.8,.2,1); }
+  .dial .num { font-family: var(--mono); font-size: 11px; color: var(--mute); }
+  .dial .name { font-size: 10px; line-height: 1.2; text-align: center; color: var(--mute); min-height: 2.4em; hyphens: auto; overflow-wrap: anywhere; }
+  .dial.open .arc { stroke: var(--open); }
+  .dial.shut .arc { stroke: var(--shut); }
+  .dial.open .name { color: var(--ink); }
+  .dial.shut .name { color: var(--shut); font-weight: 600; }
+  .dial.skip .arc { stroke: var(--line); }
+  .dial.skip .name { opacity: .55; }
+
+  .states { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 12px; font-family: var(--mono); font-size: 11.5px; color: var(--mute); }
+  .states span::before { content: ""; display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 7px; vertical-align: 0; background: var(--c); }
+  .states .s-open { --c: var(--open); } .states .s-shut { --c: var(--shut); } .states .s-skip { --c: var(--line); }
+
+  .door { margin-top: 16px; border-top: 1px dashed var(--line); padding-top: 14px; display: flex; gap: 14px; align-items: baseline; flex-wrap: wrap; }
+  .door-state { font-family: var(--mono); font-size: 13px; letter-spacing: .08em; text-transform: uppercase; }
+  .door-state.open { color: var(--open); } .door-state.shut { color: var(--shut); }
+  .door-note { font-size: 13.5px; color: var(--mute); }
+
+  /* Rule table: the precise part. */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--mute); font-weight: 500; padding: 0 10px 10px; }
+  td { padding: 11px 10px; border-top: 1px solid var(--line); vertical-align: top; }
+  tr.row { cursor: pointer; }
+  tr.row:hover td { background: rgba(255,255,255,.02); }
+  tr.row[aria-selected="true"] td { background: var(--panel-2); }
+  td.n, td.res { font-family: var(--mono); font-size: 12px; white-space: nowrap; }
+  td.rule { color: var(--ink); }
+  td.check { color: var(--mute); font-family: var(--mono); font-size: 12px; line-height: 1.45; }
+  .res.open { color: var(--open); } .res.shut { color: var(--shut); font-weight: 600; } .res.skip { color: var(--mute); }
+
+  .detail { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 20px 22px; display: grid; gap: 14px; }
+  .detail h2 { font-family: var(--display); font-weight: 700; font-size: 22px; margin: 0; letter-spacing: -.01em; }
+  .detail p { margin: 0; color: var(--mute); font-size: 14px; line-height: 1.6; }
+  .kv { display: grid; grid-template-columns: 110px 1fr; gap: 8px 14px; font-size: 13px; margin: 0; }
+  .kv dt { font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--mute); padding-top: 2px; }
+  .kv dd { margin: 0; font-family: var(--mono); font-size: 12.5px; word-break: break-word; }
+  .cmd { background: #0a1118; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; font-family: var(--mono); font-size: 12.5px; color: #cfe3da; overflow-x: auto; white-space: pre; }
+  .cmd .p { color: var(--open); user-select: none; }
+  .cmd .o { color: var(--mute); }
+  .copy { font: 500 12px var(--body); color: var(--ink); background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; cursor: pointer; justify-self: start; }
+  .copy:hover { border-color: var(--mute); }
+
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .controls .label { font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--mute); margin-right: 6px; }
+  .controls button { color: var(--ink); background: transparent; border: 1px solid var(--line); padding: 9px 14px; border-radius: 999px; cursor: pointer; font-size: 13px; }
+  .controls button:hover { border-color: var(--mute); }
+  .controls button[aria-pressed="true"] { background: var(--ink); color: var(--night); border-color: var(--ink); }
+
+  /* Receipt. */
+  .ticket { position: relative; align-self: start; background: #f1efe8; color: #13202c; border-radius: 6px; padding: 24px 24px 22px; font-family: var(--mono); font-size: 13px; box-shadow: 0 20px 50px rgba(0,0,0,.35); }
+  .ticket::before, .ticket::after { content: ""; position: absolute; top: -8px; width: 16px; height: 16px; border-radius: 50%; background: var(--night); }
+  .ticket::before { left: -8px; } .ticket::after { right: -8px; }
+  .t-head { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px dashed #b9b4a6; padding-bottom: 12px; gap: 10px; }
+  .t-id { font-weight: 500; letter-spacing: .04em; }
+  .stamp { font-family: var(--display); font-weight: 700; font-size: 16px; letter-spacing: .02em; text-transform: uppercase; padding: 4px 10px; border: 2px solid currentColor; border-radius: 4px; transform: rotate(-3deg); }
+  .stamp.open { color: #0c7a58; } .stamp.shut { color: #c23a2e; }
+  .t-rows { margin: 0; padding: 12px 0 0; display: grid; gap: 10px; }
+  .t-row { display: grid; grid-template-columns: 96px 1fr; gap: 10px; align-items: baseline; }
+  .t-row dt { color: #6a7782; text-transform: uppercase; font-size: 10.5px; letter-spacing: .08em; }
+  .t-row dd { margin: 0; word-break: break-word; }
+  .t-row dd.bad { color: #c23a2e; font-weight: 500; } .t-row dd.good { color: #0c7a58; font-weight: 500; }
+  .tag { display: inline-block; font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; color: #6a7782; border: 1px solid #b9b4a6; border-radius: 3px; padding: 1px 5px; margin-left: 6px; vertical-align: 1px; }
+  .bar-title { margin-top: 16px; color: #6a7782; text-transform: uppercase; font-size: 10.5px; letter-spacing: .08em; display: flex; justify-content: space-between; }
+  .bar { position: relative; height: 14px; margin-top: 8px; background: #e1ddd0; border-radius: 3px; overflow: hidden; display: flex; }
+  .bar i { display: block; height: 100%; }
+  .cap { position: absolute; top: -4px; bottom: -4px; width: 2px; background: #13202c; }
+  .legend { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 10px; font-size: 11px; color: #4a5863; }
+  .legend span::before { content: ""; display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; background: var(--c); }
+  .t-foot { margin-top: 16px; border-top: 1px dashed #b9b4a6; padding-top: 12px; font-size: 11px; color: #6a7782; line-height: 1.55; }
+
+  .foot { grid-column: 1 / -1; display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; border-top: 1px solid var(--line); padding-top: 16px; font-size: 12.5px; color: var(--mute); }
+  .foot a { color: var(--ink); }
+
+
+  /* About and FAQ */
+  .info { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 22px; padding-top: 8px; scroll-margin-top: 20px; }
+  .info h2 { font-family: var(--display); font-weight: 700; font-size: 30px; line-height: 1.1; letter-spacing: -.01em; margin: 6px 0 12px; }
+  .info p { margin: 0 0 12px; color: var(--mute); font-size: 15px; line-height: 1.65; max-width: 62ch; }
+  .info p strong { color: var(--ink); font-weight: 600; }
+  .tags { display: grid; gap: 8px; margin-top: 16px; }
+  .tagrow { display: grid; grid-template-columns: 116px 1fr; gap: 12px; align-items: baseline; font-size: 13.5px; color: var(--mute); border-top: 1px solid var(--line); padding-top: 8px; }
+  .pill { font-family: var(--mono); font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; border-radius: 4px; padding: 3px 7px; justify-self: start; border: 1px solid currentColor; }
+  .pill.proven { color: var(--open); } .pill.tested { color: #8fd3ff; } .pill.planned { color: var(--hold); } .pill.sample { color: var(--mute); }
+  details.q { border-top: 1px solid var(--line); padding: 14px 0; }
+  details.q:last-child { border-bottom: 1px solid var(--line); }
+  details.q summary { cursor: pointer; list-style: none; display: flex; justify-content: space-between; gap: 14px; align-items: baseline; font-weight: 600; font-size: 15px; color: var(--ink); }
+  details.q summary::-webkit-details-marker { display: none; }
+  details.q summary::after { content: "+"; font-family: var(--mono); color: var(--mute); font-size: 18px; line-height: 1; transition: transform .2s; }
+  details.q[open] summary::after { content: "−"; }
+  details.q summary:focus-visible { outline: 2px solid var(--open); outline-offset: 4px; border-radius: 4px; }
+  details.q p { margin: 10px 0 0; color: var(--mute); font-size: 14px; line-height: 1.65; max-width: 70ch; }
+  @media (max-width: 980px) { .info { grid-template-columns: 1fr; } }
+  @media (max-width: 980px) {
+    .page { grid-template-columns: 1fr; padding: 18px 16px 28px; }
+    .ticket { position: static; }
+    .steps { grid-template-columns: 1fr; }
+    .dials { grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 2px; }
+    .dial .name { font-size: 8.5px; }
+    .dial .num { font-size: 9px; }
+    .hide-sm { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) { .dial .arc, .dial .pointer { transition: none; } }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="banner" role="note">
+    <span><b>SAMPLE DATA.</b> Not on-chain. The contract is not wired to the chain yet (milestone M3).</span>
+    <span>Mandate v1 · NEAR · simulated values</span>
+  </div>
+
+  <header class="top">
+    <div class="word">Mandate<span>.</span></div>
+    <nav class="nav" aria-label="Related pages">
+      <a href="../site/index.html">Evidence and status</a>
+      <a href="../../docs/PROJECT.md">Project definition</a>
+      <a href="#about">About</a>
+      <a href="#faq">FAQ</a>
+      <a href="../../README.md">README</a>
+    </nav>
+  </header>
+
+  <main class="col">
+    <div>
+      <div class="eyebrow" id="kicker">Proposal 0412 · approved</div>
+      <h1 id="headline" class="open">All nine locks opened.</h1>
+      <p class="lede" id="lede">The vault contract checked this trade against the mandate, in order. Every check passed, so the contract asked the MPC network to sign the exact bytes it built.</p>
+    </div>
+
+    <div class="steps" aria-label="How to read this">
+      <div class="step"><span class="n">STEP 1</span><b>Locks run in order</b>Lock 1 is checked first. Each lock names one rule.</div>
+      <div class="step"><span class="n">STEP 2</span><b>The first closed lock stops it</b>Later locks are not reached, so they are marked as such.</div>
+      <div class="step"><span class="n">STEP 3</span><b>Only an open door signs</b>A signature is requested only when all nine locks are open.</div>
+    </div>
+
+    <section class="lock" aria-label="Nine inspection locks">
+      <div class="dials" id="dials" role="group" aria-label="Locks"></div>
+      <div class="states" aria-label="Lock states">
+        <span class="s-open">PASS: rule satisfied</span>
+        <span class="s-shut">BLOCKED: first rule violated</span>
+        <span class="s-skip">NOT REACHED: check stopped earlier</span>
+      </div>
+      <div class="door">
+        <div class="door-state open" id="door">Door open</div>
+        <div class="door-note" id="door-note">All nine rules passed. A signature request is ready for the MPC network (milestone M3).</div>
+      </div>
+    </section>
+
+    <div class="controls" role="group" aria-label="Scenarios">
+      <span class="label">Scenario</span>
+      <button data-scenario="ok" aria-pressed="true">Clean</button>
+      <button data-scenario="size" aria-pressed="false">Oversized</button>
+      <button data-scenario="stale" aria-pressed="false">Stale price</button>
+      <button data-scenario="slip" aria-pressed="false">Slippage</button>
+      <button data-scenario="unknown" aria-pressed="false">Unlisted token</button>
+      <button data-scenario="drawdown" aria-pressed="false">After drawdown</button>
+    </div>
+
+    <section aria-label="Rule table">
+      <table>
+        <thead><tr><th>#</th><th>Lock</th><th class="hide-sm">Rule</th><th class="hide-sm">Checked</th><th>Result</th></tr></thead>
+        <tbody id="rules"></tbody>
+      </table>
+    </section>
+
+    <section class="detail" aria-live="polite" id="detail" aria-label="Selected lock"></section>
+  </main>
+
+  <aside class="ticket" aria-label="Proposal receipt">
+    <div class="t-head">
+      <span class="t-id" id="t-id">PROPOSAL 0412</span>
+      <span class="stamp open" id="stamp">Cleared</span>
+    </div>
+    <dl class="t-rows">
+      <div class="t-row"><dt>Swap</dt><dd id="r-swap">20 USDC → wNEAR<span class="tag">sample</span></dd></div>
+      <div class="t-row"><dt>Notional</dt><dd id="r-notional">$20.00<span class="tag">sample</span></dd></div>
+      <div class="t-row"><dt>NAV</dt><dd id="r-nav">$1,482.10<span class="tag">sample</span></dd></div>
+      <div class="t-row"><dt>Result</dt><dd id="r-result" class="good">Signed by MPC<span class="tag">sample</span></dd></div>
+      <div class="t-row"><dt>Intent</dt><dd id="r-intent">not produced yet (M3)</dd></div>
+      <div class="t-row"><dt>Reason</dt><dd>9f86d081…0f00a08<span class="tag">sample</span></dd></div>
+      <div class="t-row"><dt>Expires</dt><dd>60 s after proposal (contract rule)</dd></div>
+      <div class="t-row"><dt>On-chain</dt><dd>No trade yet. See evidence page.</dd></div>
+    </dl>
+    <div class="bar-title"><span>Vault weights <span class="tag">sample</span></span><span>cap 60%</span></div>
+    <div class="bar" id="bar" role="img" aria-label="Asset weights"></div>
+    <div class="legend" id="legend"></div>
+    <div class="t-foot">This receipt shows what the dashboard checked. It is not an on-chain record. Each tagged field is sample data.</div>
+  </aside>
+
+
+  <section class="info" id="about" aria-labelledby="about-title">
+    <div>
+      <div class="eyebrow">About</div>
+      <h2 id="about-title">A treasury that checks itself before it signs.</h2>
+      <p><strong>Mandate</strong> is a policy layer for NEAR agents. An agent can propose a trade. The vault contract holds the only signing key for the treasury on NEAR Intents, and it signs only after nine rules pass, in order, against limits the owner wrote.</p>
+      <p>The agent cannot withdraw, cannot change the rules, and cannot skip a rule. It has no key. If it is compromised, the worst it can do is propose trades that the contract then rejects.</p>
+      <p>This page shows the rules, the checks, and the commands that prove them. It does not show live trading, because no live trade exists yet.</p>
+    </div>
+    <div>
+      <div class="eyebrow">Status, precisely</div>
+      <div class="tags">
+        <div class="tagrow"><span class="pill proven">Proven</span><span>The contract can get an MPC signature that mainnet <code>intents.near</code> accepts (checked by <code>simulate_intents</code>).</span></div>
+        <div class="tagrow"><span class="pill tested">Tested</span><span>The nine rules, the owner controls and the proposal gate. Run with <code>./scripts/verify.sh --integration</code>.</span></div>
+        <div class="tagrow"><span class="pill planned">Planned</span><span>Live balances and prices into the vault, the MPC call from execution, the keeper, the OutLayer agent, and the 24-hour delay on loosening limits (M3 to M5).</span></div>
+        <div class="tagrow"><span class="pill sample">Sample</span><span>Every number on this page. None of it is read from the chain yet.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="info" id="faq" aria-labelledby="faq-title" style="padding-top:0">
+    <div>
+      <div class="eyebrow">FAQ</div>
+      <h2 id="faq-title">Questions a reviewer would ask.</h2>
+      <p>Each answer says what exists today. Where something is planned, it says so.</p>
+    </div>
+    <div>
+      <details class="q" open>
+        <summary>Is this trading live on NEAR?</summary>
+        <p>No. The signature path from the contract to the MPC network was proven on testnet, and the signature was accepted by mainnet <code>intents.near</code>. The vault does not yet read live balances or prices, and it does not yet call the MPC network from its execution path. That is milestone M3.</p>
+      </details>
+      <details class="q">
+        <summary>Can the agent move the money?</summary>
+        <p>No. The agent can only propose a trade with a minimum output and a reason hash. It has no key on the vault account. The vault signs only after all nine rules pass, and the signed bytes fix the amount, deadline and nonce.</p>
+      </details>
+      <details class="q">
+        <summary>What happens if the price feed fails?</summary>
+        <p>Trading stops. A missing or stale price is a rejection, not a guess. The price-freshness lock closes, and the trade is never valued with an old number.</p>
+      </details>
+      <details class="q">
+        <summary>Why this order of locks?</summary>
+        <p>The cheap checks come first: structure, lock and cooldown. Price reads come before the money checks, because the money checks need them. The first closed lock stops the trade, so later locks are not evaluated. The order is fixed, so a rejection always names the same first failure for the same input.</p>
+      </details>
+      <details class="q">
+        <summary>Who can change the rules?</summary>
+        <p>Only the owner. The owner can be an individual account or a DAO account. Tightening a limit takes effect at once. Loosening a limit is planned to take 24 hours, and the owner can cancel it in that window. Pause always works. These delays are planned for version 1, not yet built.</p>
+      </details>
+      <details class="q">
+        <summary>What if the agent is compromised or spams proposals?</summary>
+        <p>It can only propose, and each proposal is checked. Only one proposal can be pending at a time, and none is accepted while a signed intent is still open. The circuit breaker halts proposals after three rejections in a row, and only the owner can resume them. The breaker's counting runs in the execution path, which is part of M3, so it is not active yet.</p>
+      </details>
+      <details class="q">
+        <summary>Where is the proof?</summary>
+        <p>Click any lock to see the test that proves its rule and the command to rerun it. The evidence page lists the mainnet checks and the reproduction steps. Nothing on this page needs a key or funds to rerun.</p>
+      </details>
+      <details class="q">
+        <summary>Does the design promise returns?</summary>
+        <p>No. Mandate limits how much can go wrong and who can change the limits. It makes no claim that any strategy is profitable.</p>
+      </details>
+      <details class="q">
+        <summary>Is the data on this page real?</summary>
+        <p>No. Values in the table, the receipt and the scenarios are sample data, and each one is labelled. Chain-backed values replace them when the contract is wired (M3).</p>
+      </details>
+    </div>
+  </section>
+  <footer class="foot">
+    <span>Each lock is a rule in the vault contract. The table shows the test that proves it.</span>
+    <span>Sample data · M3 pending</span>
+  </footer>
+</div>
+
+<script>
+// Each lock: the rule in plain words, the test that proves it, and the command that reruns it.
+const LOCKS = [
+  { name: "Structure", rule: "The trade swaps two different assets, both listed in the mandate, with non-zero amounts.", test: "structural_rules" },
+  { name: "Lock & cooldown", rule: "No signed intent is still open, and the cooldown since the last trade has passed.", test: "one_signed_intent_at_a_time" },
+  { name: "Price freshness", rule: "Every asset the vault trades or holds has an oracle price no older than the mandate allows.", test: "price_freshness" },
+  { name: "Balance", rule: "The vault holds at least the amount it is asked to sell.", test: "insufficient_balance" },
+  { name: "Trade size", rule: "The trade's value in USD does not exceed the per-trade maximum.", test: "max_trade_size_boundary" },
+  { name: "Daily turnover", rule: "Today's total traded value, including this trade, stays within the daily maximum. The day resets at 00:00 UTC.", test: "daily_turnover_resets_at_utc_midnight" },
+  { name: "Slippage", rule: "The guaranteed minimum output is at least the oracle value of the input, minus the allowed slippage.", test: "slippage_boundary_is_exact" },
+  { name: "Drawdown lock", rule: "If NAV has fallen past the drawdown limit from its high-water mark, only moves into stable assets are allowed.", test: "drawdown_breaker_allows_only_derisking" },
+  { name: "Position limit", rule: "After the trade, no single non-stable asset exceeds the position cap, measured in the worst case.", test: "position_cap_uses_worst_case" }
+];
+
+// Passing checks: the value each lock compared, in plain text (sample values).
+const PASS_CHECK = [
+  "USDC → wNEAR, both listed, amounts > 0",
+  "no signed intent open; last trade 14 min ago, cooldown 5 min",
+  "wNEAR and USDC prices 9 s and 11 s old, limit 60 s",
+  "vault holds 20.00 USDC, trade needs 20.00",
+  "notional $20.00 ≤ max $50.00",
+  "today $0.00 + $20.00 ≤ max $200.00",
+  "min out ≥ fair value × 99% (limit 1%)",
+  "NAV $1,482.10, high-water $1,500.00, drop 1.2% (limit 15%)",
+  "wNEAR 42% after trade ≤ cap 60%"
+];
+
+const SCENARIOS = {
+  ok: {
+    id: "0412", fail: -1, swap: "20 USDC → wNEAR", notional: "$20.00", nav: "$1,482.10",
+    kicker: "Proposal 0412 · approved", head: "All nine locks opened.",
+    lede: "The vault contract checked this trade against the mandate, in order. Every check passed, so the contract asked the MPC network to sign the exact bytes it built.",
+    checks: {}
+  },
+  size: {
+    id: "0413", fail: 4, swap: "80 USDC → wNEAR", notional: "$80.00", nav: "$1,482.10", code: "TradeTooLarge",
+    kicker: "Proposal 0413 · rejected", head: "Blocked at lock 5.",
+    lede: "The trade's value is above the per-trade maximum, so the contract rejected it before any signature was requested.",
+    checks: { 4: "notional $80.00 > max $50.00" }
+  },
+  stale: {
+    id: "0414", fail: 2, swap: "20 USDC → wNEAR", notional: "$20.00", nav: "$1,482.10", code: "StalePrice",
+    kicker: "Proposal 0414 · rejected", head: "Blocked at lock 3.",
+    lede: "The wNEAR price is older than the mandate allows, so the contract refuses to value the trade. It fails closed.",
+    checks: { 2: "wNEAR price 4 min old > limit 60 s" }
+  },
+  slip: {
+    id: "0415", fail: 6, swap: "20 USDC → wNEAR", notional: "$20.00", nav: "$1,482.10", code: "SlippageExceeded",
+    kicker: "Proposal 0415 · rejected", head: "Blocked at lock 7.",
+    lede: "The guaranteed minimum output is too far below the oracle value of the input, so the trade could fill at a bad price.",
+    checks: { 6: "min out $3.00 < fair value × 99% ($3.96)" }
+  },
+  unknown: {
+    id: "0416", fail: 0, swap: "20 USDC → PEPE", notional: "—", nav: "$1,482.10", code: "AssetNotAllowed",
+    kicker: "Proposal 0416 · rejected", head: "Blocked at lock 1.",
+    lede: "PEPE is not in the mandate's asset list. The vault does not trade assets its owner did not approve.",
+    checks: { 0: "PEPE is not listed in the mandate" }
+  },
+  drawdown: {
+    id: "0417", fail: 7, swap: "200 USDC → ETH", notional: "$200.00", nav: "$1,206.40", code: "DrawdownDeRiskOnly",
+    kicker: "Proposal 0417 · rejected", head: "Blocked at lock 8.",
+    lede: "NAV has fallen past the drawdown limit, and this trade buys a non-stable asset. The drawdown lock allows only de-risking.",
+    checks: { 7: "NAV $1,206.40 is 19.6% below high-water $1,500.00 (limit 15%); ETH is not stable" }
+  }
+};
+
+const ASSETS = [
+  { id: "USDC", weight: .46, color: "#0c7a58" },
+  { id: "wNEAR", weight: .42, color: "#2f5d8a" },
+  { id: "ETH", weight: .07, color: "#6e4bb3" },
+  { id: "BTC", weight: .05, color: "#b87b00" }
+];
+
+// ---- Lock dials ----
+const R = 42, C = 2 * Math.PI * R;
+const dialsEl = document.getElementById("dials");
+const dials = LOCKS.map((lock, i) => {
+  const b = document.createElement("button");
+  b.className = "dial";
+  b.type = "button";
+  b.setAttribute("aria-pressed", "false");
+  b.setAttribute("aria-label", `Lock ${i + 1}: ${lock.name}`);
+  b.innerHTML = `
+    <svg viewBox="0 0 100 100" aria-hidden="true">
+      <circle class="ring" cx="50" cy="50" r="${R}"/>
+      <circle class="arc" cx="50" cy="50" r="${R}" stroke-dasharray="${C}" stroke-dashoffset="${C}" transform="rotate(-90 50 50)"/>
+      <g class="pointer"><line x1="50" y1="50" x2="50" y2="18" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></g>
+      <circle cx="50" cy="50" r="4" fill="currentColor"/>
+    </svg>
+    <span class="num">${String(i + 1).padStart(2, "0")}</span>
+    <span class="name">${lock.name}</span>`;
+  b.addEventListener("click", () => select(i));
+  dialsEl.appendChild(b);
+  return { el: b, arc: b.querySelector(".arc"), pointer: b.querySelector(".pointer") };
+});
+
+// ---- Rule table rows ----
+const rulesEl = document.getElementById("rules");
+const rows = LOCKS.map((lock, i) => {
+  const tr = document.createElement("tr");
+  tr.className = "row";
+  tr.tabIndex = 0;
+  tr.setAttribute("aria-selected", "false");
+  tr.innerHTML = `
+    <td class="n">${String(i + 1).padStart(2, "0")}</td>
+    <td class="rule">${lock.name}</td>
+    <td class="rule hide-sm">${lock.rule}</td>
+    <td class="check hide-sm"></td>
+    <td class="res"></td>`;
+  tr.addEventListener("click", () => select(i));
+  tr.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); select(i); } });
+  rulesEl.appendChild(tr);
+  return tr;
+});
+
+// ---- Weights in the receipt ----
+const bar = document.getElementById("bar");
+ASSETS.forEach((a) => {
+  const seg = document.createElement("i");
+  seg.style.width = (a.weight * 100) + "%";
+  seg.style.background = a.color;
+  seg.title = `${a.id} ${Math.round(a.weight * 100)}%`;
+  bar.appendChild(seg);
+});
+const cap = document.createElement("div");
+cap.className = "cap";
+cap.style.left = "60%";
+bar.appendChild(cap);
+document.getElementById("legend").innerHTML = ASSETS.map((a) =>
+  `<span style="--c:${a.color}">${a.id} ${Math.round(a.weight * 100)}%</span>`).join("");
+
+// ---- State ----
+let current = "ok";
+let selected = 0;
+
+function stateOf(s, i) {
+  if (s.fail === -1 || i < s.fail) return "open";
+  if (i === s.fail) return "shut";
+  return "skip";
+}
+
+function setDial(d, state) {
+  d.el.classList.toggle("open", state === "open");
+  d.el.classList.toggle("shut", state === "shut");
+  d.el.classList.toggle("skip", state === "skip");
+  d.arc.style.strokeDashoffset = state === "skip" ? String(C) : "0";
+  d.pointer.style.transform = `rotate(${state === "open" ? 0 : state === "shut" ? 180 : 270}deg)`;
+}
+
+function select(i) {
+  selected = i;
+  dials.forEach((d, j) => d.el.setAttribute("aria-pressed", String(j === i)));
+  rows.forEach((r, j) => r.setAttribute("aria-selected", String(j === i)));
+  renderDetail();
+}
+
+function renderDetail() {
+  const s = SCENARIOS[current];
+  const lock = LOCKS[selected];
+  const st = stateOf(s, selected);
+  const checked = st === "skip" ? "—" : (s.checks[selected] || PASS_CHECK[selected]);
+  const verdict = st === "open" ? "PASS" : st === "shut" ? "BLOCKED" : "NOT REACHED";
+  const reach = st === "skip"
+    ? `<p>This lock was not evaluated, because lock ${s.fail + 1} stopped the trade first.</p>`
+    : "";
+  const code = st === "shut" ? s.code : st === "open" ? "passed" : "not reached";
+  const cmd = `cargo test -p mandate-vault engine::tests::${lock.test}`;
+  document.getElementById("detail").innerHTML = `
+    <div class="eyebrow">Lock ${selected + 1} of 9 · ${verdict}</div>
+    <h2>${lock.name}</h2>
+    <p>${lock.rule}</p>
+    ${reach}
+    <dl class="kv">
+      <dt>Checked</dt><dd>${checked}</dd>
+      <dt>Result</dt><dd>${code}</dd>
+      <dt>Proof</dt><dd>test ${lock.test} · contracts/vault/src/engine.rs</dd>
+    </dl>
+    <div class="eyebrow">Rerun this proof (from the repository root)</div>
+    <div class="cmd"><span class="p">$</span> ${cmd}
+<span class="o"># expected output: test result: ok. 1 passed; 0 failed</span></div>
+    <button class="copy" type="button" id="copy">Copy command</button>`;
+  document.getElementById("copy").addEventListener("click", (e) => {
+    navigator.clipboard?.writeText(cmd);
+    e.currentTarget.textContent = "Copied";
+    setTimeout(() => (e.currentTarget.textContent = "Copy command"), 1400);
+  });
+}
+
+function render(name) {
+  current = name;
+  const s = SCENARIOS[name];
+  const ok = s.fail === -1;
+  dials.forEach((d, i) => setDial(d, stateOf(s, i)));
+  rows.forEach((r, i) => {
+    const st = stateOf(s, i);
+    const res = r.querySelector(".res");
+    res.className = "res " + st;
+    res.textContent = st === "open" ? "PASS" : st === "shut" ? "BLOCKED" : "NOT REACHED";
+    r.querySelector(".check").textContent = st === "skip" ? "—" : (s.checks[i] || PASS_CHECK[i]);
+  });
+  const h = document.getElementById("headline");
+  h.textContent = s.head;
+  h.className = ok ? "open" : "shut";
+  document.getElementById("kicker").textContent = s.kicker;
+  document.getElementById("lede").textContent = s.lede;
+  document.getElementById("door").className = "door-state " + (ok ? "open" : "shut");
+  document.getElementById("door").textContent = ok ? "Door open" : "Door sealed";
+  document.getElementById("door-note").textContent = ok
+    ? "All nine rules passed. A signature request is ready for the MPC network (milestone M3)."
+    : `Lock ${s.fail + 1} stayed closed. No signature was requested.`;
+
+  document.getElementById("t-id").textContent = "PROPOSAL " + s.id;
+  const stamp = document.getElementById("stamp");
+  stamp.className = "stamp " + (ok ? "open" : "shut");
+  stamp.textContent = ok ? "Cleared" : "Rejected";
+  document.getElementById("r-swap").firstChild.textContent = s.swap;
+  document.getElementById("r-notional").firstChild.textContent = s.notional;
+  document.getElementById("r-nav").firstChild.textContent = s.nav;
+  const result = document.getElementById("r-result");
+  result.firstChild.textContent = ok ? "Signed by MPC" : `${LOCKS[s.fail].name} · ${s.code}`;
+  result.className = ok ? "good" : "bad";
+  document.getElementById("r-intent").textContent = ok ? "not produced yet (M3)" : "none: never signed";
+
+  document.querySelectorAll("[data-scenario]").forEach((b) =>
+    b.setAttribute("aria-pressed", String(b.dataset.scenario === name)));
+  // Open on the first closed lock, so the reason is visible without a click.
+  select(ok ? 0 : s.fail);
+}
+
+document.querySelectorAll("[data-scenario]").forEach((b) =>
+  b.addEventListener("click", () => render(b.dataset.scenario)));
+render("ok");
+</script>
+</body>
+</html>

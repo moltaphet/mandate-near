@@ -93,7 +93,7 @@ Components:
 - **Keeper script** (TypeScript): anyone can run it. [PLANNED]
 - **Agent integrations**: OutLayer agent [PLANNED], script agent [PLANNED].
 - **SDK**: typed client over the vault's public methods. [PLANNED]
-- **Evidence site and dashboard**: static, with simulated data labelled. Built as prototypes.
+- **Evidence site and dashboard**: static pages with sample data, labelled as sample. Built; not yet reading the chain.
 
 ## 7. Trade lifecycle
 
