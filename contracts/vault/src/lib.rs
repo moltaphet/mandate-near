@@ -23,7 +23,11 @@ pub mod mandate;
 pub mod math;
 
 use near_sdk::json_types::{U64, U128};
-use near_sdk::{AccountId, PanicOnDefault, assert_one_yocto, env, near, require};
+use near_sdk::serde_json::json;
+use near_sdk::{
+    AccountId, Gas, NearToken, PanicOnDefault, Promise, PromiseError, assert_one_yocto, env, near,
+    require,
+};
 
 pub use crate::engine::{TradingState, TradingStateView};
 pub use crate::mandate::{AssetConfig, Mandate, MandateError};
@@ -32,6 +36,18 @@ pub use crate::mandate::{AssetConfig, Mandate, MandateError};
 pub const PROPOSAL_TTL_SEC: u64 = 60;
 /// Consecutive rejections before the circuit breaker halts new proposals.
 pub const MAX_STRIKES: u32 = 3;
+
+/// Defaults for NEAR mainnet. Sandbox and testnet use `new_with_externals`.
+pub const MAINNET_SIGNER: &str = "v1.signer";
+pub const MAINNET_INTENTS: &str = "intents.near";
+/// Derivation path for the vault's NEAR Intents key (the same path the R1 spike used).
+pub const INTENTS_KEY_PATH: &str = "intents";
+/// Domain 1 on the MPC signer is Ed25519.
+pub const ED25519_DOMAIN_ID: u32 = 1;
+const GAS_DERIVE_KEY: Gas = Gas::from_tgas(10);
+const GAS_ADD_KEY_CALLBACK: Gas = Gas::from_tgas(60);
+const GAS_ADD_KEY: Gas = Gas::from_tgas(30);
+const GAS_KEY_REGISTERED_CALLBACK: Gas = Gas::from_tgas(10);
 
 /// A trade the agent wants executed. Deliberately has no payload field.
 #[near(serializers = [json, borsh])]
@@ -60,24 +76,37 @@ pub struct Vault {
     next_proposal_id: u64,
     strikes: u32,
     halted: bool,
+    /// MPC signer contract and NEAR Intents verifier this vault talks to.
+    signer: AccountId,
+    intents: AccountId,
+    /// The vault's MPC-derived Ed25519 key, as returned by the signer.
+    intents_key: Option<String>,
+    /// True once `intents` confirmed `add_public_key` for `intents_key`.
+    key_registered: bool,
 }
 
 #[near]
 impl Vault {
+    /// For mainnet: talks to `v1.signer` and `intents.near`.
     #[init]
     pub fn new(owner: AccountId, mandate: Mandate) -> Self {
-        validate_or_panic(&mandate);
-        Self {
+        Self::init(
             owner,
             mandate,
-            paused: false,
-            trading: TradingState::default(),
-            agent: None,
-            pending: None,
-            next_proposal_id: 1,
-            strikes: 0,
-            halted: false,
-        }
+            MAINNET_SIGNER.parse().unwrap_or_else(|_| env::panic_str("bad signer id")),
+            MAINNET_INTENTS.parse().unwrap_or_else(|_| env::panic_str("bad intents id")),
+        )
+    }
+
+    /// For testnet and sandbox, where the signer and verifier live at other accounts.
+    #[init]
+    pub fn new_with_externals(
+        owner: AccountId,
+        mandate: Mandate,
+        signer: AccountId,
+        intents: AccountId,
+    ) -> Self {
+        Self::init(owner, mandate, signer, intents)
     }
 
     /// Cooldown, daily turnover, high-water mark and signed-intent expiry.
@@ -113,6 +142,85 @@ impl Vault {
     /// Consecutive rejections recorded since the last success or resume.
     pub fn get_strikes(&self) -> u32 {
         self.strikes
+    }
+
+    pub fn get_intents_key(&self) -> Option<String> {
+        self.intents_key.clone()
+    }
+
+    pub fn is_key_registered(&self) -> bool {
+        self.key_registered
+    }
+
+    pub fn get_externals(&self) -> (AccountId, AccountId) {
+        (self.signer.clone(), self.intents.clone())
+    }
+
+    /// Registers the vault's MPC-derived key on `intents.near`, so that
+    /// signatures made with it count as the vault's own.
+    ///
+    /// Permissionless: the key is the one the MPC signer derives for this
+    /// vault's account, so whoever triggers this cannot choose it. Once the
+    /// key is registered, calling again is refused.
+    /// The vault attaches the 1 yoctoNEAR that `add_public_key` requires,
+    /// authenticating to `intents.near` as itself (predecessor auth).
+    pub fn register_intents_key(&mut self) -> Promise {
+        require!(!self.key_registered, "the intents key is already registered");
+        Promise::new(self.signer.clone())
+            .function_call(
+                "derived_public_key".to_string(),
+                json!({
+                    "path": INTENTS_KEY_PATH,
+                    "predecessor": env::current_account_id(),
+                    "domain_id": ED25519_DOMAIN_ID,
+                })
+                .to_string()
+                .into_bytes(),
+                NearToken::from_yoctonear(0),
+                GAS_DERIVE_KEY,
+            )
+            .then(
+                Self::ext(env::current_account_id())
+                    .with_static_gas(GAS_ADD_KEY_CALLBACK)
+                    .on_derived_key(),
+            )
+    }
+
+    #[private]
+    pub fn on_derived_key(
+        &mut self,
+        #[callback_result] key: Result<String, PromiseError>,
+    ) -> Promise {
+        let key = match key {
+            Ok(key) => key,
+            Err(_) => env::panic_str("the MPC signer did not return a derived key"),
+        };
+        require!(key.starts_with("ed25519:"), "derived key is not an Ed25519 key");
+        self.intents_key = Some(key.clone());
+        Promise::new(self.intents.clone())
+            .function_call(
+                "add_public_key".to_string(),
+                json!({ "public_key": key }).to_string().into_bytes(),
+                NearToken::from_yoctonear(1),
+                GAS_ADD_KEY,
+            )
+            .then(
+                Self::ext(env::current_account_id())
+                    .with_static_gas(GAS_KEY_REGISTERED_CALLBACK)
+                    .on_key_registered(),
+            )
+    }
+
+    #[private]
+    pub fn on_key_registered(
+        &mut self,
+        #[callback_result] result: Result<(), PromiseError>,
+    ) -> bool {
+        // A failure never downgrades an earlier success.
+        if result.is_ok() {
+            self.key_registered = true;
+        }
+        self.key_registered
     }
 
     /// Requires 1 yoctoNEAR so a leaked function-call key cannot loosen rules.
@@ -204,6 +312,25 @@ impl Vault {
 }
 
 impl Vault {
+    fn init(owner: AccountId, mandate: Mandate, signer: AccountId, intents: AccountId) -> Self {
+        validate_or_panic(&mandate);
+        Self {
+            owner,
+            mandate,
+            paused: false,
+            trading: TradingState::default(),
+            agent: None,
+            pending: None,
+            next_proposal_id: 1,
+            strikes: 0,
+            halted: false,
+            signer,
+            intents,
+            intents_key: None,
+            key_registered: false,
+        }
+    }
+
     fn assert_owner(&self) {
         require!(
             env::predecessor_account_id() == self.owner,
@@ -303,6 +430,12 @@ mod tests {
         assert_eq!(v.get_mandate(), sample());
         assert!(!v.is_paused());
         assert_eq!(v.get_agent(), None);
+        assert_eq!(
+            v.get_externals(),
+            (MAINNET_SIGNER.parse().unwrap(), MAINNET_INTENTS.parse().unwrap())
+        );
+        assert_eq!(v.get_intents_key(), None);
+        assert!(!v.is_key_registered());
         assert!(!v.is_halted());
         assert_eq!(v.get_strikes(), 0);
         assert_eq!(v.get_pending_proposal(), None);

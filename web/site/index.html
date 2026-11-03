@@ -170,6 +170,11 @@
           <td>Deployed to a local NEAR sandbox and called through transactions. Rerun: <span class="mono">./scripts/verify.sh --integration</span></td>
         </tr>
         <tr>
+          <td>The vault registers its MPC-derived key on the real <span class="mono">intents.near</span> contract, using predecessor auth.</td>
+          <td><span class="st pass">sandbox test</span></td>
+          <td>The exact mainnet <span class="mono">intents.near</span> wasm runs in a local sandbox. The test reads the key back from it and refuses a second registration. The MPC signer there is a stand-in that enforces the call convention. Fixture check: <span class="mono">scripts/fetch-intents-fixture.sh</span>. Rerun: <span class="mono">./scripts/verify.sh --integration</span></td>
+        </tr>
+        <tr>
           <td>The vault's trading flow runs end to end on a chain.</td>
           <td><span class="st todo">not yet</span></td>
           <td>Milestone M3. No evidence exists yet, and none is claimed.</td>

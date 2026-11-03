@@ -125,6 +125,16 @@ installs itself from `rust-toolchain.toml`. No keys are needed.
    - pause and unpause
    - NEP-330 source metadata pointing to this repo
 
+   It also runs `vault_registers_its_mpc_key_on_the_real_intents_contract`.
+   That test deploys the **exact mainnet `intents.near` code**
+   (`contracts/vault/tests/fixtures`, verifiable against the chain with
+   `scripts/fetch-intents-fixture.sh`) next to the vault. The vault asks the
+   MPC signer for its derived key and registers it on `intents.near` with
+   predecessor auth. The test then reads the key back from the real
+   contract, and refuses a second registration. The MPC signer in that test
+   is a stand-in that enforces the call convention; the real MPC network is
+   not used.
+
    The first run downloads the sandbox (needs `cargo-near`).
 4. **Run `cd spikes/r1-intents-signing && cargo run --release`.** You should
    see 6 PASS lines from live mainnet `simulate_intents`, a free view call
@@ -157,7 +167,7 @@ signing via MPC) is the next milestone.
 
 | Component | Role in Mandate | Status |
 |---|---|---|
-| **NEAR Intents** (`intents.near`) | holds the treasury; atomic `token_diff` settlement | ✅ verified via `simulate_intents` · 🛠 live trades |
+| **NEAR Intents** (`intents.near`) | holds the treasury; atomic `token_diff` settlement | ✅ verified via `simulate_intents` · ✅ key registration tested on the exact mainnet code in a sandbox · 🛠 live trades |
 | **Chain Signatures** (`v1.signer`, Ed25519) | gives the contract its own signing key | ✅ proven contract → MPC → Intents |
 | **OutLayer** (Intel TDX) | runs the agent with a pinned code hash; secrets sealed to that hash | 🛠 |
 | **NEAR AI Cloud** (Private TEE models only) | optional private inference with verifiable signatures | 🛠 |
@@ -170,7 +180,8 @@ signing via MPC) is the next milestone.
 - [x] Vault contract: mandate config, owner controls, unit and sandbox tests, CI
 - [x] **R1 proven**: the contract is sole signer via MPC, accepted by mainnet Intents
 - [x] Per-trade mandate engine (exact math, property-tested) and intent builder (V1 expirable nonces), accepted by mainnet `intents.near`
-- [ ] MPC sign flow in the vault + `add_public_key` on `intents.near`
+- [x] Vault registers its MPC-derived key on the real `intents.near` code (sandbox, MPC stand-in)
+- [ ] MPC sign call from the vault, with live balances and oracle prices
 - [ ] Oracle integration with a staleness bound
 - [ ] OutLayer agent (Rust → `wasm32-wasip2`) with yield/resume decision flow
 - [ ] Keeper + solver-relay publishing

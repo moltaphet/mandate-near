@@ -44,9 +44,10 @@ async fn create_account(
     sandbox: &near_sandbox::Sandbox,
     name: &str,
 ) -> testresult::TestResult<AccountId> {
-    let id: AccountId = name.parse()?;
-    sandbox.create_account(id.clone()).initial_balance(NearToken::from_near(10)).send().await?;
-    Ok(id)
+    // near-sandbox takes near-sdk's account id type; near-api has its own, so convert via the string.
+    let sandbox_id: near_sdk::AccountId = name.parse()?;
+    sandbox.create_account(sandbox_id).initial_balance(NearToken::from_near(10)).send().await?;
+    Ok(name.parse()?)
 }
 
 async fn setup() -> testresult::TestResult<Env> {

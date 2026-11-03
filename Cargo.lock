@@ -1997,6 +1997,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "mock-externals"
+version = "0.1.0"
+dependencies = [
+ "near-sdk",
+]
+
+[[package]]
 name = "multiversion_no_op"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2318,15 +2325,15 @@ dependencies = [
 
 [[package]]
 name = "near-sandbox"
-version = "0.3.16"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "270e57929e108db8cb9d06fdee198f2f37952814cd9f59b42d40c66207ccd096"
+checksum = "b1c4ffad7477635db2e0e70cf8c886348c2100dc0440a3c2e833f0f85ab14002"
 dependencies = [
  "flate2",
  "fs4",
  "json-patch",
  "libc",
- "near-account-id 2.6.0",
+ "near-account-id 3.0.0",
  "near-token",
  "serde",
  "serde_json",
