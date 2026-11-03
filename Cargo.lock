@@ -1946,6 +1946,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "mandate-agent"
+version = "0.1.0"
+dependencies = [
+ "near-api",
+ "near-sdk",
+ "serde",
+ "sha2 0.10.9",
+ "tokio",
+]
+
+[[package]]
 name = "mandate-keeper"
 version = "0.1.0"
 dependencies = [
@@ -1961,6 +1972,7 @@ dependencies = [
  "bs58 0.5.1",
  "cargo-near-build",
  "chrono",
+ "mandate-agent",
  "mandate-keeper",
  "near-api",
  "near-sandbox",
