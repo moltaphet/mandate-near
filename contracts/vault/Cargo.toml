@@ -27,8 +27,9 @@ uint.workspace = true
 bs58 = "0.5"
 
 [dev-dependencies]
-# The keeper drives the vault in tests; it is not a runtime dependency.
+# The keeper and the agent drive the vault in tests; they are not runtime dependencies.
 mandate-keeper = { path = "../../keeper" }
+mandate-agent = { path = "../../agent" }
 near-sdk = { workspace = true, features = ["unit-testing"] }
 proptest.workspace = true
 chrono.workspace = true
