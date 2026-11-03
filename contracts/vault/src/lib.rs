@@ -21,6 +21,7 @@ pub mod engine;
 pub mod intent;
 pub mod mandate;
 pub mod math;
+pub mod oracle;
 
 use near_sdk::json_types::{U64, U128};
 use near_sdk::serde_json::json;
