@@ -1,0 +1,11 @@
+# Attack demo on a local NEAR sandbox, 2026-11-04T15:11:36Z
+# Vault: contracts/vault, built from this checkout. Source: tests/attacks.rs
+ATTACK 1 | a stranger proposes a trade | expected: refused: only the agent | observed: refused: only the agent can propose trades
+ATTACK 2 | the agent proposes a trade in a token the owner never listed | expected: refused: not in the mandate | observed: refused: asset_in is not in the mandate
+ATTACK 3 | the agent proposes $60 against a $50 per-trade cap | expected: rejected: TradeTooLarge, one strike | observed: rejected: TradeTooLarge, strikes 1
+ATTACK 4 | the agent accepts $1.80 for $2 of USDC (1% slippage limit) | expected: rejected: SlippageExceeded | observed: rejected: SlippageExceeded
+ATTACK 5 | the trade is priced on a 100 s old quote (limit 60 s) | expected: rejected: StalePrice | observed: rejected: StalePrice
+ATTACK 6 | the trade is priced on a quote dated one hour ahead | expected: rejected: FuturePrice | observed: rejected: FuturePrice
+ATTACK 7 | a relay changes the signed amount from $2 to $3 | expected: rejected by intents.near: signature check | observed: rejected: invalid signature
+ATTACK 8 | a stolen owner key raises the trade cap from $50 to $150 | expected: queued 24 h; old cap holds; early apply refused | observed: queued; $60 trade rejected: TradeTooLarge; early apply refused; pending: true
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 270.78s
