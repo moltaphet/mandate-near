@@ -128,6 +128,18 @@ pub struct PendingMandate {
     pub effective_sec: u64,
 }
 
+/// How long a change of agent waits before it applies. The same delay as a loosened mandate.
+pub const AGENT_DELAY_SEC: u64 = MANDATE_DELAY_SEC;
+
+/// A new agent waiting for its delay to pass.
+#[near(serializers = [json, borsh])]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PendingAgent {
+    pub agent: AccountId,
+    /// Unix seconds from which `apply_pending_agent` may apply it.
+    pub effective_sec: u64,
+}
+
 /// What `set_mandate` did with the new mandate.
 #[near(serializers = [json])]
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -185,6 +197,8 @@ pub struct Vault {
     signed_intent: Option<SignedIntent>,
     /// A loosened mandate waiting for its delay. At most one.
     pending_mandate: Option<PendingMandate>,
+    /// A new agent waiting for its delay. At most one. The current agent keeps its rights.
+    pending_agent: Option<PendingAgent>,
 }
 
 #[near]
@@ -407,11 +421,46 @@ impl Vault {
     }
 
     /// Sets the only account allowed to propose trades. Requires 1 yoctoNEAR.
+    ///
+    /// The first agent applies at once: no agent can propose before it is set. Any later
+    /// change is queued for `AGENT_DELAY_SEC` and replaces an earlier queued change. The
+    /// current agent keeps its rights meanwhile. The owner can cancel the change, or pause
+    /// the vault at once.
     #[payable]
     pub fn set_agent(&mut self, agent: AccountId) {
         assert_one_yocto();
         self.assert_owner();
-        self.agent = Some(agent);
+        if self.agent.is_none() {
+            self.agent = Some(agent);
+            return;
+        }
+        let effective_sec = now_sec() + AGENT_DELAY_SEC;
+        self.pending_agent = Some(PendingAgent { agent, effective_sec });
+    }
+
+    /// Applies a queued agent change once its delay has passed. Anyone may call it: the owner
+    /// fixed the agent when it was queued, and only the time is checked here.
+    pub fn apply_pending_agent(&mut self) {
+        let Some(pending) = self.pending_agent.clone() else {
+            env::panic_str("no agent change is queued");
+        };
+        require!(now_sec() >= pending.effective_sec, "the agent change is still in its delay");
+        self.agent = Some(pending.agent);
+        self.pending_agent = None;
+    }
+
+    /// Drops a queued agent change before it applies. Requires 1 yoctoNEAR.
+    #[payable]
+    pub fn cancel_pending_agent(&mut self) {
+        assert_one_yocto();
+        self.assert_owner();
+        require!(self.pending_agent.is_some(), "no agent change is queued");
+        self.pending_agent = None;
+    }
+
+    /// The queued agent change, if any.
+    pub fn get_pending_agent(&self) -> Option<PendingAgent> {
+        self.pending_agent.clone()
     }
 
     /// The agent submits a trade. Only high-level parameters are accepted;
@@ -771,6 +820,7 @@ impl Vault {
             in_flight: false,
             signed_intent: None,
             pending_mandate: None,
+            pending_agent: None,
         }
     }
 
@@ -1084,6 +1134,87 @@ mod tests {
     fn owner_sets_agent_with_one_yocto() {
         let v = vault_with_agent();
         assert_eq!(v.get_agent(), Some(accounts(3)));
+        assert_eq!(v.get_pending_agent(), None);
+    }
+
+    #[test]
+    #[should_panic(expected = "only the owner can call this method")]
+    fn set_agent_rejects_non_owner() {
+        let mut v = vault_with_agent();
+        context_at(accounts(2), 1, T0);
+        v.set_agent(accounts(4));
+    }
+
+    #[test]
+    fn a_later_agent_waits_and_the_old_agent_keeps_its_rights() {
+        let mut v = vault_with_agent();
+        context_at(accounts(1), 1, T0);
+        v.set_agent(accounts(4));
+        assert_eq!(v.get_agent(), Some(accounts(3)));
+        assert_eq!(
+            v.get_pending_agent(),
+            Some(PendingAgent { agent: accounts(4), effective_sec: T0 + AGENT_DELAY_SEC })
+        );
+
+        context_at(accounts(3), 0, T0 + 1);
+        propose(&mut v);
+        assert!(v.get_pending_proposal().is_some());
+    }
+
+    #[test]
+    fn a_second_queued_agent_replaces_the_first() {
+        let mut v = vault_with_agent();
+        context_at(accounts(1), 1, T0);
+        v.set_agent(accounts(4));
+        v.set_agent(accounts(5));
+        assert_eq!(v.get_pending_agent().map(|p| p.agent), Some(accounts(5)));
+    }
+
+    #[test]
+    #[should_panic(expected = "the agent change is still in its delay")]
+    fn a_queued_agent_does_not_apply_early() {
+        let mut v = vault_with_agent();
+        context_at(accounts(1), 1, T0);
+        v.set_agent(accounts(4));
+        context_at(accounts(2), 0, T0 + AGENT_DELAY_SEC - 1);
+        v.apply_pending_agent();
+    }
+
+    #[test]
+    fn a_queued_agent_applies_after_the_delay() {
+        let mut v = vault_with_agent();
+        context_at(accounts(1), 1, T0);
+        v.set_agent(accounts(4));
+        context_at(accounts(2), 0, T0 + AGENT_DELAY_SEC);
+        v.apply_pending_agent();
+        assert_eq!(v.get_agent(), Some(accounts(4)));
+        assert_eq!(v.get_pending_agent(), None);
+    }
+
+    #[test]
+    fn a_queued_agent_can_be_cancelled() {
+        let mut v = vault_with_agent();
+        context_at(accounts(1), 1, T0);
+        v.set_agent(accounts(4));
+        v.cancel_pending_agent();
+        assert_eq!(v.get_pending_agent(), None);
+        assert_eq!(v.get_agent(), Some(accounts(3)));
+    }
+
+    #[test]
+    #[should_panic(expected = "no agent change is queued")]
+    fn cancel_without_a_queued_agent_panics() {
+        let mut v = vault_with_agent();
+        context_at(accounts(1), 1, T0);
+        v.cancel_pending_agent();
+    }
+
+    #[test]
+    #[should_panic(expected = "no agent change is queued")]
+    fn apply_without_a_queued_agent_panics() {
+        let mut v = vault_with_agent();
+        context_at(accounts(2), 0, T0 + AGENT_DELAY_SEC);
+        v.apply_pending_agent();
     }
 
     #[test]

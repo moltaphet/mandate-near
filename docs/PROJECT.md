@@ -161,6 +161,10 @@ Status: gates 1–9 are built and tested at the engine level. On-chain wiring [P
 | `set_mandate` (tightening) | owner | 1 yocto | Applies immediately |
 | `set_mandate` (loosening) | owner | 1 yocto | Queued; applies after 24 hours; can be cancelled by owner |
 | `cancel_pending_mandate` | owner | 1 yocto | Cancels a queued change |
+| `set_agent` (first agent) | owner | 1 yocto | Applies immediately. No agent can propose before it is set |
+| `set_agent` (later agent) | owner | 1 yocto | Queued; applies after 24 hours; the current agent keeps its rights meanwhile; can be cancelled by owner |
+| `apply_pending_agent` | anyone | none | Applies a queued agent once its delay has passed |
+| `cancel_pending_agent` | owner | 1 yocto | Cancels a queued agent change |
 | `pause` | owner | none | Stops all new executions immediately |
 | `unpause` | owner | 1 yocto | Resumes execution |
 | `simulate_mandate_change` | anyone (view) | none | Reports whether a mandate is valid, which fields it loosens, and whether `set_mandate` would apply it now or queue it. Changes nothing |
@@ -170,7 +174,7 @@ Status: gates 1–9 are built and tested at the engine level. On-chain wiring [P
 
 **Why these rules.** Tightening should be instant, since it reduces risk. Loosening needs a delay, so a compromised owner key cannot raise limits and drain the vault in one step. The owner can cancel a queued change, and the pause switch always works.
 
-Status: built and sandbox-tested: `set_mandate` with the 24 h delay, `apply_pending_mandate`, `cancel_pending_mandate`, `simulate_mandate_change`, `pause`, `unpause`, `set_agent`. Also tested on testnet, where a loosening was queued and cancelled (see [docs/TESTNET.md](TESTNET.md)). `withdraw` is [PLANNED].
+Status: built and sandbox-tested: `set_mandate` with the 24 h delay, `apply_pending_mandate`, `cancel_pending_mandate`, `simulate_mandate_change`, `pause`, `unpause`, `set_agent` with the 24 h delay for a later agent, `apply_pending_agent`, `cancel_pending_agent`. Also tested on testnet, where a loosening was queued and cancelled (see [docs/TESTNET.md](TESTNET.md)). `withdraw` is [PLANNED].
 
 ## 10. Owner identity
 

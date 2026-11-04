@@ -37,7 +37,7 @@ Each finding has an ID so the threat model and the code can refer to it.
 | SR-2 | Low | `src/lib.rs`, `propose` | `propose` did not check the in-flight lock. A proposal made while an execution was in flight could be dropped when that execution finished, because `on_signed` and `reject` clear `pending`. | **Fixed.** `propose` refuses while an execution is in flight. Unit test `a_proposal_waits_for_the_execution_in_flight`. |
 | SR-3 | Medium (liveness, not verified) | `src/lib.rs`, `on_price_data` | The execute chain reads one price feed per held or traded asset, and the mandate allows up to 32 assets. The gas needed at that size has not been measured. If it is more than one transaction can carry, `execute` fails inside a callback, and SR-1 applies. | **Open.** Measure with 16 and 32 feeds on the sandbox. If needed, lower `MAX_ASSETS`. |
 | SR-4 | Info | `src/lib.rs`, `execute` | `execute` is permissionless, so a stranger can choose the moment a closing gate becomes a strike. Three strikes halt proposals until the owner calls `resume_proposals`. | **Accepted.** Availability only. |
-| SR-5 | Info | `src/lib.rs`, `set_agent` | `set_agent` takes effect at once. A stolen owner key can point the vault at a new agent. Trades still pass every gate. | **Open.** Add the same delay as loosening, or move ownership to a DAO or multisig before real funds. |
+| SR-5 | Info | `src/lib.rs`, `set_agent` | A later `set_agent` took effect at once. A stolen owner key could point the vault at a new agent. Trades still pass every gate. | **Fixed.** A later agent is queued for `AGENT_DELAY_SEC` (24 h), like a loosened mandate. The current agent keeps its rights meanwhile, and `cancel_pending_agent` drops the change. The first agent applies at once, since no agent can propose before it is set. Tests: `a_new_agent_waits_24_hours_on_a_real_chain` (sandbox) and the `set_agent` unit tests in `lib.rs`. A DAO or multisig owner is still recommended before real funds. |
 | SR-6 | Info (blocker for real funds) | whole contract | There is no withdraw path. Owner funds can be traded, not recovered. | **Planned.** Withdraw needs its own signed intent and its own gates. |
 | SR-7 | Info | `src/oracle.rs`, `src/engine.rs` | The vault trusts `price-oracle.near` for correctness. Freshness, slippage and size limits bound the damage from a wrong price. | **Accepted.** See [THREAT_MODEL.md](THREAT_MODEL.md#t6-oracle-wrong-manipulated-or-stale). |
 | SR-8 | Info | `pause`, `propose` | `pause` and `propose` take no 1 yoctoNEAR, so a function-call key can call them. This is deliberate: a kill switch must work at once, and the agent's key should be a function-call key. | **Accepted by design.** |
@@ -51,7 +51,7 @@ Each finding has an ID so the threat model and the code can refer to it.
 | `reentrancy` | Pass. `execute` sets the in-flight lock before its first cross-contract call. The trading state changes only in the final callback. |
 | `incorrect-argument-or-return-types` | Pass. Token amounts cross the JSON boundary as `U128`; ids and nonces as `U64`. Timestamps are seconds, far below 2^53. |
 | `unsaved-changes` | Not applicable. The contract uses no `near_sdk::store` collections. |
-| `owner-check` | Pass. `set_mandate`, `cancel_pending_mandate`, `set_agent`, `resume_proposals`, `pause` and `unpause` call `assert_owner`. `apply_pending_mandate` and `register_intents_key` are permissionless by design. |
+| `owner-check` | Pass. `set_mandate`, `cancel_pending_mandate`, `set_agent`, `cancel_pending_agent`, `resume_proposals`, `pause` and `unpause` call `assert_owner`. `apply_pending_mandate` and `register_intents_key` are permissionless by design. |
 | `yocto-attach` | Pass with two deliberate exceptions, SR-8: `pause` and `propose`. |
 | `storage-collision` | Not applicable. |
 | `required-initialization-macro` | Pass. `new` and `new_with_externals` are `#[init]`. |
@@ -71,5 +71,5 @@ A short checklist, since the code alone does not enforce these:
 3. Compare the deployed code hash with a local build of the tagged commit
    (NEP-330 metadata names the repo).
 4. Check `get_externals` shows the mainnet signer, intents and oracle.
-5. Make the owner a multisig or DAO, or accept SR-5 in writing.
+5. Make the owner a multisig or DAO, or accept the owner-key risk in writing.
 6. Resolve or accept SR-1, SR-3 and SR-6.
