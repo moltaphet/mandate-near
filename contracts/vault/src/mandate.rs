@@ -16,8 +16,10 @@ pub const BPS_DENOMINATOR: u16 = 10_000;
 pub const MAX_SLIPPAGE_BPS_CAP: u16 = 500;
 /// Hard ceiling on accepted oracle price age.
 pub const MAX_PRICE_AGE_SEC_CAP: u32 = 300;
-/// Bounds per-trade loops over the universe and the mandate's storage cost.
-pub const MAX_ASSETS: usize = 32;
+/// Bounds per-trade loops over the universe and the mandate's storage cost. It also bounds the
+/// execute chain's gas: one price feed per asset, each reserved at 8 TGas. 22 assets passed on
+/// the sandbox and 24 failed, so 20 leaves a margin. See docs/evidence/gas-limit.txt (SECURITY SR-3).
+pub const MAX_ASSETS: usize = 20;
 /// Token decimals above this are rejected; keeps USD math inside 256 bits.
 pub const MAX_DECIMALS: u8 = 30;
 const MAX_PRICE_FEED_ID_LEN: usize = 128;

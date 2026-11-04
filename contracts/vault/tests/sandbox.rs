@@ -172,3 +172,34 @@ async fn owner_controls_on_a_real_chain() -> testresult::TestResult<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn a_new_agent_waits_24_hours_on_a_real_chain() -> testresult::TestResult<()> {
+    let env = setup().await?;
+    let (owner, stranger) = (env.owner.clone(), env.stranger.clone());
+    let replacement = create_account(&env._sandbox, "replacement.sandbox").await?;
+
+    // The first agent applies at once: no agent can propose before it is set.
+    assert_eq!(env.view("get_agent").await, json!(null));
+    assert!(!env.call(&stranger, "set_agent", json!({ "agent": stranger }), 1).await);
+    assert!(env.call(&owner, "set_agent", json!({ "agent": stranger }), 1).await);
+    assert_eq!(env.view("get_agent").await, json!(stranger));
+    assert_eq!(env.view("get_pending_agent").await, json!(null));
+
+    // A later agent is queued. The current agent keeps its rights.
+    assert!(!env.call(&owner, "set_agent", json!({ "agent": replacement }), 0).await);
+    assert!(env.call(&owner, "set_agent", json!({ "agent": replacement }), 1).await);
+    let queued = env.view("get_pending_agent").await;
+    assert_eq!(queued["agent"], json!(replacement), "{queued}");
+    assert_eq!(env.view("get_agent").await, json!(stranger), "old agent holds during the delay");
+
+    // Applying before the delay is refused; a stranger's cancel is refused; the owner can cancel.
+    assert!(!env.call(&stranger, "apply_pending_agent", json!({}), 0).await);
+    assert!(!env.call(&stranger, "cancel_pending_agent", json!({}), 1).await);
+    assert!(!env.call(&owner, "apply_pending_agent", json!({}), 0).await);
+    assert!(env.call(&owner, "cancel_pending_agent", json!({}), 1).await);
+    assert_eq!(env.view("get_pending_agent").await, json!(null));
+    assert_eq!(env.view("get_agent").await, json!(stranger));
+
+    Ok(())
+}

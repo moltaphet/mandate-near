@@ -18,7 +18,7 @@ on reading, not on a run.
 | Mandate (the rules) | vault state | Owner: tightening at once; loosening after a 24 h delay |
 | Signing authority | MPC key derived for the vault account (`v1.signer`) | Only the vault contract, through `sign` |
 | Owner key | a NEAR full-access key held by the owner | Owner (see T3) |
-| Agent key | an account the owner names with `set_agent` | Can propose only (see T2) |
+| Agent key | an account the owner names with `set_agent`; a later change waits 24 h | Can propose only (see T2) |
 
 There is **no withdraw path yet** (planned). Funds in the vault can change
 form through mandate-approved trades but cannot leave by an owner call. See SR-6.
@@ -82,15 +82,22 @@ This is the most serious owner-side threat, because the owner key controls the r
 **Tests.** Attack 8 (a $150 cap queued, the $60 trade still refused, early apply
 refused); unit tests in `lib.rs` for the queue rules.
 
+**Mechanism for the agent.** A later change of agent is queued for 24 h
+(`set_agent`, `apply_pending_agent`, `cancel_pending_agent`). The first agent
+applies at once, since no agent can propose before it is set. The current agent
+keeps its rights during the delay, and `pause` stops execution at once.
+Tests: `a_new_agent_waits_24_hours_on_a_real_chain` in `tests/sandbox.rs`, and
+the `set_agent` unit tests in `lib.rs`. SR-5 is fixed.
+
 **Residual.**
-- `set_agent` takes effect at once and has no delay. A stolen owner key can
-  point the vault at an attacker-controlled agent. Gates still apply, so the
-  damage is limited to mandate-approved trades, but the key is still the most
-  powerful one. SR-5.
+- A stolen owner key can still pause the vault, and can still queue a new
+  agent. The agent then takes over after 24 h unless the owner cancels, so the
+  owner has one day to notice. Gates still apply, so the damage is limited to
+  mandate-approved trades.
 - The owner can tighten a mandate to a point that stops all trading. That is a
   liveness loss, not a theft.
-- Recommended before real funds: a DAO or multisig as owner, and a delay on
-  `set_agent`. The DAO test is planned, not built.
+- Recommended before real funds: a DAO or multisig as owner. The DAO test is
+  planned, not built.
 
 ### T4. Strike griefing by a stranger
 
@@ -187,11 +194,16 @@ compare its hash.
 ### T12. Gas exhaustion of `execute`
 
 **Mechanism.** The execute chain makes one read per held or traded feed. The
-mandate caps assets at `MAX_ASSETS` (32).
+mandate caps assets at `MAX_ASSETS` (20).
 
-**Residual (not verified).** The gas needed for 32 feeds has not been measured.
-If it exceeds what one transaction can carry, `execute` fails in a callback,
-which leaves the lock set (SR-1, SR-3). Measurement is planned.
+**Measured.** On the sandbox, 22 feeds pass and 24 and 32 fail with
+`Exceeded the prepaid gas` ([docs/evidence/gas-limit.txt](docs/evidence/gas-limit.txt)).
+The cap is set below the largest size that passed.
+
+**Residual.** A failing `execute` leaves the lock set, so the vault stops
+executing (SR-1). The cap keeps the chain inside the measured limit, but a
+future change to a callback's gas or the oracle's answer size could move it.
+Re-measure after any such change.
 
 ## Out of scope
 

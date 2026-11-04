@@ -1,0 +1,11 @@
+# Execute gas by feed count, local NEAR sandbox, 2026-11-04
+# One feed per asset: every asset is held, so the execute chain reads each price feed.
+# Total assets are wNEAR, USDC and the extras. 22 passed on this run; 24 and 32 failed with 'Exceeded the prepaid gas'.
+# MAX_ASSETS was then set to 20, two below the largest size that passed. A mandate above it is refused at deploy.
+GAS | execute, every gate passes, MPC sign (16 feeds read) | 59.41 TGas
+GAS | execute, every gate passes (24 feeds read) | FAILED: Exceeded the prepaid gas.
+GAS | a second execute after that failure | refused: Smart contract panicked: an execution is already in progress
+GAS | execute, every gate passes (32 feeds read) | FAILED: Exceeded the prepaid gas.
+GAS | execute, every gate passes, MPC sign (18 feeds read) | 63.77 TGas
+GAS | execute, every gate passes, MPC sign (20 feeds read) | 68.11 TGas
+GAS | execute, every gate passes, MPC sign (22 feeds read) | 72.51 TGas

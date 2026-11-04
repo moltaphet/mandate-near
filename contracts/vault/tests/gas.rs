@@ -5,7 +5,10 @@
 
 mod common;
 
-use common::{REASON, USDC, WNEAR, World, fund_vault, mandate, now_sec, set_prices, world};
+use common::{
+    REASON, USDC, WNEAR, World, fund_extra_assets, fund_vault, mandate, now_sec, set_prices, world,
+    world_with_extra,
+};
 use near_api::{AccountId, NearGas, NearToken};
 use near_sdk::serde_json::{Value, json};
 
@@ -80,5 +83,81 @@ async fn gas_per_call() -> testresult::TestResult<()> {
     record("pause", burnt);
     let (_, burnt) = call(&w, "unpause", json!({}), &owner, 1).await?;
     record("unpause", burnt);
+    Ok(())
+}
+
+/// One `execute` from the stranger. The outer error is a sandbox failure; the inner error
+/// is the vault's answer, shortened to the message that says why.
+async fn execute_once(w: &World) -> testresult::TestResult<Result<(Value, f64), String>> {
+    let result = w
+        .vault
+        .call_function("execute", json!({}))
+        .transaction()
+        .gas(NearGas::from_tgas(300))
+        .with_signer(w.stranger.clone(), w.signer.clone())
+        .send_to(&w.network)
+        .await?
+        .into_result();
+    Ok(match result {
+        Ok(success) => {
+            let burnt = success.total_gas_burnt.as_gas() as f64 / 1e12;
+            Ok((success.json::<Value>().unwrap_or(Value::Null), burnt))
+        }
+        Err(e) => Err(short_reason(&format!("{e:?}"))),
+    })
+}
+
+/// The quoted message from a failure, or the start of the failure if it has none.
+fn short_reason(debug: &str) -> String {
+    let quoted = debug.split("ExecutionError(\"").nth(1).and_then(|rest| rest.split('"').next());
+    quoted.unwrap_or(debug).chars().take(120).collect()
+}
+
+/// `execute` as the number of feeds it reads grows. Every asset is held, so the chain
+/// reads one price feed per asset. Each size runs on its own sandbox, because the mandate
+/// is fixed at deploy. A failure is recorded, not hidden: it is the answer to SR-3.
+#[tokio::test]
+async fn gas_by_feed_count() -> testresult::TestResult<()> {
+    // Total assets: 16 and 20, the most the mandate allows (MAX_ASSETS), with wNEAR and USDC among them.
+    for extra in [14, 18] {
+        let w = world_with_extra(extra).await?;
+        let (agent, stranger) = (w.agent.clone(), w.stranger.clone());
+        let feeds = 2 + extra;
+
+        call(&w, "register_intents_key", json!({}), &stranger, 0).await?;
+        fund_vault(&w, 10_000_000).await?;
+        fund_extra_assets(&w, 1_000_000).await?;
+        set_prices(&w, now_sec()).await?;
+
+        let proposal = json!({
+            "asset_in": USDC,
+            "asset_out": WNEAR,
+            "amount_in": "2000000",
+            "min_amount_out": "450000000000000000000000",
+            "reason_hash": REASON,
+        });
+        call(&w, "propose", proposal, &agent, 0).await?;
+        match execute_once(&w).await? {
+            Ok((outcome, burnt)) => {
+                assert!(outcome.get("Executed").is_some(), "{outcome}");
+                record(
+                    &format!("execute, every gate passes, MPC sign ({feeds} feeds read)"),
+                    burnt,
+                );
+            }
+            Err(reason) => {
+                println!(
+                    "GAS | execute, every gate passes ({feeds} feeds read) | FAILED: {reason}"
+                );
+                // The failed run left the in-flight lock set (SR-1): does the next execute run?
+                match execute_once(&w).await? {
+                    Ok(_) => println!("GAS | a second execute after that failure | ran"),
+                    Err(again) => {
+                        println!("GAS | a second execute after that failure | refused: {again}")
+                    }
+                }
+            }
+        }
+    }
     Ok(())
 }
