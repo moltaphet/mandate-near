@@ -68,7 +68,7 @@ TX-1  keeper → vault.request_decision()          (permissionless, rate-limited
                         {pair, amount_in, min_amount_out, quote_hash, reason_hash}
         vault.on_decision(): store Proposal{id, …, expires_at}
 
-TX-2  keeper → vault.execute_proposal(id)
+TX-2  keeper → vault.execute(id)
         vault → intents.near.mt_batch_balance_of(vault.near, assets)         [V]
         vault → price-oracle.near (fresh price, fail closed on staleness)    [V docs]
         vault: Mandate::check(proposal, balances, prices, state) → Ok | Err(reason)
@@ -90,14 +90,14 @@ amounts, deadline and nonce. `token_diff` guarantees we receive at least
 
 | Rule | Check location |
 |---|---|
-| Asset allowlist (in and out) | `execute_proposal` |
+| Asset allowlist (in and out) | `execute` |
 | Max notional per trade (USD) | oracle price × amount |
 | Max position weight after trade | balances + prices |
 | Min-out ≥ oracle value × (1 − max_slippage_bps) | blocks bad quotes and oracle-vs-quote divergence |
 | Daily turnover cap, min cooldown between trades | vault state |
 | Drawdown circuit breaker: NAV < HWM × (1 − max_dd) ⇒ only de-risk trades (into stable) allowed | vault state |
 | **Single outstanding signed intent**: no new signature until the previous deadline has passed | prevents stacked exposure from unpublished signatures |
-| Oracle staleness bound; fail closed | `execute_proposal` |
+| Oracle staleness bound; fail closed | `execute` |
 | Owner kill switch; owner-only withdraw via `intents.near.ft_withdraw` (predecessor auth) **[V]** | owner methods |
 
 **Implemented (2026-10-31)** as the pure function `engine::check_trade`. It

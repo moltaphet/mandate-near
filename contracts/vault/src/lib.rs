@@ -426,6 +426,8 @@ impl Vault {
     ) -> U64 {
         self.assert_not_paused();
         require!(!self.halted, "proposals are halted by the circuit breaker");
+        // An execution in flight still owns the pending proposal: its callbacks clear it.
+        require!(!self.in_flight, "an execution is in progress; propose after it finishes");
         let agent = self.agent.clone().unwrap_or_else(|| env::panic_str("no agent is configured"));
         require!(env::predecessor_account_id() == agent, "only the agent can propose trades");
 
@@ -1097,6 +1099,15 @@ mod tests {
     fn propose_rejects_non_agent() {
         let mut v = vault_with_agent();
         context(accounts(2), 0);
+        propose(&mut v);
+    }
+
+    #[test]
+    #[should_panic(expected = "an execution is in progress")]
+    fn a_proposal_waits_for_the_execution_in_flight() {
+        let mut v = vault_with_agent();
+        context(accounts(3), 0);
+        v.in_flight = true;
         propose(&mut v);
     }
 

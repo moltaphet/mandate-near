@@ -97,21 +97,21 @@ Components:
 
 ## 7. Trade lifecycle
 
-Two transactions by design, because one would exceed the gas budget once oracle reads, balance reads and the MPC call are combined. [PLANNED for the on-chain wiring; the gate engine and intent builder are built.]
+Two transactions by design, because one would exceed the gas budget once oracle reads, balance reads and the MPC call are combined. [BUILT and sandbox-tested with a stand-in MPC signer. Not yet run on mainnet.]
 
 **Transaction 1, decision.**
 1. Agent runs in OutLayer (or as a script) and produces a proposal: pair, amount in, minimum out, a reason hash.
 2. The proposal is stored with an expiry. A new proposal cannot replace an unexecuted one before its expiry.
 
 **Transaction 2, execution.** Permissionless: any account can call it.
-1. Call `request_price_data` for each asset the trade touches or the vault holds.
+1. Read the vault's balances, then the price and publish time of each asset the trade touches or the vault holds (`get_price_data` and `get_asset`).
 2. Read prices. Any missing or stale price is a `MissingPrice` or `StalePrice` rejection. The contract fails closed.
 3. Read vault balances on `intents.near`.
 4. Run the nine gates in fixed order (section 8). The first closed gate rejects with a named code.
 5. If all pass, build the `token_diff` payload and V1 nonce with the live salt.
 6. Call `v1.signer.sign` with the EdDSA payload, attaching the required deposit and gas.
 7. Store the signed intent and update trading state: last trade time, daily turnover, high-water mark, intent expiry.
-8. Emit an event with the intent hash, mandate version, and result.
+8. [PLANNED] Emit an event with the intent hash, mandate version, and result. The contract emits no events yet; the result is in the transaction's return value and the stored state.
 
 **Off-chain publication.** A solver or keeper publishes the signed intent to the solver relay. The solver settles atomically; `token_diff` guarantees at least the signed minimum or nothing.
 
@@ -160,17 +160,17 @@ Status: gates 1–9 are built and tested at the engine level. On-chain wiring [P
 |---|---|---|---|
 | `set_mandate` (tightening) | owner | 1 yocto | Applies immediately |
 | `set_mandate` (loosening) | owner | 1 yocto | Queued; applies after 24 hours; can be cancelled by owner |
-| `cancel_mandate_change` | owner | 1 yocto | Cancels a queued change |
+| `cancel_pending_mandate` | owner | 1 yocto | Cancels a queued change |
 | `pause` | owner | none | Stops all new executions immediately |
 | `unpause` | owner | 1 yocto | Resumes execution |
-| `simulate` | anyone (view) | none | Runs the gates on a proposal against current state and returns the first failing gate, or approval, without changing state |
-| `withdraw` | owner | 1 yocto | Withdraws via `intents.near` predecessor auth |
+| `simulate_mandate_change` | anyone (view) | none | Reports whether a mandate is valid, which fields it loosens, and whether `set_mandate` would apply it now or queue it. Changes nothing |
+| `withdraw` [PLANNED] | owner | 1 yocto | Withdraws via `intents.near` predecessor auth. Not built: there is no way to take funds out of the vault yet |
 
 **Definition of loosening.** A change is loosening if it increases `max_trade_usd`, `max_daily_turnover_usd`, `max_position_bps`, `max_slippage_bps`, or `max_drawdown_bps`, decreases `min_trade_interval_sec` or `max_price_age_sec`, adds an asset, or moves an asset from non-stable to stable (which would relax the drawdown rule). Any change that is not loosening applies immediately. A change that mixes both directions is treated as loosening.
 
 **Why these rules.** Tightening should be instant, since it reduces risk. Loosening needs a delay, so a compromised owner key cannot raise limits and drain the vault in one step. The owner can cancel a queued change, and the pause switch always works.
 
-Status: owner controls for set, pause and unpause are built and sandbox-tested. The delay, `simulate` and `withdraw` are [PLANNED].
+Status: built and sandbox-tested: `set_mandate` with the 24 h delay, `apply_pending_mandate`, `cancel_pending_mandate`, `simulate_mandate_change`, `pause`, `unpause`, `set_agent`. Also tested on testnet, where a loosening was queued and cancelled (see [docs/TESTNET.md](TESTNET.md)). `withdraw` is [PLANNED].
 
 ## 10. Owner identity
 
@@ -182,10 +182,10 @@ The contract must not assume the owner is an individual. [PLANNED: one sandbox t
 
 ## 11. Oracle policy
 
-- Prices are requested immediately before a trade with `request_price_data`, then read.
+- Prices are requested immediately before a trade with `get_price_data`, then read.
 - The contract accepts a price only if its publish time is within `max_price_age_sec`.
 - A zero price, an exponent above zero, or an exponent below −30 is a valuation error, never a panic.
-- Current state, observed on mainnet: `price-oracle.near` returns `null` for `wrap.near` and for the USDC asset id in `get_price_data`. The feed must be requested and confirmed working before any trade. If it still returns no price, trading stays off and the evidence says so.
+- Current state, observed on mainnet on 2026-10-31: `price-oracle.near` returns `null` for `wrap.near` and for the USDC asset id in `get_price_data`. The feed must be confirmed working before any trade. If it still returns no price, trading stays off and the evidence says so. The contract's own gate fails closed on a missing or stale price (sandbox attacks 5 and 6).
 - Pyth no longer supports NEAR (per Pyth's own documentation), so it is not used.
 - As a second check, the solver quote is compared with the oracle value. [PLANNED]
 
@@ -197,21 +197,23 @@ The contract must not assume the owner is an individual. [PLANNED: one sandbox t
 - Secrets, if any, are bound to the wasm hash.
 - Outputs a proposal within the 900-byte result limit.
 
-### 12.2 Script agent [PLANNED]
-- A plain TypeScript process using the SDK, with no TEE.
+### 12.2 Script agent [BUILT, sandbox and testnet]
+- A plain Rust process (`agent/`), with no TEE. It proposes one trade, then reports the vault's decision.
+- Tests: `contracts/vault/tests/agent.rs` (sandbox). Testnet: the proposal reached the vault; execution failed closed for lack of a registered key (see [docs/TESTNET.md](TESTNET.md)).
 - Exists to prove the vault is agent-agnostic: any process can propose; only the contract decides.
 
 Acceptance for both: each agent makes the same proposals through the same SDK, and the vault treats them identically.
 
 ## 13. SDK [PLANNED]
 
-- Typed client over: `get_mandate`, `get_trading_state`, `simulate`, `propose`, `execute`, `cancel_proposal`, owner methods.
+- Today the agent and keeper crates are the reference clients. A separate SDK is not built.
+- Target surface: `get_mandate`, `get_trading_state`, `simulate_mandate_change`, `propose`, `execute`, owner methods.
 - Stable public interface. Breaking changes require a new contract version.
 - Target: a new agent integrates in under 100 lines and under 4 hours for a developer familiar with NEAR. Measured, not assumed.
 
-## 14. Keeper [PLANNED]
+## 14. Keeper [BUILT, sandbox-tested; the binary has not yet run against a live chain]
 
-- A permissionless script that watches for expired or pending proposals and calls `execute`.
+- A permissionless process (`keeper/`) that runs one tick per call: executes a pending proposal, or reports a signed intent to an outbox. After a failed tick it backs off, 5 s doubling up to 600 s.
 - Anyone can run it. The vault does not trust it.
 - If no keeper runs, no trade happens. This is a fail-safe, and is documented as such.
 
@@ -245,7 +247,7 @@ Every claim on the README or evidence site carries one status: [PROVEN], [TESTED
 | Re-initialisation | `#[init]` guard | — |
 | Stuck signed intent | Expiry; one outstanding intent at a time | Blocks new trades until expiry |
 
-A full threat model document is planned as a separate deliverable.
+The full threat model is in [THREAT_MODEL.md](../THREAT_MODEL.md). The self-review findings are in [SECURITY.md](../SECURITY.md).
 
 ## 18. Metrics we will publish
 

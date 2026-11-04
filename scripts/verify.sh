@@ -29,7 +29,7 @@ cargo test --workspace --lib
 
 if $integration; then
   step "Integration tests on a local NEAR sandbox (owner controls; key registration, execute, the keeper and the script agent on the real intents.near)"
-  cargo test -p mandate-vault --test sandbox --test intents_registration --test execute_path --test keeper --test agent
+  cargo test -p mandate-vault --test sandbox --test intents_registration --test execute_path --test keeper --test agent --test attacks
 fi
 
 printf '\nAll checks passed.\n'
