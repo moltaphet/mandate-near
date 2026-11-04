@@ -201,6 +201,47 @@ fn is_valid_price_feed_id(id: &str) -> bool {
         && id.bytes().all(|b| b.is_ascii_alphanumeric() || b"._:-".contains(&b))
 }
 
+/// The limits that `new` loosens compared with `old`, by field name.
+///
+/// A loosened field lets the vault do something it could not do before:
+/// a higher cap, a shorter cooldown, a longer price age, an asset that was not
+/// listed, a changed asset config, or a new stable asset. Anything else is a
+/// tightening (or no change). The owner applies a tightening at once; a
+/// loosening waits (see `MANDATE_DELAY_SEC`). Unknown changes count as loosening.
+pub fn loosened_fields(old: &Mandate, new: &Mandate) -> Vec<&'static str> {
+    let mut out = Vec::new();
+    if new.max_trade_usd.0 > old.max_trade_usd.0 {
+        out.push("max_trade_usd");
+    }
+    if new.max_daily_turnover_usd.0 > old.max_daily_turnover_usd.0 {
+        out.push("max_daily_turnover_usd");
+    }
+    if new.max_position_bps > old.max_position_bps {
+        out.push("max_position_bps");
+    }
+    if new.max_slippage_bps > old.max_slippage_bps {
+        out.push("max_slippage_bps");
+    }
+    if new.max_drawdown_bps > old.max_drawdown_bps {
+        out.push("max_drawdown_bps");
+    }
+    if new.min_trade_interval_sec < old.min_trade_interval_sec {
+        out.push("min_trade_interval_sec");
+    }
+    if new.max_price_age_sec > old.max_price_age_sec {
+        out.push("max_price_age_sec");
+    }
+    let listed = |id: &str| old.assets.iter().find(|a| a.asset_id == id);
+    let asset_loosened = new.assets.iter().any(|a| listed(&a.asset_id) != Some(a));
+    if asset_loosened {
+        out.push("assets");
+    }
+    if new.stable_assets.iter().any(|id| !old.stable_assets.contains(id)) {
+        out.push("stable_assets");
+    }
+    out
+}
+
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
@@ -229,6 +270,47 @@ pub(crate) mod tests {
             min_trade_interval_sec: 300,
             max_price_age_sec: 60,
         }
+    }
+
+    #[test]
+    fn loosened_fields_names_each_loosened_limit() {
+        let old = sample();
+        assert!(loosened_fields(&old, &old).is_empty());
+        assert_eq!(
+            loosened_fields(&old, &Mandate { max_trade_usd: U64(60_000_000), ..sample() }),
+            vec!["max_trade_usd"]
+        );
+        assert_eq!(
+            loosened_fields(&old, &Mandate { min_trade_interval_sec: 60, ..sample() }),
+            vec!["min_trade_interval_sec"]
+        );
+        assert!(
+            loosened_fields(&old, &Mandate { min_trade_interval_sec: 600, ..sample() }).is_empty()
+        );
+        assert!(loosened_fields(&old, &Mandate { max_slippage_bps: 50, ..sample() }).is_empty());
+    }
+
+    #[test]
+    fn adding_an_asset_or_a_stable_asset_is_loosening_and_removing_is_not() {
+        let old = sample();
+        let mut added = sample();
+        added.assets.push(asset("nep141:new.near", 18));
+        assert_eq!(loosened_fields(&old, &added), vec!["assets"]);
+
+        let mut removed = sample();
+        removed.assets.pop();
+        assert!(loosened_fields(&old, &removed).is_empty());
+
+        let stable = Mandate { stable_assets: vec![USDC.into(), WNEAR.into()], ..sample() };
+        assert_eq!(loosened_fields(&old, &stable), vec!["stable_assets"]);
+    }
+
+    #[test]
+    fn changing_an_existing_asset_config_counts_as_loosening() {
+        let old = sample();
+        let mut changed = sample();
+        changed.assets[0].price_feed_id = "other-feed".into();
+        assert_eq!(loosened_fields(&old, &changed), vec!["assets"]);
     }
 
     #[test]
