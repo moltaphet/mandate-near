@@ -38,7 +38,7 @@ use near_sdk::{
 use crate::engine::{Market, Trade, TradeError, check_trade};
 pub use crate::engine::{TradingState, TradingStateView};
 use crate::intent::{TokenDiff, token_diff_payload, v1_nonce};
-pub use crate::mandate::{AssetConfig, Mandate, MandateError};
+pub use crate::mandate::{AssetConfig, Mandate, MandateError, loosened_fields};
 use crate::oracle::{AssetView, PriceData, prices_for};
 
 /// How long a pending proposal stays executable. Matches the 60 s target in docs/PROJECT.md.
@@ -115,6 +115,42 @@ pub enum ExecutionOutcome {
     Failed { reason: String },
 }
 
+/// How long a loosening of the mandate waits before it applies. Tightening applies at once.
+/// The owner can cancel a queued change in this window.
+pub const MANDATE_DELAY_SEC: u64 = 24 * 60 * 60;
+
+/// A loosened mandate waiting for its delay to pass.
+#[near(serializers = [json, borsh])]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PendingMandate {
+    pub mandate: Mandate,
+    /// Unix seconds from which `apply_pending_mandate` may apply it.
+    pub effective_sec: u64,
+}
+
+/// What `set_mandate` did with the new mandate.
+#[near(serializers = [json])]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum MandateChangeOutcome {
+    /// Nothing loosened: the mandate is in force now.
+    Applied,
+    /// A limit was loosened: the mandate applies after `effective_sec`.
+    Queued { effective_sec: U64 },
+}
+
+/// What `simulate_mandate_change` would do. Changes nothing.
+#[near(serializers = [json])]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct MandateSimulation {
+    pub valid: bool,
+    /// Why the mandate is refused, when `valid` is false.
+    pub error: Option<String>,
+    /// The loosened fields. Empty means the change applies at once.
+    pub loosened_fields: Vec<String>,
+    /// `None` when the mandate is invalid.
+    pub outcome: Option<MandateChangeOutcome>,
+}
+
 /// `v1.signer` response: `{"scheme": "Ed25519", "signature": [64 bytes]}`.
 #[near(serializers = [json])]
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -147,6 +183,8 @@ pub struct Vault {
     in_flight: bool,
     /// The latest signed intent. Replaced by each approved trade.
     signed_intent: Option<SignedIntent>,
+    /// A loosened mandate waiting for its delay. At most one.
+    pending_mandate: Option<PendingMandate>,
 }
 
 #[near]
@@ -299,13 +337,73 @@ impl Vault {
         self.key_registered
     }
 
-    /// Requires 1 yoctoNEAR so a leaked function-call key cannot loosen rules.
+    /// Sets the mandate. Requires 1 yoctoNEAR so a leaked function-call key cannot change rules.
+    ///
+    /// A change that loosens any limit is queued for `MANDATE_DELAY_SEC` and replaces any
+    /// earlier queued change. A change that only tightens applies at once and drops any
+    /// queued change, which was written against the old limits.
     #[payable]
-    pub fn set_mandate(&mut self, mandate: Mandate) {
+    pub fn set_mandate(&mut self, mandate: Mandate) -> MandateChangeOutcome {
         assert_one_yocto();
         self.assert_owner();
         validate_or_panic(&mandate);
-        self.mandate = mandate;
+        if loosened_fields(&self.mandate, &mandate).is_empty() {
+            self.mandate = mandate;
+            self.pending_mandate = None;
+            return MandateChangeOutcome::Applied;
+        }
+        let effective_sec = now_sec() + MANDATE_DELAY_SEC;
+        self.pending_mandate = Some(PendingMandate { mandate, effective_sec });
+        MandateChangeOutcome::Queued { effective_sec: U64(effective_sec) }
+    }
+
+    /// Applies a queued loosening once its delay has passed. Anyone may call it: the owner
+    /// fixed the content when it was queued, and only the time is checked here.
+    pub fn apply_pending_mandate(&mut self) {
+        let Some(pending) = self.pending_mandate.clone() else {
+            env::panic_str("no mandate change is queued");
+        };
+        require!(now_sec() >= pending.effective_sec, "the mandate change is still in its delay");
+        self.mandate = pending.mandate;
+        self.pending_mandate = None;
+    }
+
+    /// Drops a queued loosening before it applies. Requires 1 yoctoNEAR.
+    #[payable]
+    pub fn cancel_pending_mandate(&mut self) {
+        assert_one_yocto();
+        self.assert_owner();
+        require!(self.pending_mandate.is_some(), "no mandate change is queued");
+        self.pending_mandate = None;
+    }
+
+    /// The queued loosening, if any.
+    pub fn get_pending_mandate(&self) -> Option<PendingMandate> {
+        self.pending_mandate.clone()
+    }
+
+    /// What `set_mandate` would do with this mandate, without doing it.
+    pub fn simulate_mandate_change(&self, mandate: Mandate) -> MandateSimulation {
+        if let Err(err) = mandate.validate() {
+            return MandateSimulation {
+                valid: false,
+                error: Some(err.to_string()),
+                loosened_fields: vec![],
+                outcome: None,
+            };
+        }
+        let fields = loosened_fields(&self.mandate, &mandate);
+        let outcome = if fields.is_empty() {
+            MandateChangeOutcome::Applied
+        } else {
+            MandateChangeOutcome::Queued { effective_sec: U64(now_sec() + MANDATE_DELAY_SEC) }
+        };
+        MandateSimulation {
+            valid: true,
+            error: None,
+            loosened_fields: fields.into_iter().map(str::to_owned).collect(),
+            outcome: Some(outcome),
+        }
     }
 
     /// Sets the only account allowed to propose trades. Requires 1 yoctoNEAR.
@@ -670,6 +768,7 @@ impl Vault {
             key_registered: false,
             in_flight: false,
             signed_intent: None,
+            pending_mandate: None,
         }
     }
 
@@ -842,6 +941,95 @@ mod tests {
         let updated = Mandate { max_slippage_bps: 50, ..sample() };
         v.set_mandate(updated.clone());
         assert_eq!(v.get_mandate(), updated);
+    }
+
+    #[test]
+    fn tightening_applies_at_once() {
+        let mut v = vault();
+        context(accounts(1), 1);
+        let tighter = Mandate { max_trade_usd: U64(10_000_000), ..sample() };
+        assert_eq!(v.set_mandate(tighter.clone()), MandateChangeOutcome::Applied);
+        assert_eq!(v.get_mandate(), tighter);
+        assert_eq!(v.get_pending_mandate(), None);
+    }
+
+    #[test]
+    fn loosening_waits_for_the_delay_and_the_old_limits_hold_meanwhile() {
+        let mut v = vault();
+        context(accounts(1), 1);
+        let looser = Mandate { max_slippage_bps: 200, ..sample() };
+        let outcome = v.set_mandate(looser.clone());
+        assert_eq!(
+            outcome,
+            MandateChangeOutcome::Queued { effective_sec: U64(T0 + MANDATE_DELAY_SEC) }
+        );
+        assert_eq!(v.get_mandate(), sample());
+        assert_eq!(v.get_pending_mandate().map(|p| p.mandate), Some(looser.clone()));
+
+        context_at(accounts(2), 0, T0 + MANDATE_DELAY_SEC);
+        v.apply_pending_mandate();
+        assert_eq!(v.get_mandate(), looser);
+        assert_eq!(v.get_pending_mandate(), None);
+    }
+
+    #[test]
+    #[should_panic(expected = "the mandate change is still in its delay")]
+    fn a_loosening_cannot_be_applied_early() {
+        let mut v = vault();
+        context(accounts(1), 1);
+        v.set_mandate(Mandate { max_slippage_bps: 200, ..sample() });
+        context_at(accounts(2), 0, T0 + MANDATE_DELAY_SEC - 1);
+        v.apply_pending_mandate();
+    }
+
+    #[test]
+    fn the_owner_can_cancel_a_queued_loosening() {
+        let mut v = vault();
+        context(accounts(1), 1);
+        v.set_mandate(Mandate { max_slippage_bps: 200, ..sample() });
+        v.cancel_pending_mandate();
+        assert_eq!(v.get_pending_mandate(), None);
+        assert_eq!(v.get_mandate(), sample());
+    }
+
+    #[test]
+    fn a_second_loosening_replaces_the_first() {
+        let mut v = vault();
+        context(accounts(1), 1);
+        v.set_mandate(Mandate { max_slippage_bps: 200, ..sample() });
+        let second = Mandate { max_slippage_bps: 300, ..sample() };
+        v.set_mandate(second.clone());
+        assert_eq!(v.get_pending_mandate().map(|p| p.mandate), Some(second));
+    }
+
+    #[test]
+    fn a_tightening_drops_a_queued_loosening() {
+        let mut v = vault();
+        context(accounts(1), 1);
+        v.set_mandate(Mandate { max_slippage_bps: 200, ..sample() });
+        let tighter = Mandate { max_slippage_bps: 50, ..sample() };
+        assert_eq!(v.set_mandate(tighter.clone()), MandateChangeOutcome::Applied);
+        assert_eq!(v.get_pending_mandate(), None);
+        assert_eq!(v.get_mandate(), tighter);
+    }
+
+    #[test]
+    fn simulate_reports_the_effect_and_changes_nothing() {
+        let v = vault();
+        let sim = v.simulate_mandate_change(Mandate { max_slippage_bps: 200, ..sample() });
+        assert!(sim.valid);
+        assert_eq!(sim.loosened_fields, vec!["max_slippage_bps".to_string()]);
+        assert_eq!(
+            sim.outcome,
+            Some(MandateChangeOutcome::Queued { effective_sec: U64(T0 + MANDATE_DELAY_SEC) })
+        );
+        assert_eq!(v.get_pending_mandate(), None);
+        assert_eq!(v.get_mandate(), sample());
+
+        let bad = v.simulate_mandate_change(Mandate { max_slippage_bps: 501, ..sample() });
+        assert!(!bad.valid);
+        assert!(bad.error.unwrap().contains("max_slippage_bps"));
+        assert_eq!(bad.outcome, None);
     }
 
     #[test]

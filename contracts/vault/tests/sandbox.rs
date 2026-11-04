@@ -95,6 +95,16 @@ impl Env {
             .expect("view call")
             .data
     }
+
+    async fn call_view(&self, method: &str, args: Value) -> Value {
+        self.vault
+            .call_function(method, args)
+            .read_only()
+            .fetch_from(&self.network)
+            .await
+            .expect("view call")
+            .data
+    }
 }
 
 #[tokio::test]
@@ -140,6 +150,25 @@ async fn owner_controls_on_a_real_chain() -> testresult::TestResult<()> {
     assert!(!env.call(&owner, "unpause", json!({}), 0).await);
     assert!(env.call(&owner, "unpause", json!({}), 1).await);
     assert_eq!(env.view("is_paused").await, json!(false));
+
+    // Loosening waits 24 h. The owner raises the slippage cap from 50 to 100 bps.
+    let sim = env.call_view("simulate_mandate_change", json!({ "mandate": mandate(100) })).await;
+    assert_eq!(sim["valid"], json!(true), "{sim}");
+    assert_eq!(sim["loosened_fields"], json!(["max_slippage_bps"]), "{sim}");
+    assert_eq!(env.view("get_pending_mandate").await, json!(null));
+
+    assert!(env.call(&owner, "set_mandate", json!({ "mandate": mandate(100) }), 1).await);
+    let queued = env.view("get_pending_mandate").await;
+    assert_eq!(queued["mandate"], mandate(100), "{queued}");
+    assert_eq!(env.view("get_mandate").await, mandate(50), "old limits hold during the delay");
+
+    // Applying before the delay is refused; a stranger's cancel is refused; the owner can cancel.
+    assert!(!env.call(&stranger, "apply_pending_mandate", json!({}), 0).await);
+    assert!(!env.call(&stranger, "cancel_pending_mandate", json!({}), 1).await);
+    assert!(!env.call(&owner, "apply_pending_mandate", json!({}), 0).await);
+    assert!(env.call(&owner, "cancel_pending_mandate", json!({}), 1).await);
+    assert_eq!(env.view("get_pending_mandate").await, json!(null));
+    assert_eq!(env.view("get_mandate").await, mandate(50));
 
     Ok(())
 }

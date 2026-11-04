@@ -30,20 +30,37 @@ async fn main() -> Result<(), Box<dyn Error>> {
     std::fs::create_dir_all(&outbox)?;
 
     let mut last_reported: Option<String> = None;
+    // Each failed `execute` still costs gas, so failures back off instead of retrying every few seconds.
+    let mut failures: u32 = 0;
     loop {
+        let mut pause = Duration::from_secs(5);
         match keeper.tick(last_reported.as_deref()).await {
-            Ok(Tick::Executed(outcome)) => println!("executed: {outcome}"),
-            Ok(Tick::Expired) => println!("pending proposal expired; waiting for a new one"),
+            Ok(Tick::Executed(outcome)) => {
+                failures = 0;
+                println!("executed: {outcome}");
+            }
+            Ok(Tick::Expired) => {
+                failures = 0;
+                println!("pending proposal expired; waiting for a new one");
+            }
             Ok(Tick::Publish(signed)) => {
+                failures = 0;
                 let id = signed["proposal_id"].as_str().unwrap_or("unknown");
                 let path = outbox.join(format!("intent-{id}.json"));
                 std::fs::write(&path, near_sdk::serde_json::to_vec_pretty(&signed)?)?;
                 println!("signed intent for proposal {id} written to {}", path.display());
                 last_reported = signed["payload"].as_str().map(str::to_owned);
             }
-            Ok(Tick::Idle) => {}
-            Err(err) => eprintln!("keeper tick failed: {err}"),
+            Ok(Tick::Idle) => failures = 0,
+            Err(err) => {
+                failures = failures.saturating_add(1);
+                pause = Duration::from_secs((5u64 << failures.min(7)).min(600));
+                eprintln!(
+                    "keeper tick failed ({failures} in a row, next try in {}s): {err}",
+                    pause.as_secs()
+                );
+            }
         }
-        tokio::time::sleep(Duration::from_secs(5)).await;
+        tokio::time::sleep(pause).await;
     }
 }
