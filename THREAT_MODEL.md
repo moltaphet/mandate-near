@@ -194,11 +194,16 @@ compare its hash.
 ### T12. Gas exhaustion of `execute`
 
 **Mechanism.** The execute chain makes one read per held or traded feed. The
-mandate caps assets at `MAX_ASSETS` (32).
+mandate caps assets at `MAX_ASSETS` (20).
 
-**Residual (not verified).** The gas needed for 32 feeds has not been measured.
-If it exceeds what one transaction can carry, `execute` fails in a callback,
-which leaves the lock set (SR-1, SR-3). Measurement is planned.
+**Measured.** On the sandbox, 22 feeds pass and 24 and 32 fail with
+`Exceeded the prepaid gas` ([docs/evidence/gas-limit.txt](docs/evidence/gas-limit.txt)).
+The cap is set below the largest size that passed.
+
+**Residual.** A failing `execute` leaves the lock set, so the vault stops
+executing (SR-1). The cap keeps the chain inside the measured limit, but a
+future change to a callback's gas or the oracle's answer size could move it.
+Re-measure after any such change.
 
 ## Out of scope
 

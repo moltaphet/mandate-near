@@ -119,7 +119,7 @@ Two transactions by design, because one would exceed the gas budget once oracle 
 
 ### 8.1 Fields
 
-- `assets`: up to 32 entries. Each has `asset_id` (NEAR Intents id), `decimals`, `price_feed_id`.
+- `assets`: up to 20 entries (`MAX_ASSETS`; the execute gas limit, see [SECURITY.md](SECURITY.md) SR-3). Each has `asset_id` (NEAR Intents id), `decimals`, `price_feed_id`.
 - `stable_assets`: subset of `assets`, used for de-risking.
 - `max_trade_usd`, `max_daily_turnover_usd`: micro-dollars.
 - `max_position_bps`: cap on any non-stable asset's weight after a trade.

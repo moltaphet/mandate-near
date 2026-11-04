@@ -45,6 +45,23 @@ pub struct World {
     pub stranger: AccountId,
     /// The key the signer stand-in derives for the vault (the one the vault registers).
     pub derived_key: String,
+    /// Assets beyond wNEAR and USDC, each its own mock token. See `extra_asset`.
+    pub extra: usize,
+}
+
+/// The asset id of the `i`-th extra asset: a mock token on `tok{i:02}.sandbox`.
+pub fn extra_asset(i: usize) -> String {
+    format!("nep141:{}", extra_account(i))
+}
+
+/// The account of the `i`-th extra asset's mock token.
+pub fn extra_account(i: usize) -> String {
+    format!("tok{i:02}.sandbox")
+}
+
+/// The price feed id of the `i`-th extra asset. The mock oracle is keyed by it.
+pub fn extra_feed(i: usize) -> String {
+    format!("tok{i:02}")
 }
 
 pub async fn create_account(
@@ -75,11 +92,22 @@ pub async fn view(
 
 /// The mandate used by every integration test: wNEAR and USDC, USDC stable.
 pub fn mandate() -> Value {
+    mandate_with_extra(0)
+}
+
+/// The same mandate with `extra` more assets, each a 6-decimal mock token priced at $1.
+pub fn mandate_with_extra(extra: usize) -> Value {
+    let mut assets = vec![
+        json!({ "asset_id": WNEAR, "decimals": 24, "price_feed_id": WNEAR_FEED }),
+        json!({ "asset_id": USDC, "decimals": 6, "price_feed_id": USDC_FEED }),
+    ];
+    for i in 0..extra {
+        assets.push(
+            json!({ "asset_id": extra_asset(i), "decimals": 6, "price_feed_id": extra_feed(i) }),
+        );
+    }
     json!({
-        "assets": [
-            { "asset_id": WNEAR, "decimals": 24, "price_feed_id": WNEAR_FEED },
-            { "asset_id": USDC, "decimals": 6, "price_feed_id": USDC_FEED },
-        ],
+        "assets": assets,
         "stable_assets": [USDC],
         "max_trade_usd": "50000000",
         "max_daily_turnover_usd": "200000000",
@@ -104,6 +132,12 @@ fn build_contract(manifest: Option<&str>) -> testresult::TestResult<Vec<u8>> {
 }
 
 pub async fn world() -> testresult::TestResult<World> {
+    world_with_extra(0).await
+}
+
+/// The sandbox world with `extra` assets beyond wNEAR and USDC. The mandate allows MAX_ASSETS
+/// in all (20 now), so `extra` is at most 18.
+pub async fn world_with_extra(extra: usize) -> testresult::TestResult<World> {
     let vault_wasm = build_contract(None)?;
     let mock_wasm = build_contract(Some("../mock-externals/Cargo.toml"))?;
     let oracle_wasm = build_contract(Some("../mock-oracle/Cargo.toml"))?;
@@ -126,6 +160,10 @@ pub async fn world() -> testresult::TestResult<World> {
     let usdc_id = create_account(&sandbox, "usdc.sandbox", 10).await?;
     // The real verifier is 1.3 MB, so its account needs enough balance for storage.
     let intents_id = create_account(&sandbox, "intents.sandbox", 100).await?;
+    let mut extra_ids = Vec::new();
+    for i in 0..extra {
+        extra_ids.push(create_account(&sandbox, &extra_account(i), 10).await?);
+    }
 
     Contract::deploy(intents_id.clone())
         .use_code(intents_wasm)
@@ -162,13 +200,15 @@ pub async fn world() -> testresult::TestResult<World> {
         .await?
         .assert_success();
 
-    Contract::deploy(usdc_id.clone())
-        .use_code(ft_wasm)
-        .with_init_call("new", json!({}))?
-        .with_signer(signer.clone())
-        .send_to(&network)
-        .await?
-        .assert_success();
+    for token in std::iter::once(&usdc_id).chain(&extra_ids) {
+        Contract::deploy(token.clone())
+            .use_code(ft_wasm.clone())
+            .with_init_call("new", json!({}))?
+            .with_signer(signer.clone())
+            .send_to(&network)
+            .await?
+            .assert_success();
+    }
 
     Contract::deploy(vault_id.clone())
         .use_code(vault_wasm)
@@ -176,7 +216,7 @@ pub async fn world() -> testresult::TestResult<World> {
             "new_with_externals",
             json!({
                 "owner": owner,
-                "mandate": mandate(),
+                "mandate": mandate_with_extra(extra),
                 "signer": mpc_id,
                 "intents": intents_id,
                 "oracle": oracle_id,
@@ -222,14 +262,27 @@ pub async fn world() -> testresult::TestResult<World> {
         agent,
         stranger,
         derived_key,
+        extra,
     })
 }
 
 /// Deposits `amount` of USDC into `intents.near` for the vault, the standard way:
 /// the stranger holds minted tokens and calls `ft_transfer_call` with the vault as receiver.
 pub async fn fund_vault(w: &World, amount: u128) -> testresult::TestResult<()> {
+    deposit_to_vault(w, &w.usdc, amount).await
+}
+
+/// Deposits `amount` of every extra asset into `intents.near` for the vault, as `fund_vault` does for USDC.
+pub async fn fund_extra_assets(w: &World, amount: u128) -> testresult::TestResult<()> {
+    for i in 0..w.extra {
+        deposit_to_vault(w, &Contract(extra_account(i).parse()?), amount).await?;
+    }
+    Ok(())
+}
+
+async fn deposit_to_vault(w: &World, token: &Contract, amount: u128) -> testresult::TestResult<()> {
     let depositor = w.stranger.clone();
-    w.usdc
+    token
         .call_function("mint", json!({ "account_id": depositor, "amount": amount.to_string() }))
         .transaction()
         .gas(near_api::NearGas::from_tgas(30))
@@ -237,7 +290,7 @@ pub async fn fund_vault(w: &World, amount: u128) -> testresult::TestResult<()> {
         .send_to(&w.network)
         .await?
         .assert_success();
-    w.usdc
+    token
         .call_function(
             "ft_transfer_call",
             json!({
@@ -284,10 +337,14 @@ pub async fn set_report(
     Ok(())
 }
 
-/// wNEAR at $4.50 and USDC at $1.00, both reported at `timestamp_sec`.
+/// wNEAR at $4.50 and USDC at $1.00, both reported at `timestamp_sec`. Each extra asset is $1.00.
 pub async fn set_prices(w: &World, timestamp_sec: u64) -> testresult::TestResult<()> {
     set_report(w, WNEAR_FEED, "450000000", timestamp_sec).await?;
-    set_report(w, USDC_FEED, "100000000", timestamp_sec).await
+    set_report(w, USDC_FEED, "100000000", timestamp_sec).await?;
+    for i in 0..w.extra {
+        set_report(w, &extra_feed(i), "100000000", timestamp_sec).await?;
+    }
+    Ok(())
 }
 
 pub async fn propose(w: &World) -> testresult::TestResult<()> {
