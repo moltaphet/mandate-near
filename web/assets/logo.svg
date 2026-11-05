@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 320" width="100%" height="100%">
+  <defs>
+    <style>
+      
+      .wordmark {
+        font-family: 'Bricolage Grotesque', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-weight: 700;
+        font-size: 98px;
+        fill: #0D1620;
+        letter-spacing: -0.03em;
+      }
+    </style>
+  </defs>
+
+  <!-- Geometric Gate & Check Mark (#0D1620) -->
+  <g fill="#0D1620">
+    <!-- Left Pillar, Top Bar, and Upper Right Pillar -->
+    <path d="M 80,72 H 236 V 134 L 204,166 V 104 H 112 V 248 H 80 Z" />
+    
+    <!-- Lower Right Pillar (cut below the check mark) -->
+    <path d="M 204,209 L 236,177 V 248 H 204 Z" />
+    
+    <!-- Integrated Geometric Check Mark -->
+    <path d="M 140,176 L 156,160 L 174,178 L 236,116 V 147 L 174,209 Z" />
+  </g>
+
+  <!-- Wordmark "Mandate" -->
+  <text x="272" y="195" class="wordmark">Mandate</text>
+</svg>

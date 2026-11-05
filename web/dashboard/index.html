@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
+<link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Mandate · How a trade is checked</title>
@@ -31,8 +32,7 @@
   .banner b { font-weight: 500; color: var(--ink); }
 
   header.top { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: baseline; gap: 18px; flex-wrap: wrap; }
-  .word { font-family: var(--display); font-weight: 700; font-size: 26px; letter-spacing: -.01em; }
-  .word span { color: var(--open); }
+  .word img { display: block; height: 44px; width: auto; }
   .nav { display: flex; gap: 20px; font-family: var(--mono); font-size: 12px; color: var(--mute); flex-wrap: wrap; }
   .nav a { color: var(--mute); text-decoration: none; }
   .nav a:hover { color: var(--ink); }
@@ -180,7 +180,7 @@
   </div>
 
   <header class="top">
-    <div class="word">Mandate<span>.</span></div>
+    <div class="word"><img src="../assets/logo-light.svg" alt="Mandate" width="200" height="80"></div>
     <nav class="nav" aria-label="Related pages">
       <a href="../site/index.html">Evidence and status</a>
       <a href="../../docs/PROJECT.md">Project definition</a>
