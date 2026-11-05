@@ -250,6 +250,7 @@ Every claim on the README or evidence site carries one status: [PROVEN], [TESTED
 | Mandate misconfigured | `simulate` before going live; validation on set | Owner error is still possible |
 | Re-initialisation | `#[init]` guard | — |
 | Stuck signed intent | Expiry; one outstanding intent at a time | Blocks new trades until expiry |
+| Stuck execution (failed callback) | The lock runs out after a 300 s window plus the 120 s intent lifetime; a late callback from an earlier execution changes nothing | Pauses trading for up to 7 minutes ([SECURITY.md](SECURITY.md) SR-1) |
 
 The full threat model is in [THREAT_MODEL.md](../THREAT_MODEL.md). The self-review findings are in [SECURITY.md](../SECURITY.md).
 

@@ -35,7 +35,7 @@ use near_sdk::{
     assert_one_yocto, env, near, require,
 };
 
-use crate::engine::{Market, Trade, TradeError, check_trade};
+use crate::engine::{INTENT_TTL_SEC, Market, Trade, TradeError, check_trade};
 pub use crate::engine::{TradingState, TradingStateView};
 use crate::intent::{TokenDiff, token_diff_payload, v1_nonce};
 pub use crate::mandate::{AssetConfig, Mandate, MandateError, loosened_fields};
@@ -43,6 +43,10 @@ use crate::oracle::{AssetView, PriceData, prices_for};
 
 /// How long a pending proposal stays executable. Matches the 60 s target in docs/PROJECT.md.
 pub const PROPOSAL_TTL_SEC: u64 = 60;
+/// How long one execution may build and sign an intent. Its callbacks stop signing after this.
+/// The lock it holds runs out once this window and the intent's lifetime have both passed, so
+/// no intent from that execution can still be valid when the next one starts.
+pub const EXECUTION_WINDOW_SEC: u64 = 300;
 /// Consecutive rejections before the circuit breaker halts new proposals.
 pub const MAX_STRIKES: u32 = 3;
 
@@ -84,6 +88,14 @@ pub struct Proposal {
     pub reason_hash: String,
     pub created_sec: u64,
     pub expires_sec: u64,
+}
+
+/// The execution that holds the in-flight lock. Its callbacks act only while they carry its id.
+#[near(serializers = [json, borsh])]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct InFlight {
+    pub id: U64,
+    pub started_sec: u64,
 }
 
 /// An intent the MPC signer has signed. A keeper publishes it off chain; the
@@ -191,8 +203,11 @@ pub struct Vault {
     intents_key: Option<String>,
     /// True once `intents` confirmed `add_public_key` for `intents_key`.
     key_registered: bool,
-    /// True between `execute` and its final callback. Blocks a second run.
-    in_flight: bool,
+    /// The execution that holds the lock, if any. Set by `execute`; cleared when it ends, or
+    /// by time once its window and the intent's lifetime have passed (`execution_locked`).
+    in_flight: Option<InFlight>,
+    /// The id the next execution takes. Callbacks of an earlier execution carry an older id.
+    next_execution_id: u64,
     /// The latest signed intent. Replaced by each approved trade.
     signed_intent: Option<SignedIntent>,
     /// A loosened mandate waiting for its delay. At most one.
@@ -281,7 +296,7 @@ impl Vault {
     }
 
     pub fn is_in_flight(&self) -> bool {
-        self.in_flight
+        self.execution_locked(now_sec())
     }
 
     /// Registers the vault's MPC-derived key on `intents.near`, so that
@@ -476,7 +491,10 @@ impl Vault {
         self.assert_not_paused();
         require!(!self.halted, "proposals are halted by the circuit breaker");
         // An execution in flight still owns the pending proposal: its callbacks clear it.
-        require!(!self.in_flight, "an execution is in progress; propose after it finishes");
+        require!(
+            !self.execution_locked(now_sec()),
+            "an execution is in progress; propose after it finishes"
+        );
         let agent = self.agent.clone().unwrap_or_else(|| env::panic_str("no agent is configured"));
         require!(env::predecessor_account_id() == agent, "only the agent can propose trades");
 
@@ -546,17 +564,19 @@ impl Vault {
     pub fn execute(&mut self) -> Promise {
         self.assert_not_paused();
         require!(!self.halted, "proposals are halted by the circuit breaker");
-        require!(!self.in_flight, "an execution is already in progress");
-        require!(self.key_registered, "the intents key is not registered");
         let proposal =
             self.pending.clone().unwrap_or_else(|| env::panic_str("no pending proposal"));
         let now = now_sec();
+        require!(!self.execution_locked(now), "an execution is already in progress");
+        require!(self.key_registered, "the intents key is not registered");
         require!(now < proposal.expires_sec, "the pending proposal has expired");
         require!(
             self.trading.signed_intent_expires_at_sec <= now,
             "a signed intent is still outstanding"
         );
-        self.in_flight = true;
+        let execution = U64(self.next_execution_id);
+        self.next_execution_id += 1;
+        self.in_flight = Some(InFlight { id: execution, started_sec: now });
 
         let token_ids: Vec<String> =
             self.mandate.assets.iter().map(|a| a.asset_id.clone()).collect();
@@ -572,7 +592,7 @@ impl Vault {
             .then(
                 Self::ext(env::current_account_id())
                     .with_static_gas(GAS_CALLBACK)
-                    .on_balances(proposal),
+                    .on_balances(proposal, execution),
             )
     }
 
@@ -581,7 +601,11 @@ impl Vault {
         &mut self,
         #[callback_result] balances: Result<Vec<U128>, PromiseError>,
         proposal: Proposal,
+        execution: U64,
     ) -> PromiseOrValue<ExecutionOutcome> {
+        if !self.is_current(execution) {
+            return PromiseOrValue::Value(superseded());
+        }
         let balances = match balances {
             Ok(b) if b.len() == self.mandate.assets.len() => b,
             _ => return PromiseOrValue::Value(self.failed("could not read vault balances")),
@@ -612,7 +636,7 @@ impl Vault {
                 .then(
                     Self::ext(env::current_account_id())
                         .with_static_gas(GAS_CALLBACK)
-                        .on_price_data(proposal, held, feeds),
+                        .on_price_data(proposal, held, feeds, execution),
                 ),
         )
     }
@@ -624,7 +648,11 @@ impl Vault {
         proposal: Proposal,
         held: Vec<(String, U128)>,
         feeds: Vec<String>,
+        execution: U64,
     ) -> PromiseOrValue<ExecutionOutcome> {
+        if !self.is_current(execution) {
+            return PromiseOrValue::Value(superseded());
+        }
         let data = match data {
             Ok(d) => d,
             Err(_) => return PromiseOrValue::Value(self.failed("could not read oracle prices")),
@@ -648,7 +676,7 @@ impl Vault {
             reads.then(
                 Self::ext(env::current_account_id())
                     .with_static_gas(GAS_CALLBACK)
-                    .on_assets(proposal, held, feeds, data),
+                    .on_assets(proposal, held, feeds, data, execution),
             ),
         )
     }
@@ -660,7 +688,11 @@ impl Vault {
         held: Vec<(String, U128)>,
         feeds: Vec<String>,
         data: PriceData,
+        execution: U64,
     ) -> PromiseOrValue<ExecutionOutcome> {
+        if !self.is_current(execution) {
+            return PromiseOrValue::Value(superseded());
+        }
         let mut assets = BTreeMap::new();
         for (i, feed) in feeds.into_iter().enumerate() {
             match read_promise::<Option<AssetView>>(i as u64) {
@@ -684,20 +716,22 @@ impl Vault {
         };
         match check_trade(&self.mandate, &self.trading, &trade, &market) {
             Err(err) => PromiseOrValue::Value(self.reject(&err)),
-            Ok(approval) => PromiseOrValue::Promise(
-                Promise::new(self.intents.clone())
-                    .function_call(
-                        "current_salt".to_string(),
-                        b"{}".to_vec(),
-                        NearToken::from_yoctonear(0),
-                        GAS_READ_SALT,
-                    )
-                    .then(
-                        Self::ext(env::current_account_id())
-                            .with_static_gas(GAS_CALLBACK)
-                            .on_salt(proposal, approval.next_state),
-                    ),
-            ),
+            Ok(approval) => {
+                PromiseOrValue::Promise(
+                    Promise::new(self.intents.clone())
+                        .function_call(
+                            "current_salt".to_string(),
+                            b"{}".to_vec(),
+                            NearToken::from_yoctonear(0),
+                            GAS_READ_SALT,
+                        )
+                        .then(
+                            Self::ext(env::current_account_id())
+                                .with_static_gas(GAS_CALLBACK)
+                                .on_salt(proposal, approval.next_state, execution),
+                        ),
+                )
+            }
         }
     }
 
@@ -707,7 +741,15 @@ impl Vault {
         #[callback_result] salt: Result<String, PromiseError>,
         proposal: Proposal,
         next_state: TradingState,
+        execution: U64,
     ) -> PromiseOrValue<ExecutionOutcome> {
+        if !self.is_current(execution) {
+            return PromiseOrValue::Value(superseded());
+        }
+        // Past the window, no new intent may be built: its deadline could outlive the lock.
+        if !self.window_open() {
+            return PromiseOrValue::Value(self.failed("the execution window has passed"));
+        }
         let salt = salt
             .ok()
             .and_then(|hex| from_hex(&hex))
@@ -757,7 +799,7 @@ impl Vault {
                 .then(
                     Self::ext(env::current_account_id())
                         .with_static_gas(GAS_CALLBACK)
-                        .on_signed(proposal, payload, next_state),
+                        .on_signed(proposal, payload, next_state, execution),
                 ),
         )
     }
@@ -769,13 +811,23 @@ impl Vault {
         proposal: Proposal,
         payload: String,
         next_state: TradingState,
+        execution: U64,
     ) -> ExecutionOutcome {
+        if !self.is_current(execution) {
+            return superseded();
+        }
         let signature = match response {
             Ok(r) if r.scheme == "Ed25519" && r.signature.len() == 64 => r.signature,
-            _ => return self.failed("the MPC signer did not return an Ed25519 signature"),
+            // The call itself failed: no signature exists, so the lock can go.
+            Err(_) => return self.failed("the MPC signer call failed"),
+            // An answer that is not an Ed25519 signature may still carry one: keep the lock.
+            Ok(_) => {
+                return self
+                    .failed_holding_lock("the MPC signer did not return an Ed25519 signature");
+            }
         };
         let Some(public_key) = self.intents_key.clone() else {
-            return self.failed("the intents key is not recorded");
+            return self.failed_holding_lock("the intents key is not recorded");
         };
         let expires_sec = next_state.signed_intent_expires_at_sec;
         self.signed_intent = Some(SignedIntent {
@@ -788,7 +840,7 @@ impl Vault {
         self.trading = next_state;
         self.pending = None;
         self.record_approval();
-        self.in_flight = false;
+        self.in_flight = None;
         ExecutionOutcome::Executed { proposal_id: proposal.id, expires_sec: U64(expires_sec) }
     }
 }
@@ -817,25 +869,54 @@ impl Vault {
             oracle,
             intents_key: None,
             key_registered: false,
-            in_flight: false,
+            in_flight: None,
+            next_execution_id: 1,
             signed_intent: None,
             pending_mandate: None,
             pending_agent: None,
         }
     }
 
-    /// A closed gate: counts a strike, consumes the proposal.
+    /// A closed gate: counts a strike, consumes the proposal. No signature was requested.
     fn reject(&mut self, err: &TradeError) -> ExecutionOutcome {
         self.record_rejection();
         self.pending = None;
-        self.in_flight = false;
+        self.in_flight = None;
         ExecutionOutcome::Rejected { code: err.code().to_string(), reason: err.to_string() }
     }
 
-    /// A failed read or signature: keeps the proposal, counts nothing.
+    /// A failed read or signature call: keeps the proposal, counts nothing. The lock is
+    /// released, because no signature was obtained.
     fn failed(&mut self, reason: &str) -> ExecutionOutcome {
-        self.in_flight = false;
+        self.in_flight = None;
         ExecutionOutcome::Failed { reason: reason.to_string() }
+    }
+
+    /// A failure after the signer may have answered. The lock stays until it runs out, so a
+    /// second intent for the proposal is not built while the first one could still settle.
+    fn failed_holding_lock(&mut self, reason: &str) -> ExecutionOutcome {
+        ExecutionOutcome::Failed { reason: reason.to_string() }
+    }
+
+    /// True while the execution holding the lock may still build and sign an intent.
+    fn window_open(&self) -> bool {
+        self.in_flight
+            .as_ref()
+            .is_some_and(|run| now_sec() < run.started_sec + EXECUTION_WINDOW_SEC)
+    }
+
+    /// True while an execution holds the lock. The lock runs out once its window and the
+    /// intent's lifetime have both passed: by then no intent from it is still valid.
+    fn execution_locked(&self, now: u64) -> bool {
+        self.in_flight
+            .as_ref()
+            .is_some_and(|run| now < run.started_sec + EXECUTION_WINDOW_SEC + INTENT_TTL_SEC)
+    }
+
+    /// Callbacks act only for the execution that holds the lock. A late callback from an
+    /// earlier execution changes nothing.
+    fn is_current(&self, execution: U64) -> bool {
+        self.in_flight.as_ref().is_some_and(|run| run.id == execution)
     }
 
     fn assert_owner(&self) {
@@ -889,6 +970,11 @@ fn from_hex(s: &str) -> Option<Vec<u8>> {
 
 fn is_hex_digest(s: &str) -> bool {
     s.len() == 64 && s.bytes().all(|b| b.is_ascii_hexdigit())
+}
+
+/// What a callback from an execution that no longer holds the lock returns. It changes nothing.
+fn superseded() -> ExecutionOutcome {
+    ExecutionOutcome::Failed { reason: "superseded by a newer execution".to_string() }
 }
 
 fn validate_or_panic(mandate: &Mandate) {
@@ -1233,13 +1319,148 @@ mod tests {
         propose(&mut v);
     }
 
+    /// The lock as an execution with `id` holds it, started at `started`.
+    fn running(id: u64, started: u64) -> Option<InFlight> {
+        Some(InFlight { id: U64(id), started_sec: started })
+    }
+
     #[test]
     #[should_panic(expected = "an execution is in progress")]
     fn a_proposal_waits_for_the_execution_in_flight() {
         let mut v = vault_with_agent();
         context(accounts(3), 0);
-        v.in_flight = true;
+        v.in_flight = running(1, T0);
         propose(&mut v);
+    }
+
+    #[test]
+    #[should_panic(expected = "an execution is already in progress")]
+    fn execute_refuses_while_the_lock_holds() {
+        let mut v = vault_with_agent();
+        v.key_registered = true;
+        context(accounts(3), 0);
+        propose(&mut v);
+        v.in_flight = running(1, T0);
+        context(accounts(2), 0);
+        let _ = v.execute();
+    }
+
+    #[test]
+    fn the_lock_runs_out_after_the_window_and_the_intent_lifetime() {
+        let mut v = vault_with_agent();
+        v.in_flight = running(1, T0);
+        let runs_out = T0 + EXECUTION_WINDOW_SEC + INTENT_TTL_SEC;
+        context_at(accounts(2), 0, runs_out - 1);
+        assert!(v.is_in_flight());
+        context_at(accounts(2), 0, runs_out);
+        assert!(!v.is_in_flight());
+    }
+
+    #[test]
+    fn a_proposal_goes_through_once_the_lock_has_run_out() {
+        let mut v = vault_with_agent();
+        v.in_flight = running(1, T0);
+        context_at(accounts(3), 0, T0 + EXECUTION_WINDOW_SEC + INTENT_TTL_SEC);
+        propose(&mut v);
+        assert!(v.get_pending_proposal().is_some());
+    }
+
+    #[test]
+    fn each_execution_takes_a_new_id_and_the_next_waits_for_the_lock() {
+        let mut v = vault_with_agent();
+        v.key_registered = true;
+        context(accounts(3), 0);
+        propose(&mut v);
+        context(accounts(2), 0);
+        let _ = v.execute();
+        assert_eq!(v.in_flight, running(1, T0));
+
+        let runs_out = T0 + EXECUTION_WINDOW_SEC + INTENT_TTL_SEC;
+        context_at(accounts(3), 0, runs_out);
+        propose(&mut v);
+        context_at(accounts(2), 0, runs_out);
+        let _ = v.execute();
+        assert_eq!(v.in_flight, running(2, runs_out));
+    }
+
+    #[test]
+    fn a_late_salt_builds_no_intent_and_frees_the_lock() {
+        let mut v = vault_with_agent();
+        context(accounts(3), 0);
+        propose(&mut v);
+        let proposal = v.get_pending_proposal().expect("pending");
+        v.in_flight = running(1, T0);
+        context_at(accounts(0), 0, T0 + EXECUTION_WINDOW_SEC);
+        match v.on_salt(Ok("00000000".to_string()), proposal, TradingState::default(), U64(1)) {
+            PromiseOrValue::Value(ExecutionOutcome::Failed { reason }) => {
+                assert_eq!(reason, "the execution window has passed");
+            }
+            _ => panic!("a late salt must not start a signature"),
+        }
+        assert_eq!(v.in_flight, None);
+        assert!(v.get_pending_proposal().is_some(), "a failed run keeps the proposal");
+    }
+
+    #[test]
+    fn a_callback_from_an_earlier_execution_changes_nothing() {
+        let mut v = vault_with_agent();
+        context(accounts(3), 0);
+        propose(&mut v);
+        let proposal = v.get_pending_proposal().expect("pending");
+        v.in_flight = running(2, T0);
+        context(accounts(0), 0);
+
+        match v.on_salt(
+            Err(PromiseError::Failed),
+            proposal.clone(),
+            TradingState::default(),
+            U64(1),
+        ) {
+            PromiseOrValue::Value(ExecutionOutcome::Failed { reason }) => {
+                assert_eq!(reason, "superseded by a newer execution");
+            }
+            _ => panic!("a stale salt must do nothing"),
+        }
+        let late = SignatureResponse { scheme: "Ed25519".to_string(), signature: vec![0; 64] };
+        let outcome =
+            v.on_signed(Ok(late), proposal, String::new(), TradingState::default(), U64(1));
+        assert!(matches!(outcome, ExecutionOutcome::Failed { .. }));
+
+        assert_eq!(v.in_flight, running(2, T0));
+        assert_eq!(v.get_pending_proposal().map(|p| p.id), Some(U64(1)));
+        assert_eq!(v.strikes, 0);
+        assert_eq!(v.get_signed_intent(), None);
+    }
+
+    #[test]
+    fn a_failed_signer_call_frees_the_lock() {
+        let mut v = vault_with_agent();
+        context(accounts(3), 0);
+        propose(&mut v);
+        let proposal = v.get_pending_proposal().expect("pending");
+        v.in_flight = running(1, T0);
+        context(accounts(0), 0);
+        v.on_signed(
+            Err(PromiseError::Failed),
+            proposal,
+            String::new(),
+            TradingState::default(),
+            U64(1),
+        );
+        assert_eq!(v.in_flight, None);
+    }
+
+    #[test]
+    fn a_malformed_signer_answer_keeps_the_lock() {
+        let mut v = vault_with_agent();
+        context(accounts(3), 0);
+        propose(&mut v);
+        let proposal = v.get_pending_proposal().expect("pending");
+        v.in_flight = running(1, T0);
+        context(accounts(0), 0);
+        let odd = SignatureResponse { scheme: "ECDSA".to_string(), signature: vec![0; 64] };
+        v.on_signed(Ok(odd), proposal, String::new(), TradingState::default(), U64(1));
+        assert_eq!(v.in_flight, running(1, T0));
     }
 
     #[test]

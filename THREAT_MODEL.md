@@ -156,9 +156,12 @@ callback. Callbacks are `#[private]`.
 agent proposal made while an execution was in flight could be dropped when that
 execution finished (SR-2). Fixed by refusing `propose` while in flight.
 
-**Open.** The lock has no recovery path (SR-1). If a callback never finishes,
-the vault stops executing for good, and with no withdraw path (SR-6) the funds
-stay where they are.
+**Fixed (SR-1).** Each execution has an id, and its callbacks act only while
+they carry the current id, so a late callback changes nothing. The lock runs
+out by time: `EXECUTION_WINDOW_SEC` plus the intent lifetime. Past the window
+no new intent is built, so a second intent for the same proposal cannot be live
+at the same time as the first. A stuck execution therefore pauses trading for
+at most about 7 minutes; it does not stop the vault for good.
 
 ### T9. Mandate changes that are not in the mandate
 
@@ -200,10 +203,10 @@ mandate caps assets at `MAX_ASSETS` (20).
 `Exceeded the prepaid gas` ([docs/evidence/gas-limit.txt](docs/evidence/gas-limit.txt)).
 The cap is set below the largest size that passed.
 
-**Residual.** A failing `execute` leaves the lock set, so the vault stops
-executing (SR-1). The cap keeps the chain inside the measured limit, but a
-future change to a callback's gas or the oracle's answer size could move it.
-Re-measure after any such change.
+**Residual.** A failing `execute` holds the lock until it runs out, about 7
+minutes (SR-1). The cap keeps the chain inside the measured limit, but a future
+change to a callback's gas or the oracle's answer size could move it. Re-measure
+after any such change.
 
 ## Out of scope
 
