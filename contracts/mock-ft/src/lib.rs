@@ -1,10 +1,11 @@
 //! Sandbox-only minimal NEP-141 token.
 //!
 //! It exists to fund `intents.near` in tests: `mint` gives a test account
-//! tokens, and `ft_transfer_call` deposits them the standard way (the receiver's
-//! `ft_on_transfer` answers how much it did not take, and that part is
-//! refunded). Storage, metadata and the rest of NEP-141 are left out on
-//! purpose. It is never deployed to a real network.
+//! tokens, `ft_transfer_call` deposits them the standard way (the receiver is
+//! credited, its `ft_on_transfer` answers how much it did not take, and that
+//! part is refunded), and `ft_transfer` pays withdrawals out. Storage, metadata
+//! and the rest of NEP-141 are left out on purpose. It is never deployed to a
+//! real network.
 
 use std::collections::BTreeMap;
 
@@ -50,6 +51,7 @@ impl MockFt {
         let balance = self.balances.entry(sender.clone()).or_default();
         require!(*balance >= amount.0, "not enough tokens");
         *balance -= amount.0;
+        *self.balances.entry(receiver_id.clone()).or_default() += amount.0;
         Promise::new(receiver_id.clone())
             .function_call(
                 "ft_on_transfer".to_string(),
@@ -69,6 +71,18 @@ impl MockFt {
                     GAS_RESOLVE,
                 ),
             )
+    }
+
+    /// NEP-141 `ft_transfer`. Requires 1 yoctoNEAR. Withdrawals from `intents.near` use it.
+    #[payable]
+    pub fn ft_transfer(&mut self, receiver_id: AccountId, amount: U128, memo: Option<String>) {
+        assert_one_yocto();
+        let _ = memo;
+        let sender = env::predecessor_account_id();
+        let balance = self.balances.entry(sender).or_default();
+        require!(*balance >= amount.0, "not enough tokens");
+        *balance -= amount.0;
+        *self.balances.entry(receiver_id).or_default() += amount.0;
     }
 
     /// Refunds what the receiver did not take. Private: only the token calls it.

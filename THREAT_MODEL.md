@@ -20,8 +20,8 @@ on reading, not on a run.
 | Owner key | a NEAR full-access key held by the owner | Owner (see T3) |
 | Agent key | an account the owner names with `set_agent`; a later change waits 24 h | Can propose only (see T2) |
 
-There is **no withdraw path yet** (planned). Funds in the vault can change
-form through mandate-approved trades but cannot leave by an owner call. See SR-6.
+Funds leave only by an owner withdrawal. It is queued for 24 h like a loosened
+mandate, cancellable, and sent to the receiver the owner named. See T3 and SR-6.
 
 ## Actors and trust
 
@@ -78,6 +78,9 @@ This is the most serious owner-side threat, because the owner key controls the r
   Anyone may apply a queued change after the delay, so it cannot be held back.
 - Tightening applies at once and drops any queued loosening.
 - `pause` stops execution at once. `unpause` and `set_mandate` need a full-access key.
+- A withdrawal is queued for 24 h (`request_withdrawal`, `cancel_pending_withdrawal`,
+  `apply_pending_withdrawal`). It is refused while an execution holds the lock or a
+  signed intent is open, and it is checked again when it is sent.
 
 **Tests.** Attack 8 (a $150 cap queued, the $60 trade still refused, early apply
 refused); unit tests in `lib.rs` for the queue rules.
@@ -94,6 +97,9 @@ the `set_agent` unit tests in `lib.rs`. SR-5 is fixed.
   agent. The agent then takes over after 24 h unless the owner cancels, so the
   owner has one day to notice. Gates still apply, so the damage is limited to
   mandate-approved trades.
+- A stolen owner key can queue a withdrawal of any mandate asset. The owner has
+  24 h to notice and cancel. If nobody cancels, anyone can send it after the
+  delay, so the funds leave. This is the main residual risk for real funds.
 - The owner can tighten a mandate to a point that stops all trading. That is a
   liveness loss, not a theft.
 - Recommended before real funds: a DAO or multisig as owner. The DAO test is

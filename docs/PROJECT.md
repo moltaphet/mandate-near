@@ -168,13 +168,15 @@ Status: gates 1–9 are built and tested at the engine level. On-chain wiring [P
 | `pause` | owner | none | Stops all new executions immediately |
 | `unpause` | owner | 1 yocto | Resumes execution |
 | `simulate_mandate_change` | anyone (view) | none | Reports whether a mandate is valid, which fields it loosens, and whether `set_mandate` would apply it now or queue it. Changes nothing |
-| `withdraw` [PLANNED] | owner | 1 yocto | Withdraws via `intents.near` predecessor auth. Not built: there is no way to take funds out of the vault yet |
+| `request_withdrawal` | owner | 1 yocto | Queues a withdrawal of one mandate asset to a receiver, 24 h delay, replaces an earlier queue. Refused while an execution holds the lock or a signed intent is open |
+| `cancel_pending_withdrawal` | owner | 1 yocto | Cancels a queued withdrawal |
+| `apply_pending_withdrawal` | anyone | none | After the delay, sends it: the vault calls `ft_withdraw` on `intents.near` (predecessor is the vault). A failed call queues it again |
 
 **Definition of loosening.** A change is loosening if it increases `max_trade_usd`, `max_daily_turnover_usd`, `max_position_bps`, `max_slippage_bps`, or `max_drawdown_bps`, decreases `min_trade_interval_sec` or `max_price_age_sec`, adds an asset, or moves an asset from non-stable to stable (which would relax the drawdown rule). Any change that is not loosening applies immediately. A change that mixes both directions is treated as loosening.
 
 **Why these rules.** Tightening should be instant, since it reduces risk. Loosening needs a delay, so a compromised owner key cannot raise limits and drain the vault in one step. The owner can cancel a queued change, and the pause switch always works.
 
-Status: built and sandbox-tested: `set_mandate` with the 24 h delay, `apply_pending_mandate`, `cancel_pending_mandate`, `simulate_mandate_change`, `pause`, `unpause`, `set_agent` with the 24 h delay for a later agent, `apply_pending_agent`, `cancel_pending_agent`. Also tested on testnet, where a loosening was queued and cancelled (see [docs/TESTNET.md](TESTNET.md)). `withdraw` is [PLANNED].
+Status: built and sandbox-tested: `set_mandate` with the 24 h delay, `apply_pending_mandate`, `cancel_pending_mandate`, `simulate_mandate_change`, `pause`, `unpause`, `set_agent` with the 24 h delay for a later agent, `apply_pending_agent`, `cancel_pending_agent`, `request_withdrawal`, `cancel_pending_withdrawal`. The owner's withdrawal request and cancel run on the sandbox; the `ft_withdraw` call that the vault sends is run on the sandbox from the account that holds the balance, and the vault's own send after the 24 h delay is unit-tested only, because the sandbox clock cannot reach the delay. Also tested on testnet, where a loosening was queued and cancelled (see [docs/TESTNET.md](TESTNET.md)).
 
 ## 10. Owner identity
 
