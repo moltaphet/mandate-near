@@ -72,7 +72,7 @@ today; the trading-path guarantees arrive with the 🛠 items in the
 
 | Actor | Can | Cannot |
 |---|---|---|
-| **Owner** | ✅ set the mandate (full-access key + 1 yocto; tightening at once, loosening after a 24 h delay, cancellable), ✅ pause instantly, ✅ unpause · 🛠 withdraw | exceed the gates, or take a trade past them |
+| **Owner** | ✅ set the mandate (full-access key + 1 yocto; tightening at once, loosening after a 24 h delay, cancellable), ✅ pause instantly, ✅ unpause, ✅ withdraw (queued 24 h, cancellable; the send after the delay is unit-tested only) | exceed the gates, or take a trade past them |
 | **Agent** (script today, TEE planned) | ✅ propose trades | move funds, exceed any limit, change the mandate |
 | **Keeper** | trigger steps, delay | alter a signed trade, sign anything |
 | **Solver** | fill a trade at ≥ `min_out` | take more than the signed `token_diff` |
@@ -200,7 +200,7 @@ has not run on mainnet.
 - [ ] Run the signing path on a live chain (mainnet, or testnet once `intents.testnet` exists)
 - [ ] OutLayer agent (Rust → `wasm32-wasip2`) with yield/resume decision flow
 - [ ] Solver-relay publishing
-- [ ] Withdraw (owner, signed intent, own gates)
+- [x] Withdraw: owner queues, 24 h delay, `ft_withdraw` on `intents.near` (sandbox; the send after the delay is unit-tested, not run on a live chain)
 - [ ] Dashboard with live attack demos (each must fail on camera). A recorded replay of the eight attacks is on the dashboard; a live run against a chain is not built.
 - [ ] First real mainnet trade with a few dollars
 - [ ] Demo video, submission

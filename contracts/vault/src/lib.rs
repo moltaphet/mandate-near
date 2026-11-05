@@ -74,6 +74,8 @@ const GAS_READ_SALT: Gas = Gas::from_tgas(5);
 /// `v1.signer` needs at least 15 TGas attached; 30 leaves room for the signer.
 const GAS_SIGN: Gas = Gas::from_tgas(30);
 const GAS_CALLBACK: Gas = Gas::from_tgas(15);
+/// `ft_withdraw` on `intents.near`, which moves the tokens out of the vault's balance.
+const GAS_WITHDRAW: Gas = Gas::from_tgas(100);
 
 /// A trade the agent wants executed. Deliberately has no payload field.
 #[near(serializers = [json, borsh])]
@@ -143,12 +145,28 @@ pub struct PendingMandate {
 /// How long a change of agent waits before it applies. The same delay as a loosened mandate.
 pub const AGENT_DELAY_SEC: u64 = MANDATE_DELAY_SEC;
 
+/// How long a withdrawal waits before it is sent. The same delay as a loosened mandate, so a
+/// stolen owner key has a day to be noticed and cancelled before any funds leave.
+pub const WITHDRAW_DELAY_SEC: u64 = MANDATE_DELAY_SEC;
+
 /// A new agent waiting for its delay to pass.
 #[near(serializers = [json, borsh])]
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PendingAgent {
     pub agent: AccountId,
     /// Unix seconds from which `apply_pending_agent` may apply it.
+    pub effective_sec: u64,
+}
+
+/// A withdrawal of one asset from the vault's balance, waiting for its delay to pass.
+#[near(serializers = [json, borsh])]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PendingWithdrawal {
+    /// The mandate asset, as `nep141:<token account>`.
+    pub asset_id: String,
+    pub receiver: AccountId,
+    pub amount: U128,
+    /// Unix seconds from which `apply_pending_withdrawal` may send it.
     pub effective_sec: u64,
 }
 
@@ -214,6 +232,8 @@ pub struct Vault {
     pending_mandate: Option<PendingMandate>,
     /// A new agent waiting for its delay. At most one. The current agent keeps its rights.
     pending_agent: Option<PendingAgent>,
+    /// A withdrawal waiting for its delay. At most one; a newer request replaces it.
+    pending_withdrawal: Option<PendingWithdrawal>,
 }
 
 #[near]
@@ -478,6 +498,97 @@ impl Vault {
         self.pending_agent.clone()
     }
 
+    /// Queues a withdrawal of `amount` of a mandate asset to `receiver`. Requires 1 yoctoNEAR.
+    /// Refused while an execution holds the lock or a signed intent is outstanding, so a
+    /// withdrawal cannot race a trade. A newer request replaces a queued one.
+    #[payable]
+    pub fn request_withdrawal(&mut self, asset_id: String, receiver: AccountId, amount: U128) {
+        assert_one_yocto();
+        self.assert_owner();
+        require!(
+            self.mandate.assets.iter().any(|a| a.asset_id == asset_id),
+            "the asset is not in the mandate"
+        );
+        require!(token_account(&asset_id).is_some(), "only nep141 assets can be withdrawn");
+        require!(amount.0 > 0, "the amount must be positive");
+        let now = now_sec();
+        require!(!self.execution_locked(now), "an execution is in progress");
+        require!(
+            self.trading.signed_intent_expires_at_sec <= now,
+            "a signed intent is still outstanding"
+        );
+        self.pending_withdrawal = Some(PendingWithdrawal {
+            asset_id,
+            receiver,
+            amount,
+            effective_sec: now + WITHDRAW_DELAY_SEC,
+        });
+    }
+
+    /// Drops a queued withdrawal before it is sent. Requires 1 yoctoNEAR.
+    #[payable]
+    pub fn cancel_pending_withdrawal(&mut self) {
+        assert_one_yocto();
+        self.assert_owner();
+        require!(self.pending_withdrawal.is_some(), "no withdrawal is queued");
+        self.pending_withdrawal = None;
+    }
+
+    /// The queued withdrawal, if any.
+    pub fn get_pending_withdrawal(&self) -> Option<PendingWithdrawal> {
+        self.pending_withdrawal.clone()
+    }
+
+    /// Sends a queued withdrawal once its delay has passed. Anyone may call it: the owner fixed
+    /// the content when it was queued, and only the time and the vault's state are checked.
+    /// The withdrawal is taken before the call and queued again if the call fails.
+    pub fn apply_pending_withdrawal(&mut self) -> Promise {
+        let pending = self
+            .pending_withdrawal
+            .clone()
+            .unwrap_or_else(|| env::panic_str("no withdrawal is queued"));
+        let now = now_sec();
+        require!(now >= pending.effective_sec, "the withdrawal is still in its delay");
+        require!(!self.execution_locked(now), "an execution is in progress");
+        require!(
+            self.trading.signed_intent_expires_at_sec <= now,
+            "a signed intent is still outstanding"
+        );
+        let token = token_account(&pending.asset_id)
+            .unwrap_or_else(|| env::panic_str("only nep141 assets can be withdrawn"));
+        self.pending_withdrawal = None;
+        Promise::new(self.intents.clone())
+            .function_call(
+                "ft_withdraw".to_string(),
+                json!({
+                    "token": token,
+                    "receiver_id": pending.receiver,
+                    "amount": pending.amount,
+                })
+                .to_string()
+                .into_bytes(),
+                NearToken::from_yoctonear(1),
+                GAS_WITHDRAW,
+            )
+            .then(
+                Self::ext(env::current_account_id())
+                    .with_static_gas(GAS_CALLBACK)
+                    .on_withdrawn(pending),
+            )
+    }
+
+    /// Puts a withdrawal back in the queue when `intents.near` refused it, unless the owner has
+    /// queued another one meanwhile.
+    #[private]
+    pub fn on_withdrawn(
+        &mut self,
+        #[callback_result] result: Result<U128, PromiseError>,
+        pending: PendingWithdrawal,
+    ) {
+        if result.is_err() && self.pending_withdrawal.is_none() {
+            self.pending_withdrawal = Some(pending);
+        }
+    }
     /// The agent submits a trade. Only high-level parameters are accepted;
     /// the vault constructs the signed payload itself at execution time.
     pub fn propose(
@@ -874,6 +985,7 @@ impl Vault {
             signed_intent: None,
             pending_mandate: None,
             pending_agent: None,
+            pending_withdrawal: None,
         }
     }
 
@@ -975,6 +1087,11 @@ fn is_hex_digest(s: &str) -> bool {
 /// What a callback from an execution that no longer holds the lock returns. It changes nothing.
 fn superseded() -> ExecutionOutcome {
     ExecutionOutcome::Failed { reason: "superseded by a newer execution".to_string() }
+}
+
+/// The token account of a `nep141:` asset id, or `None` for any other kind of asset.
+fn token_account(asset_id: &str) -> Option<&str> {
+    asset_id.strip_prefix("nep141:").filter(|token| !token.is_empty())
 }
 
 fn validate_or_panic(mandate: &Mandate) {
@@ -1212,6 +1329,162 @@ mod tests {
         let mut v = vault();
         context(accounts(2), 0);
         v.pause();
+    }
+
+    // ---- Withdrawals: the owner queues, anyone sends after the delay ----
+
+    fn queue_withdrawal(v: &mut Vault) {
+        context_at(accounts(1), 1, T0);
+        v.request_withdrawal(USDC.into(), accounts(4), U128(1_000_000));
+    }
+
+    #[test]
+    fn a_withdrawal_waits_for_the_delay() {
+        let mut v = vault();
+        queue_withdrawal(&mut v);
+        assert_eq!(
+            v.get_pending_withdrawal(),
+            Some(PendingWithdrawal {
+                asset_id: USDC.into(),
+                receiver: accounts(4),
+                amount: U128(1_000_000),
+                effective_sec: T0 + WITHDRAW_DELAY_SEC,
+            })
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "only the owner can call this method")]
+    fn request_withdrawal_rejects_non_owner() {
+        let mut v = vault();
+        context_at(accounts(2), 1, T0);
+        v.request_withdrawal(USDC.into(), accounts(4), U128(1));
+    }
+
+    #[test]
+    #[should_panic(expected = "Requires attached deposit of exactly 1 yoctoNEAR")]
+    fn request_withdrawal_requires_one_yocto() {
+        let mut v = vault();
+        context_at(accounts(1), 0, T0);
+        v.request_withdrawal(USDC.into(), accounts(4), U128(1));
+    }
+
+    #[test]
+    #[should_panic(expected = "the asset is not in the mandate")]
+    fn request_withdrawal_refuses_an_unlisted_asset() {
+        let mut v = vault();
+        context_at(accounts(1), 1, T0);
+        v.request_withdrawal("nep141:scam.near".into(), accounts(4), U128(1));
+    }
+
+    #[test]
+    #[should_panic(expected = "the amount must be positive")]
+    fn request_withdrawal_refuses_zero() {
+        let mut v = vault();
+        context_at(accounts(1), 1, T0);
+        v.request_withdrawal(USDC.into(), accounts(4), U128(0));
+    }
+
+    #[test]
+    #[should_panic(expected = "an execution is in progress")]
+    fn request_withdrawal_refuses_while_the_lock_holds() {
+        let mut v = vault();
+        v.in_flight = running(1, T0);
+        context_at(accounts(1), 1, T0);
+        v.request_withdrawal(USDC.into(), accounts(4), U128(1));
+    }
+
+    #[test]
+    #[should_panic(expected = "a signed intent is still outstanding")]
+    fn request_withdrawal_refuses_while_a_signed_intent_is_open() {
+        let mut v = vault();
+        v.trading.signed_intent_expires_at_sec = T0 + 120;
+        context_at(accounts(1), 1, T0);
+        v.request_withdrawal(USDC.into(), accounts(4), U128(1));
+    }
+
+    #[test]
+    #[should_panic(expected = "the withdrawal is still in its delay")]
+    fn apply_withdrawal_refused_before_the_delay() {
+        let mut v = vault();
+        queue_withdrawal(&mut v);
+        context_at(accounts(2), 0, T0 + WITHDRAW_DELAY_SEC - 1);
+        let _ = v.apply_pending_withdrawal();
+    }
+
+    #[test]
+    fn apply_withdrawal_takes_it_after_the_delay() {
+        let mut v = vault();
+        queue_withdrawal(&mut v);
+        context_at(accounts(2), 0, T0 + WITHDRAW_DELAY_SEC);
+        let _ = v.apply_pending_withdrawal();
+        assert_eq!(v.get_pending_withdrawal(), None);
+    }
+
+    #[test]
+    #[should_panic(expected = "no withdrawal is queued")]
+    fn apply_without_a_withdrawal_panics() {
+        let mut v = vault();
+        context_at(accounts(2), 0, T0 + WITHDRAW_DELAY_SEC);
+        let _ = v.apply_pending_withdrawal();
+    }
+
+    #[test]
+    #[should_panic(expected = "a signed intent is still outstanding")]
+    fn apply_withdrawal_refused_while_a_signed_intent_is_open() {
+        let mut v = vault();
+        queue_withdrawal(&mut v);
+        v.trading.signed_intent_expires_at_sec = T0 + WITHDRAW_DELAY_SEC + 60;
+        context_at(accounts(2), 0, T0 + WITHDRAW_DELAY_SEC);
+        let _ = v.apply_pending_withdrawal();
+    }
+
+    #[test]
+    fn a_failed_withdrawal_is_queued_again() {
+        let mut v = vault();
+        queue_withdrawal(&mut v);
+        let pending = v.get_pending_withdrawal().expect("queued");
+        context_at(accounts(2), 0, T0 + WITHDRAW_DELAY_SEC);
+        let _ = v.apply_pending_withdrawal();
+        context(accounts(0), 0);
+        v.on_withdrawn(Err(PromiseError::Failed), pending.clone());
+        assert_eq!(v.get_pending_withdrawal(), Some(pending));
+    }
+
+    #[test]
+    fn a_failed_withdrawal_does_not_replace_a_newer_request() {
+        let mut v = vault();
+        queue_withdrawal(&mut v);
+        let first = v.get_pending_withdrawal().expect("queued");
+        context_at(accounts(2), 0, T0 + WITHDRAW_DELAY_SEC);
+        let _ = v.apply_pending_withdrawal();
+        context_at(accounts(1), 1, T0 + WITHDRAW_DELAY_SEC);
+        v.request_withdrawal(USDC.into(), accounts(5), U128(2_000_000));
+        let newer = v.get_pending_withdrawal();
+        context(accounts(0), 0);
+        v.on_withdrawn(Err(PromiseError::Failed), first);
+        assert_eq!(v.get_pending_withdrawal(), newer);
+    }
+
+    #[test]
+    fn a_sent_withdrawal_is_not_queued_again() {
+        let mut v = vault();
+        queue_withdrawal(&mut v);
+        let pending = v.get_pending_withdrawal().expect("queued");
+        context_at(accounts(2), 0, T0 + WITHDRAW_DELAY_SEC);
+        let _ = v.apply_pending_withdrawal();
+        context(accounts(0), 0);
+        v.on_withdrawn(Ok(U128(0)), pending);
+        assert_eq!(v.get_pending_withdrawal(), None);
+    }
+
+    #[test]
+    fn the_owner_cancels_a_queued_withdrawal() {
+        let mut v = vault();
+        queue_withdrawal(&mut v);
+        context_at(accounts(1), 1, T0 + 1);
+        v.cancel_pending_withdrawal();
+        assert_eq!(v.get_pending_withdrawal(), None);
     }
 
     // ---- Agent gate and proposal shape ----
