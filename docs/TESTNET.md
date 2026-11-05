@@ -33,3 +33,31 @@ The vault build is from `feat/owner-controls` (`contracts/vault`, wasm sha256 pr
 ## Reproduce
 
 Needs a funded testnet account and the vault deployed as above. The steps are the owner controls (`set_mandate`, `get_pending_mandate`, `cancel_pending_mandate`), then `propose` as the agent, then `execute` as anyone. The sandbox tests reproduce the same logic without funds: `./scripts/verify.sh --integration`.
+
+## Run 2, 5 Nov 2026: the current vault on testnet
+
+The vault as it stands after SR-1, SR-3, SR-5 and SR-6. The owner is `mandate-r1-4715a0.testnet`. The vault is `vault.mandate-r1-4715a0.testnet` and the agent is `agent.mandate-r1-4715a0.testnet`, both subaccounts created by the owner's key. The externals are the testnet ones: `v1.signer-prod.testnet`, `intents.testnet` and `price-oracle.testnet`.
+
+The run is `contracts/vault/tests/testnet_run.rs`. It is ignored by default and needs `MANDATE_TESTNET_RUN=1`.
+
+| Step | Result |
+| --- | --- |
+| Create vault (5 NEAR) and agent (0.5 NEAR) subaccounts | ok |
+| `new_with_externals` deployed and initialised in one step | ok; `get_externals` shows the three testnet externals |
+| `set_agent` (first agent) | applied at once; `get_agent` returns the agent |
+| `set_mandate` with a higher `max_trade_usd` | `Queued`, effective 24 h later |
+| `cancel_pending_mandate` | ok; `get_pending_mandate` is then empty |
+| `request_withdrawal` (1000 units of wNEAR to the owner) | queued |
+| `apply_pending_withdrawal` before the delay | refused: `the withdrawal is still in its delay` |
+| `cancel_pending_withdrawal` | ok |
+| `propose` as the agent | stored as proposal 1; then proposal 2 in the recheck |
+| `execute` as the owner | refused: `the intents key is not registered` |
+| Delete the vault's full-access key (SR-9) | ok; 0 access keys left on the vault |
+
+Failed transactions burnt about 1.89 TGas each (the early apply and the execute). The key deletion burnt about 0.63 TGas.
+
+### What this run did not reach
+
+- **The signing path.** `intents.testnet` has no contract, so the key cannot be registered and nothing is signed. `execute` stops at the key check, before the gates and the MPC call.
+- **The send after the 24 h delay.** The sandbox clock cannot reach it, and this run did not wait a day. The request, the early refusal and the cancel ran on the chain.
+- **The script agent and the keeper against a live chain.** Not run in this step.
