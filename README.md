@@ -201,7 +201,7 @@ has not run on mainnet.
 - [ ] OutLayer agent (Rust → `wasm32-wasip2`) with yield/resume decision flow
 - [ ] Solver-relay publishing
 - [ ] Withdraw (owner, signed intent, own gates)
-- [ ] Dashboard with live attack demos (each must fail on camera)
+- [ ] Dashboard with live attack demos (each must fail on camera). A recorded replay of the eight attacks is on the dashboard; a live run against a chain is not built.
 - [ ] First real mainnet trade with a few dollars
 - [ ] Demo video, submission
 

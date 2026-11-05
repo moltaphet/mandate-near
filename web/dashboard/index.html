@@ -160,6 +160,16 @@
     .hide-sm { display: none; }
   }
   @media (prefers-reduced-motion: reduce) { .dial .arc, .dial .pointer { transition: none; } }
+  .attacks { grid-column: 1 / -1; display: grid; gap: 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 22px 22px 18px; }
+  .attacks h2 { font-family: var(--display); font-weight: 700; font-size: 26px; line-height: 1.15; letter-spacing: -.01em; margin: 0; }
+  .attacks code { font-family: var(--mono); font-size: 12.5px; color: var(--ink); }
+  .attacks .run { margin: 0; color: var(--mute); font-size: 13px; }
+  .attacks .scroll { overflow-x: auto; }
+  @media (max-width: 640px) {
+    .attacks { padding: 18px 16px 14px; }
+    .attacks table th:first-child, .attacks table td.n { display: none; }
+    .attacks td.res { white-space: normal; }
+  }
 </style>
 </head>
 <body>
@@ -224,6 +234,7 @@
     </section>
 
     <section class="detail" aria-live="polite" id="detail" aria-label="Selected lock"></section>
+
   </main>
 
   <aside class="ticket" aria-label="Proposal receipt">
@@ -247,6 +258,28 @@
     <div class="t-foot">This receipt shows what the dashboard checked. It is not an on-chain record. Each tagged field is sample data.</div>
   </aside>
 
+
+    <section class="attacks" aria-labelledby="attacks-title">
+      <div class="eyebrow">Attack replay · recorded on a local sandbox, 2026-11-05</div>
+      <h2 id="attacks-title">Eight attacks, each blocked.</h2>
+      <p class="lede">Each row is an attack the vault must refuse. The results are copied from <code>docs/evidence/attacks.txt</code>. The script <code>scripts/attack-demo.sh</code> writes that file by running every attack against the real contract on a local NEAR sandbox. Nothing here ran on-chain.</p>
+      <div class="scroll">
+      <table>
+        <thead><tr><th>#</th><th>Attack</th><th class="hide-sm">Expected</th><th>Observed</th><th>Result</th></tr></thead>
+        <tbody>
+          <tr><td class="n">01</td><td class="rule">A stranger proposes a trade</td><td class="check hide-sm">refused: only the agent</td><td class="check">refused: only the agent can propose trades</td><td class="res open">refused</td></tr>
+          <tr><td class="n">02</td><td class="rule">The agent trades a token the owner never listed</td><td class="check hide-sm">refused: not in the mandate</td><td class="check">refused: asset_in is not in the mandate</td><td class="res open">refused</td></tr>
+          <tr><td class="n">03</td><td class="rule">The agent proposes $60 against a $50 per-trade cap</td><td class="check hide-sm">rejected: TradeTooLarge, one strike</td><td class="check">rejected: TradeTooLarge, strikes 1</td><td class="res open">rejected</td></tr>
+          <tr><td class="n">04</td><td class="rule">The agent accepts $1.80 for $2 of USDC (1% slippage limit)</td><td class="check hide-sm">rejected: SlippageExceeded</td><td class="check">rejected: SlippageExceeded</td><td class="res open">rejected</td></tr>
+          <tr><td class="n">05</td><td class="rule">The trade is priced on a 100 s old quote (limit 60 s)</td><td class="check hide-sm">rejected: StalePrice</td><td class="check">rejected: StalePrice</td><td class="res open">rejected</td></tr>
+          <tr><td class="n">06</td><td class="rule">The trade is priced on a quote dated one hour ahead</td><td class="check hide-sm">rejected: FuturePrice</td><td class="check">rejected: FuturePrice</td><td class="res open">rejected</td></tr>
+          <tr><td class="n">07</td><td class="rule">A relay changes the signed amount from $2 to $3</td><td class="check hide-sm">rejected by intents.near: signature check</td><td class="check">rejected: invalid signature</td><td class="res open">rejected</td></tr>
+          <tr><td class="n">08</td><td class="rule">A stolen owner key raises the trade cap from $50 to $150</td><td class="check hide-sm">queued 24 h; old cap holds; early apply refused</td><td class="check">queued; $60 trade rejected: TradeTooLarge; early apply refused; pending: true</td><td class="res open">queued, trade blocked</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p class="run">Run them yourself: <code>./scripts/attack-demo.sh</code></p>
+    </section>
 
   <section class="info" id="about" aria-labelledby="about-title">
     <div>
