@@ -1,8 +1,11 @@
 MANDATE — OPERATIONAL SECURITY AND HACKATHON REVIEW
 Review date: 6 November 2026
 Workspace: /Users/ehs4n/mandate-near
-Prepared against the current, changing working tree. FINAL COMBINED VERIFICATION PENDING.
-The final reviewer must insert the frozen revision/artifact manifest and final command results.
+Prepared against the current working tree. Final FAST verification is recorded;
+final serial sandbox verification and publication/visual checks remain pending.
+Current artifact:384464bytes; SHA256
+def86f513ce545d3ffc1125080e76ae58cf6077cc06b55382466097baf64e8fa.
+The final reviewer must insert the frozen source manifest/revision and remaining results.
 Submission deadline supplied by the author: 14 November 2026, 23:59 UTC.
 Official contest rules, eligibility and judging criteria: UNVERIFIED.
 
@@ -36,8 +39,9 @@ Coverage combines inherited complete reading recorded in the prior remediation
 report with the current task owners' reading of changed files. New controls
 were independently reviewed where stated below. Full source coverage does not
 establish live execution. Partial coverage is retained where a current complete
-pass has not been confirmed. Final frontend source has been read; browser
-visual/interaction verification and final combined command results remain open.
+pass has not been confirmed. Final frontend source has been read; current FAST291 commands and reader/site
+bundle parity passed. Browser visual/interaction verification and final serial
+sandbox command results remain open.
 
 Contract sources:
 contracts/vault/src/lib.rs -> fully read in inherited review; current production controls/callbacks reviewed by contract owner; independent withdrawal reread
@@ -115,6 +119,7 @@ docs/evidence/recovery-design.txt -> fully read in earlier pass; current changes
 docs/evidence/attacks.txt -> fully read in inherited review
 docs/evidence/gas-limit.txt -> fully read in inherited review
 docs/evidence/gas.txt -> fully read in inherited review
+docs/evidence/operational-fast.txt -> fully read; current eight-command outputs and finalFAST291/artifact record
 docs/spikes/R1.md -> fully read in inherited review
 web/site/index.html -> fully read after the paper-site rewrite
 web/site/site.mjs -> fully read, including safe sharing, clipboard and navigation
@@ -122,7 +127,7 @@ web/site/site.test.mjs -> fully read; utility tests are not mounted-browser layo
 web/dashboard/index.html -> fully read in inherited review; current changed/sample/render excerpts reread
 web/dashboard/live.mjs -> fully read independently; rule caps correctly parse the contract's U64 fields
 web/dashboard/live.test.mjs -> partially read in report preparation; frontend owner test review retained
-web/site/audit.mjs -> partially read: generated reader correspondence; final build check pending
+web/site/audit.mjs -> partially read: generated reader correspondence; final FAST bundle parity check passed
 Cargo.toml -> fully read in inherited review; current overflow profile checked
 contracts/vault/Cargo.toml -> fully read
 contracts/mock-ft/Cargo.toml -> fully read in inherited review
@@ -174,7 +179,7 @@ F06 | High | contracts/vault/src/lib.rs:732 | Withdrawal state precedes calls an
 F07 | High | contracts/vault/src/lib.rs:1474 | Expired/stale execution callbacks cannot consume a newer proposal. | "self.execution_locked(now_sec())" | Execution1 startsT; atT+420 proposal2 is accepted before execution2. Late execution1 callback has no current timed authority and cannot clear proposal2. | Preserved ID/time/proposal fencing; post-request signing errors retain lock. | Verified by reading
 F27 | High | contracts/vault/src/lib.rs:1297 | Escaped signatures retain quota even if callback fails or arrives too late. | "self.trading = next_state.clone();" | Daily cap200, turnover180, input20. Signer may produce bytes, then callback arrives at outer-lock expiry. Recorded turnover is already200 before dispatch, so a further20 signing authorization cannot reuse the reservation. | Preserved pre-dispatch turnover/cooldown/HWM reservation. Failed/lost/unfilled requests do not automatically refund it. Settlement-day turnover is not measured. | Verified by reading
 F09 | High | contracts/vault/src/oracle.rs:105; contracts/vault/src/pyth.rs:55 | Coherence/input guards are implemented; live price correctness and updater are unproven. | "if asset.reports.iter().any(|report| report.timestamp.0 > snapshot) {"; "if u128::from(value.conf.0) * 10_000 > u128::from(mantissa) * u128::from(max_slippage_bps) {" | Earlier aggregate1 plus later report2 is omitted. Pyth price100000000/conf1000001 at100bps is omitted and MissingPrice refuses signing. A fresh wrong price can still pass all oracle-based economic checks. Queried live NEAR caches were null. | Adapter counterexamples fixed; provider choice immutable. Choose usable feeds/updater, units/quote currency and accepted administrator/source trust before funds. Staleness/confidence are not independent market-value guarantees. | Verified by reading
-F11 | High | agent/src/lib.rs:5 | Compromised agent can cause economic harm within gates. | "//! mandate, including economically harmful trades that still pass the gates." | Repeated permitted but poor choices can lose money. Agent lacks direct treasury signing authority but its proposals can cause authorized money movement. | Corrected code/docs scope. Final paper-site headline must avoid literal "cannot move money" and keep residual loss prominent. | Verified by reading
+F11 | High | agent/src/lib.rs:5 | Compromised agent can cause economic harm within gates. | "//! mandate, including economically harmful trades that still pass the gates." | Repeated permitted but poor choices can lose money. Agent lacks direct treasury signing authority but its proposals can cause authorized money movement. | Corrected code/docs scope. Current paper-site headline removes literal "cannot move money" and its FAQ states residual permitted loss. | Verified by reading
 F18 | High | contracts/vault/src/migration.rs:96 | Four recognized layouts can migrate only under quiescent conditions; migration is not custody history proof. | "env::panic_str("unsupported legacy vault state layout");" | Unknown/current/self-owned/unpaused/active state -> refuse. Recognized legacy fields convert, but old bytes cannot prove no arbitrary voucher mint or old dispatched withdrawal existed. | Strict private migration and original-source golden fixtures retained. Fresh deployment required unless complete relevant history is authenticated. Never discard an active guard. | Verified by reading
 F25 | High | contracts/vault/src/lib.rs:1262 | Salt delay cannot turn a fresh approval into a stale-price signing request. | "if now_sec() > price_deadline {" | Approve atT using max_age60; salt callback atT+61 -> refuse; T+60 -> permitted if other authority remains valid. | Stored oldest approved-price deadline and strict-later check retained. No settlement-time freshness claim. | Verified by reading
 F17 | High | contracts/vault/src/lib.rs:68; scripts/inspect-deployment.py:199 | Current deployed verifier/signer/source/audit/admin/custody trust is UNVERIFIED. | "pub const MAINNET_INTENTS: &str = "intents.near";"; ""read_only": True, "live_readiness": "UNVERIFIED"," | A passing fixture with a stand-in signer does not establish the binary, roles or authority currently protecting a funded live vault. Historical testnet Intents has no deployed code. | Independently bind exact deployed binaries to reviewed source/audit and inspect administrative trust; real vault signing/settlement receipts required. Inspector never upgrades observed counts into a readiness guarantee. | Needs a test
@@ -182,7 +187,7 @@ F05 | Medium | contracts/vault/src/withdrawal.rs:220 | Zero terminal amount is t
 F29 | Medium | contracts/vault/src/lib.rs:556 | Pyth mandate preview previously accepted feed IDs that the authoritative setter refused. | "if let Err(error) = oracle_mandate_validation(&mandate, self.oracle_kind) {" | Pyth vault, mandate containing generic PriceOracle feed name -> old preview valid=true/Applied or Queued, actual setter rejects its non-64-lowercase-hex feed. This misleads owner tooling; it does not bypass on-chain validation. | FIXED: preview and setter share provider-specific validation. Two exact regressions check invalid preview/state preservation and valid immediate/queued outcome parity. | Verified by reading
 F08 | Medium | contracts/vault/src/withdrawal.rs:198 | Old callbacks cannot resurrect replaced/cancelled request authorization. | "if active.request_seq.0 == self.withdrawal_seq && self.pending_withdrawal.is_none() {" | A dispatched; owner queues B then cancels B; later A refund/cancellation must not restore A or overwrite B. | Preserved request generation, per-attempt ID/stage and unarmed requeue. | Verified by reading
 F12 | Medium | contracts/vault/src/mandate.rs:185 | Asset parsing accepts only bounded valid NEP141 AccountIds. | "id.len() <= 71 && account.parse::<AccountId>().is_ok()" | nep141:.near, near., a..b, a-_b, aa:bb, >64-byte account, or arbitrary NEP245 suffix -> reject. nep141:<valid account> -> supported. | Preserved NEP141-only custody/grammar/length bound. Internal NEP245 voucher is a control marker, not an added tradable asset. | Verified by reading
-F13 | Medium | scripts/verify.sh:50 | Current integration script includes gas and new protocol/deployment targets. | "--test gas"; "--test recovery_protocol --test pyth_path --test sealed_deployment" | Supported20-feed or voucher branch failure now fails an included target instead of being omitted. Without --integration, sandbox targets are not run. | Script coverage corrected. Final complete run of frozen candidate still pending; check-claims only checks references. | Verified by reading
+F13 | Medium | scripts/verify.sh:50 | Current integration script includes gas and new protocol/deployment targets. | "--test gas"; "--test recovery_protocol --test pyth_path --test sealed_deployment" | Supported20-feed or voucher branch failure now fails an included target instead of being omitted. Without --integration, sandbox targets are not run. | Script coverage corrected; final FAST passed291 tests. Complete serial sandbox run remains pending; check-claims only checks references. | Verified by reading
 F14 | Medium | README.md:21; docs/OPERATIONAL-READINESS.md:28 | Current local docs distinguish implementation from historical/live results; published site can still present older claims. | "> Recent autonomous-client and unique-voucher recovery changes are implemented;"; "The published `https://mandatenear.xyz/` appearance was observed and matches that" | A judge can read an older published75-test/TEE/M3 page while current local code/docs have changed. Neither historical counts nor local HTML edits prove the deployed website or vault is current. | Final local paper-site claims corrected and source reviewed. Publication and matching remote source/deployment remain separate and UNVERIFIED. | Verified by reading
 F15 | Medium | web/dashboard/index.html:488 | Sample economics are fixed fixtures, not actual chain gate computation. | "const ASSETS = [" | Sample scenario may say one gate rejects; it does not establish that live holdings/prices/rules produce that first failure. | Preserve explicit sample mode and consistent fixtures. Connected reader shows observed state separately; do not label sample outcome as live execution. | Verified by reading
 F19 | Medium | contracts/vault/src/lib.rs:1254 | Expired intent cannot be requested from MPC even inside the300-second build window. | "if next_state.signed_intent_expires_at_sec <= now_sec() {" | Approved intent expiresT+120; salt returns atT+120 orT+200 -> refuse signing, rather than extend deadline without fresh gates. | Preserved exact-expiry rejection. | Verified by reading
@@ -365,23 +370,23 @@ C. CLAIMS VS CODE TABLE
 Claim | Where stated | Backed by | Status
 Sensitive actions check owner predecessor and exact1yocto | SECURITY.md:105; docs/PROJECT.md:191 | assert_owner/assert_one_yocto; owner controls and units | backed by code and a test, sandbox scope
 Pause/propose deliberately work without1yocto | SECURITY.md:55 | explicit owner/agent checks; pause/propose tests | backed by code and a test; real limited-permission owner-key integration still missing
-24h loosening, replacement agent and withdrawal queues | SECURITY.md:48; docs/PROJECT.md:189 | constants/now>=deadline; controlled-time queue replacement/boundary tests | backed by code and a test locally; live elapsed delay UNVERIFIED
+24h loosening, replacement agent and withdrawal queues | SECURITY.md:52–53; docs/PROJECT.md:194/197/203 | constants/now>=deadline; controlled-time queue replacement/boundary tests | backed by code and a test locally; live elapsed delay UNVERIFIED
 Replacement resets timer, rearm preserves withdrawal maturity | docs/PROJECT.md:203; README.md:316 | queue generation/now+delay; owner rearm and replacement tests | backed by code and a test
 Agent cannot directly sign/withdraw/change owner controls | README.md:82; THREAT_MODEL.md:68 | agent predecessor-only proposal path, exact payload builder; authorization tests | backed by code and a test, correct deployment premises required
 Compromised agent can still cause permitted loss | README.md:10; THREAT_MODEL.md:58 | gates restrict authorization, do not optimize returns | backed by code and a test for accepted/rejected proposals; no profitability claim
 Nine gates/exact math/conservative rounding | README.md:213; docs/PROJECT.md:142 | engine.rs/math.rs; boundary/property/attack tests | backed by code and a test, not exhaustive proof
 All held/traded prices fresh at signing request | README.md:229; SECURITY.md:58 | coverage checks, stored oldest-price deadline;60/61-second tests | backed by code and a test; settlement-time freshness not guaranteed
-Pyth input shape/exponent/confidence checks | docs/OPERATIONAL-READINESS.md:43 | pyth.rs; unit/provider + four pyth_path sandbox tests | backed by code and a test against documented-shape stand-in
-Provider-specific mandate preview matches setter | contracts/vault/src/lib.rs:554–556, documented API | shared oracle_mandate_validation; pyth_preview_rejects_generic_feed_ids_without_changing_the_vault and pyth_preview_matches_applied_and_queued_setter_outcomes_for_valid_feeds | backed by code and a test; previous mismatch fixed
+Pyth input shape/exponent/confidence checks | docs/OPERATIONAL-READINESS.md:54 | pyth.rs; unit/provider + four pyth_path sandbox tests | backed by code and a test against documented-shape stand-in
+Provider-specific mandate preview matches setter | docs/PROJECT.md:202; contracts/vault/src/lib.rs:554–556 | shared oracle_mandate_validation; pyth_preview_rejects_generic_feed_ids_without_changing_the_vault and pyth_preview_matches_applied_and_queued_setter_outcomes_for_valid_feeds | backed by code and a test; previous mismatch fixed
 Explicit64KiB typed callback result bounds | contracts/vault/src/lib.rs:472/497/1004/1099/1178/1328 | six explicit SDK callback max_bytes attributes; compiled source | backed by code only; generated Wasm wrapper oversized-result runtime UNVERIFIED
-Usable live provider/updater/feed units/admin identity | docs/OPERATIONAL-READINESS.md:53 | queried NEAR caches null; no operating updater evidence | backed by nothing as a readiness claim; UNVERIFIED
+Usable live provider/updater/feed units/admin identity | docs/OPERATIONAL-READINESS.md:62–68 | queried NEAR caches null; no operating updater evidence | backed by nothing as a readiness claim; UNVERIFIED
 One current execution/signed intent, stale callbacks inert | SECURITY.md:48; THREAT_MODEL.md:216 | ID/proposal/revision/time guards; late/expiry regressions | backed by code and a test locally
-Failed/lost signatures cannot restore turnover quota | README.md:237; THREAT_MODEL.md:147 | lib.rs:1297 reservation before dispatch; escaped-signature regression | backed by code and a test
+Failed/lost signatures cannot restore turnover quota | README.md:237; THREAT_MODEL.md:147 | contracts/vault/src/lib.rs:1297 reservation before dispatch; escaped-signature regression | backed by code and a test
 Daily cap is strict settlement-day volume cap | expressly disclaimed README.md:227 | accounting uses approval snapshot; prior-day intent may settle next day | contradicted by code if stated
 Drawdown stops all losses or guarantees stable peg | expressly disclaimed THREAT_MODEL.md:191 | oracle-priced snapshot/stable classification; no independent peg source | backed by nothing for stronger claim
 Every position always<=cap | corrected docs/PROJECT.md:134 | non-worsening overweight de-risk exception | contradicted by code if stated literally
 Three strikes halt, owner resumes | SECURITY.md:51 | rejection counter/halt/owner resume tests | backed by code and a test; timing grief accepted
-Exact payload_v2.Eddsa/domain1 convention | docs/ARCHITECTURE.md:83 | lib.rs:1305–1306; enforcing mock and historical separate spike | backed by code and a test locally; actual current vault live signing UNVERIFIED
+Exact payload_v2.Eddsa/domain1 convention | docs/ARCHITECTURE.md:83 | contracts/vault/src/lib.rs:1305–1306; enforcing mock and historical separate spike | backed by code and a test locally; actual current vault live signing UNVERIFIED
 Signature or relay SETTLED means independently verified settlement | expressly disclaimed README.md:204 | relay status retains settlement_verified:false; no receipt/ledger verifier | contradicted by code if stated
 Atomic matched settlement/minout/replay | README.md:110; THREAT_MODEL.md:139 | matched_funded_settlement_is_atomic_and_replay_is_refused on supplied Intents fixture | backed by code and a test locally; current live verifier identity UNVERIFIED
 20-asset supported limit | SECURITY.md:10; docs/PROJECT.md:131 | MAX_ASSETS=20; PriceOracle gas and Pyth20-feed tests | backed by code and a test on measured fixture revision; final candidate rerun pending
@@ -390,19 +395,19 @@ Unknown balance-masked withdrawal has operation proof | THREAT_MODEL.md:238 | cu
 Universal unknown-withdrawal recovery with any deployment history | not claimed/F26/F28 | inconsistent proof retains guard; hidden old burn/refund may violate uniqueness | contradicted by code if stated
 Safe retry requires owner rearm/new ID | README.md:316; docs/PROJECT.md:206 | arm spent before issuance, private generation requeue, exact1yocto rearm | backed by code and a test locally
 Sent proof proves terminal delivery/no later refund | expressly disclaimed README.md:329 | native marker-first fixture shows committed marker with FT failure/refund | contradicted by code if stated
-Fresh atomic deployment without any account access permission works | docs/OPERATIONAL-READINESS.md:68 | sealed_deployment actual four-action batch; zero permission counts and external owner controls | backed by code and a test in sandbox; actual intended deployment UNVERIFIED
-Current permission/sink/supply counts prove no prior voucher mint | docs/OPERATIONAL-READINESS.md:103 | current-only public observations; no lifetime issuance/history authority | backed by nothing for stronger claim
-Four known migrations are safe for all historical deployments | docs/PROJECT.md:243 | four strict schemas/quiescence/golden inputs; old external history absent | backed by code and a test for known layouts only; universal deployment safety not established
-Deterministic two-asset autonomous strategy/final-block preview | README.md:179; docs/PROJECT.md:285 | autonomous.rs:227, transport pinning, refresh before proposal; client/unit/sandbox protocol tests | backed by code and a test; final suite and live operation pending
+Fresh atomic deployment without any account access permission works | docs/OPERATIONAL-READINESS.md:77 | sealed_deployment actual four-action batch; zero permission counts and external owner controls | backed by code and a test in sandbox; actual intended deployment UNVERIFIED
+Current permission/sink/supply counts prove no prior voucher mint | expressly qualified docs/OPERATIONAL-READINESS.md:112–120 | current-only public observations; no lifetime issuance/history authority | backed by nothing for stronger claim
+Four known migrations are safe for all historical deployments | qualified docs/PROJECT.md:249–257 | four strict schemas/quiescence/golden inputs; old external history absent | backed by code and a test for known layouts only; universal deployment safety not established
+Deterministic two-asset autonomous strategy/final-block preview | README.md:179; docs/PROJECT.md:290–292 | agent/src/autonomous.rs:227, transport pinning, refresh before proposal; client/unit/sandbox protocol tests | backed by code and a test; current FAST passed, final sandbox and live operation pending
 Dry-run submits no proposal or publication and loads no signing/auth settings | README.md:191 | main.rs returns before signed_agent, no relay auth in dry branch; client tests | backed by code and a test; public quote may fail without required partner authentication
-Keeper publication explicit/current-state/quote bound | README.md:199; docs/PROJECT.md:304 | no publisher by default, current signed equality, exact binding checks; mock HTTP protocol tests | backed by code and a test; live relay interoperability UNVERIFIED
+Keeper publication explicit/current-state/quote bound | README.md:199; docs/PROJECT.md:308 | no publisher by default, current signed equality, exact binding checks; mock HTTP protocol tests | backed by code and a test; live relay interoperability UNVERIFIED
 Continuous relay monitoring/final receipt reconciliation | README.md:205 | one initial status query; settlement_verified:false; no continuous tracker | backed by nothing as an implemented claim; correctly disclosed absent
 Current agent uses TEE/model/private inference | expressly planned README.md:7 | deterministic Rust/manual plans; no supplied attestation or inference run | backed by nothing as implemented claim
-Connected read-only dashboard at pinned final block | docs/OPERATIONAL-READINESS.md:22; README.md:302 | public reader/schema/block pinning/hostile text tests; local browser fixture | backed by code and a test locally; final rewritten frontend and publication pending
+Connected read-only dashboard at pinned final block | docs/OPERATIONAL-READINESS.md:22; README.md:302 | public reader/schema/block pinning/hostile text tests; local browser fixture | backed by code and a test locally; finalFAST reader/site/parity passed, browser and publication pending
 Dashboard sample computes live gates | expressly sample-labelled | fixed ASSETS/scenarios in dashboard HTML | contradicted by code if stated
 All eight attacks pass on current final release | README.md:162 | dedicated eight-class fixture target exists; historical runs scoped | backed by a test on earlier reviewed revision; final frozen full run pending
 verify.sh runs everything in default mode | README.md:125 | defaultfmt/clippy/references/Node/Python/units/client tests; sandbox only --integration | contradicted by script if unqualified
-Current published website/deployed vault matches current local source | docs/TESTNET.md:5; OPERATIONAL-READINESS.md:24 | historical vault hash/unsafe owner persists; local website edits unpublished | backed by nothing; UNVERIFIED
+Current published website/deployed vault matches current local source | historical docs/TESTNET.md:5; docs/OPERATIONAL-READINESS.md:28–35 | historical vault hash/unsafe owner persists; local website edits unpublished | backed by nothing; UNVERIFIED
 Official eligibility/track/deadline | docs/OPERATIONAL-READINESS.md:6 | author deadline only; organizer rules absent | backed by nothing independently; UNVERIFIED
 
 D. TESTS THAT ARE WEAK OR MISSING
@@ -466,8 +471,10 @@ advertise them as live MPC costs or final whole-release verification.
 
 Old75/126/130/133 counts refer to prior pages/revisions/runs. The task owner
 recorded226 vault unit tests passing after the two Pyth preview regressions;
-that observed scoped result is not the final whole-release count. Final current
-unique test count is PENDING and must come from actual final outputs. Generated
+that observed scoped result is not the final whole-release count. Current
+finalFAST comprises235 workspace library tests,13 client integration
+tests,31 JavaScript tests and12 Python tests:291 non-overlapping passes. Final
+serial sandbox count is PENDING and must come from actual outputs. Generated
 property cases, reruns, partial commands and Node/Python cases must be reported
 separately. No fixed current126-test claim is supportable.
 
@@ -622,9 +629,18 @@ H. THINGS CHECKED AND FOUND CORRECT
 
 I. COULD NOT VERIFY — EXACT EVIDENCE/COMMAND THAT WOULD SETTLE IT
 
-Final combined candidate: UNVERIFIED/PENDING. Run bash scripts/verify.sh and
-bash scripts/verify.sh --integration against the frozen tree and record the
-complete exit code/output. scripts/check-claims.sh alone cannot settle it.
+FinalFAST: VERIFIED by recorded local outputs in docs/evidence/operational-fast.txt,
+291 non-overlapping tests passed and all eight commands exited0. Final serial
+sandbox candidate: UNVERIFIED/PENDING. Complete bash scripts/verify.sh --integration
+against the frozen tree and record its complete exit code/output.
+scripts/check-claims.sh alone cannot settle security assertions or sandbox status.
+
+Permissionless low-gas execute grief: UNVERIFIED. execute has no entry minimum;
+run an actual Wasm sandbox proposal through deliberately inadequate entry gas
+and assert the exact resulting lock/outcome/proposal/strike behavior, then
+recovery and later normal execution. Add this scenario to the existing
+contracts/vault/tests/execute_path.rs and run that target. No minimum-gas change
+was made without runtime evidence.
 
 Actual deployment/owner/signer/binary identity: UNVERIFIED. Use the public
 read-only inspector command documented in docs/OPERATIONAL-READINESS.md:12
@@ -659,12 +675,14 @@ Local wiring command:
 from contracts/vault. A labelled mock is not live market evidence.
 
 SDK generated typed callback response limit (F30): UNVERIFIED at runtime.
-Add a sandbox external-response fixture returning >65536 bytes for the six
-typed callbacks, invoke the actual vault Wasm wrappers and assert exact refusal
-and execution/withdrawal state invariants. Run the new regression target via
-cargo test --offline --test <actual-added-target> -- --nocapture from
-contracts/vault; the placeholder is not an existing test or a reported pass.
-Direct unit callback calls and successful Clippy cannot settle wrapper behavior.
+Extend contracts/mock-externals/src/lib.rs and contracts/mock-oracle/src/lib.rs
+with oversized successful-response fixtures, and the existing contracts/vault/tests/execute_path.rs and
+contracts/vault/tests/intents_registration.rs with actual Wasm receipt tests for
+the six typed callbacks. Return >65536 bytes and assert wrapper refusal plus
+unchanged/safely guarded execution state. Then run from contracts/vault:
+  cargo test --offline --test execute_path --test intents_registration -- --nocapture
+These missing scenarios are not existing or reported passing tests. Direct unit
+callback calls and successful Clippy cannot settle wrapper behavior.
 
 Actual current vault MPC signing/funded settlement: UNVERIFIED. Need actual
 vault register_intents_key/execute/signed payload, chosen real signer domain,
@@ -691,8 +709,8 @@ command cargo test --offline -p mandate-agent -p mandate-keeper --lib --tests
 proves local protocol. One initial status query/SETTLED does not authenticate
 final settlement; continuous monitor/restart persistence is unimplemented.
 
-Final frontend/published site/remote CI/official rules: UNVERIFIED until final
-site build and hostile-text/mobile/keyboard/browser checks, actual published
+Final frontend/published site/remote CI/official rules: currentFAST Node31 and
+site bundle parity passed. Mounted mobile/keyboard/browser checks, actual published
 asset correspondence, current CI results and organizer rules are checked.
 Local node --test web/dashboard/live.test.mjs and python3 -B scripts/build-web.py
 --check test reader/build correspondence; they do not publish or authenticate
@@ -727,7 +745,11 @@ OBSERVED FOCUSED VERIFICATION, NOT A FINAL RELEASE COUNT
    attributes compiled and strict Clippy passed; generated-wrapper oversized
    runtime path remains UNVERIFIED. Final fast/integration outputs remain separate.
 
-FINAL FAST VERIFICATION: PENDING — final owner to insert actual results.
+FINAL FAST VERIFICATION: PASS —291 non-overlapping tests;8 commands exit0.
+Evidence: docs/evidence/operational-fast.txt, observed2026-11-06 18:42:01 UTC.
+Workspace libraries235(vault226,agent7,keeper2); client integration13; JS31;
+Python12. Formatting, strict all-target Clippy, bundle parity/local references pass.
 FINAL THIRTEEN-TARGET SANDBOX VERIFICATION: PENDING — actual outputs required.
-FINAL FRONTEND REVIEW/BUILD/BROWSER VERIFICATION: PENDING.
+FINAL FRONTEND SOURCE/JS/PARITY: PASS within finalFAST.
+FINAL MOUNTED BROWSER/VISUAL/HOSTED VERIFICATION: UNVERIFIED.
 LIVE FUNDED VAULT SIGNING/SETTLEMENT/RECOVERY: UNVERIFIED.
