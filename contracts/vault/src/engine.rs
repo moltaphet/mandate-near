@@ -290,6 +290,22 @@ pub fn check_trade(
             return Err(TradeError::PositionTooLarge);
         }
     }
+    // Every other non-stable asset is checked too. A trade can push an unchanged holding
+    // over the cap by shrinking NAV, so only a holding whose share rises is refused here.
+    for cfg in &mandate.assets {
+        if cfg.asset_id == trade.asset_out || mandate.is_stable(&cfg.asset_id) {
+            continue;
+        }
+        let held_before =
+            value(market, cfg, balance(&market.balances, &cfg.asset_id), Rounding::Up)?;
+        let held_after = value(market, cfg, balance(&after, &cfg.asset_id), Rounding::Up)?;
+        let share_rises = wide_mul(held_after, nav_before) > wide_mul(held_before, nav_after);
+        if share_rises
+            && wide_mul(held_after, bps) > wide_mul(nav_after, u128::from(mandate.max_position_bps))
+        {
+            return Err(TradeError::PositionTooLarge);
+        }
+    }
 
     Ok(Approval {
         notional_usd: notional,

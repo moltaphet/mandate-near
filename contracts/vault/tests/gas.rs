@@ -146,16 +146,8 @@ async fn gas_by_feed_count() -> testresult::TestResult<()> {
                 );
             }
             Err(reason) => {
-                println!(
-                    "GAS | execute, every gate passes ({feeds} feeds read) | FAILED: {reason}"
-                );
-                // The failed run left the in-flight lock set (SR-1): does the next execute run?
-                match execute_once(&w).await? {
-                    Ok(_) => println!("GAS | a second execute after that failure | ran"),
-                    Err(again) => {
-                        println!("GAS | a second execute after that failure | refused: {again}")
-                    }
-                }
+                // Both sizes are within MAX_ASSETS, so a failure here is a regression.
+                panic!("execute failed at {feeds} feeds, within the supported cap: {reason}");
             }
         }
     }

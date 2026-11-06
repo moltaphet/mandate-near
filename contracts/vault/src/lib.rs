@@ -234,6 +234,9 @@ pub struct Vault {
     pending_agent: Option<PendingAgent>,
     /// A withdrawal waiting for its delay. At most one; a newer request replaces it.
     pending_withdrawal: Option<PendingWithdrawal>,
+    /// Moves on with every withdrawal request and cancel. A send that fails returns its
+    /// request to the queue only while this number is still the one it was sent under.
+    withdrawal_seq: u64,
 }
 
 #[near]
@@ -511,6 +514,11 @@ impl Vault {
         );
         require!(token_account(&asset_id).is_some(), "only nep141 assets can be withdrawn");
         require!(amount.0 > 0, "the amount must be positive");
+        // Tokens sent to the vault or to intents.near would not return to the owner's control.
+        require!(
+            receiver != env::current_account_id() && receiver != self.intents,
+            "the receiver cannot be the vault or intents.near"
+        );
         let now = now_sec();
         require!(!self.execution_locked(now), "an execution is in progress");
         require!(
@@ -523,6 +531,7 @@ impl Vault {
             amount,
             effective_sec: now + WITHDRAW_DELAY_SEC,
         });
+        self.withdrawal_seq += 1;
     }
 
     /// Drops a queued withdrawal before it is sent. Requires 1 yoctoNEAR.
@@ -532,6 +541,7 @@ impl Vault {
         self.assert_owner();
         require!(self.pending_withdrawal.is_some(), "no withdrawal is queued");
         self.pending_withdrawal = None;
+        self.withdrawal_seq += 1;
     }
 
     /// The queued withdrawal, if any.
@@ -557,6 +567,7 @@ impl Vault {
         let token = token_account(&pending.asset_id)
             .unwrap_or_else(|| env::panic_str("only nep141 assets can be withdrawn"));
         self.pending_withdrawal = None;
+        let seq = U64(self.withdrawal_seq);
         Promise::new(self.intents.clone())
             .function_call(
                 "ft_withdraw".to_string(),
@@ -573,19 +584,22 @@ impl Vault {
             .then(
                 Self::ext(env::current_account_id())
                     .with_static_gas(GAS_CALLBACK)
-                    .on_withdrawn(pending),
+                    .on_withdrawn(pending, seq),
             )
     }
 
-    /// Puts a withdrawal back in the queue when `intents.near` refused it, unless the owner has
-    /// queued another one meanwhile.
+    /// Puts a withdrawal back in the queue when it did not reach the receiver: the call
+    /// failed, or `intents.near` refunded it (a zero transfer). A failure returns only while
+    /// no newer request or cancel has happened since it was sent and nothing is queued.
     #[private]
     pub fn on_withdrawn(
         &mut self,
         #[callback_result] result: Result<U128, PromiseError>,
         pending: PendingWithdrawal,
+        seq: U64,
     ) {
-        if result.is_err() && self.pending_withdrawal.is_none() {
+        let delivered = matches!(result, Ok(sent) if sent.0 > 0);
+        if !delivered && seq.0 == self.withdrawal_seq && self.pending_withdrawal.is_none() {
             self.pending_withdrawal = Some(pending);
         }
     }
@@ -861,6 +875,10 @@ impl Vault {
         if !self.window_open() {
             return PromiseOrValue::Value(self.failed("the execution window has passed"));
         }
+        // The owner's pause also stops an execution that is already under way.
+        if self.paused {
+            return PromiseOrValue::Value(self.failed("the vault is paused"));
+        }
         let salt = salt
             .ok()
             .and_then(|hex| from_hex(&hex))
@@ -964,6 +982,13 @@ impl Vault {
         intents: AccountId,
         oracle: AccountId,
     ) -> Self {
+        // The owner must be an account that can act on its own. The vault cannot sign as
+        // itself once its full-access keys are removed, so an owner equal to the vault
+        // would leave the owner controls unreachable.
+        require!(
+            owner != env::current_account_id(),
+            "the owner cannot be the vault account itself"
+        );
         validate_or_panic(&mandate);
         Self {
             owner,
@@ -986,6 +1011,7 @@ impl Vault {
             pending_mandate: None,
             pending_agent: None,
             pending_withdrawal: None,
+            withdrawal_seq: 0,
         }
     }
 
@@ -1446,9 +1472,37 @@ mod tests {
         let pending = v.get_pending_withdrawal().expect("queued");
         context_at(accounts(2), 0, T0 + WITHDRAW_DELAY_SEC);
         let _ = v.apply_pending_withdrawal();
+        let seq = U64(v.withdrawal_seq);
         context(accounts(0), 0);
-        v.on_withdrawn(Err(PromiseError::Failed), pending.clone());
+        v.on_withdrawn(Err(PromiseError::Failed), pending.clone(), seq);
         assert_eq!(v.get_pending_withdrawal(), Some(pending));
+    }
+
+    #[test]
+    fn a_refunded_withdrawal_is_queued_again() {
+        // intents.near answers a refund with a zero transfer, which is not delivery.
+        let mut v = vault();
+        queue_withdrawal(&mut v);
+        let pending = v.get_pending_withdrawal().expect("queued");
+        context_at(accounts(2), 0, T0 + WITHDRAW_DELAY_SEC);
+        let _ = v.apply_pending_withdrawal();
+        let seq = U64(v.withdrawal_seq);
+        context(accounts(0), 0);
+        v.on_withdrawn(Ok(U128(0)), pending.clone(), seq);
+        assert_eq!(v.get_pending_withdrawal(), Some(pending));
+    }
+
+    #[test]
+    fn a_delivered_withdrawal_is_not_queued_again() {
+        let mut v = vault();
+        queue_withdrawal(&mut v);
+        let pending = v.get_pending_withdrawal().expect("queued");
+        context_at(accounts(2), 0, T0 + WITHDRAW_DELAY_SEC);
+        let _ = v.apply_pending_withdrawal();
+        let seq = U64(v.withdrawal_seq);
+        context(accounts(0), 0);
+        v.on_withdrawn(Ok(U128(1_000_000)), pending, seq);
+        assert_eq!(v.get_pending_withdrawal(), None);
     }
 
     #[test]
@@ -1458,24 +1512,52 @@ mod tests {
         let first = v.get_pending_withdrawal().expect("queued");
         context_at(accounts(2), 0, T0 + WITHDRAW_DELAY_SEC);
         let _ = v.apply_pending_withdrawal();
+        let seq = U64(v.withdrawal_seq);
         context_at(accounts(1), 1, T0 + WITHDRAW_DELAY_SEC);
         v.request_withdrawal(USDC.into(), accounts(5), U128(2_000_000));
         let newer = v.get_pending_withdrawal();
         context(accounts(0), 0);
-        v.on_withdrawn(Err(PromiseError::Failed), first);
+        v.on_withdrawn(Err(PromiseError::Failed), first, seq);
         assert_eq!(v.get_pending_withdrawal(), newer);
     }
 
     #[test]
-    fn a_sent_withdrawal_is_not_queued_again() {
+    fn a_failed_withdrawal_does_not_return_after_a_cancel() {
+        // Sent A; queued B; cancelled B; then A fails. A must not come back.
         let mut v = vault();
         queue_withdrawal(&mut v);
-        let pending = v.get_pending_withdrawal().expect("queued");
+        let first = v.get_pending_withdrawal().expect("queued");
         context_at(accounts(2), 0, T0 + WITHDRAW_DELAY_SEC);
         let _ = v.apply_pending_withdrawal();
+        let seq = U64(v.withdrawal_seq);
+        context_at(accounts(1), 1, T0 + WITHDRAW_DELAY_SEC);
+        v.request_withdrawal(USDC.into(), accounts(5), U128(2_000_000));
+        v.cancel_pending_withdrawal();
         context(accounts(0), 0);
-        v.on_withdrawn(Ok(U128(0)), pending);
+        v.on_withdrawn(Err(PromiseError::Failed), first, seq);
         assert_eq!(v.get_pending_withdrawal(), None);
+    }
+
+    #[test]
+    #[should_panic(expected = "the receiver cannot be the vault or intents.near")]
+    fn withdrawal_cannot_be_sent_to_the_vault_itself() {
+        let mut v = vault();
+        context_at(accounts(1), 1, T0);
+        let me = env::current_account_id();
+        v.request_withdrawal(USDC.into(), me, U128(1_000_000));
+    }
+
+    #[test]
+    #[should_panic(expected = "the owner cannot be the vault account itself")]
+    fn the_owner_cannot_be_the_vault_itself() {
+        testing_env!(
+            VMContextBuilder::new()
+                .current_account_id(accounts(1))
+                .predecessor_account_id(accounts(0))
+                .block_timestamp(T0 * 1_000_000_000)
+                .build()
+        );
+        let _ = Vault::new(accounts(1), sample());
     }
 
     #[test]
