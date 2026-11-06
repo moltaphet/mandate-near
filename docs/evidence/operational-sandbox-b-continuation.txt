@@ -1,0 +1,6 @@
+FINAL FROZEN-REVISION SERIAL CONTINUATION: PENDING
+Command: cargo test --offline -p mandate-vault --no-fail-fast --test intents_registration --test pyth_path --test withdraw --test withdrawal_lifecycle --test sealed_deployment -- --test-threads=1
+Reason: initial parallel B run stopped during mock-oracle cargo-near/wasm-opt build before the missing-price assertion. Source code remains frozen.
+Scope: local sandbox and supplied fixture; no live signing/funds/relay publication.
+Source fingerprint: docs/evidence/operational-sandbox-sources.json
+

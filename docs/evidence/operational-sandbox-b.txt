@@ -27,4 +27,72 @@ test a_missing_oracle_price_rejects_and_counts_a_strike ... FAILED
 test a_paused_vault_does_not_execute ... ok
 test a_signed_intent_blocks_the_next_proposal ... ok
 test a_tampered_payload_is_rejected_by_the_real_verifier ... ok
-test an_old_price_is_refused_by_the_mandate_age_limit ... 
+test an_old_price_is_refused_by_the_mandate_age_limit ... ok
+test an_unfunded_vault_is_rejected_and_three_strikes_halt_the_vault ... ok
+test execute_without_a_proposal_is_refused ... ok
+
+failures:
+
+---- a_missing_oracle_price_rejects_and_counts_a_strike stdout ----
+
+thread 'a_missing_oracle_price_rejects_and_counts_a_strike' (23530303) panicked at contracts/vault/tests/common/mod.rs:132:22:
+error: eyre::Report - error running a build command with `cargo near ...`
+NOTE: if `cargo-near` CLI is not installed, see https://github.com/near/cargo-near?tab=readme-ov-file#installation
+
+Original command output:
+• Collecting cargo project metadata...
+• done
+
+• Checking rustc version...
+• done
+
+• Checking the host environment...
+• done
+
+• Generating ABI
+ │     Finished `dev` profile [unoptimized] target(s) in 0.09s
+• Extracting ABI...
+• done
+
+• Compressing ABI to be embedded..
+• done
+
+• Building contract
+ │     Blocking waiting for file lock on package cache
+ │     Blocking waiting for file lock on package cache
+ │     Blocking waiting for file lock on package cache
+ │    Compiling near-sdk-macros v5.30.0
+ │    Compiling near-sdk v5.30.0
+ │    Compiling mock-oracle v0.1.0 (/Users/ehs4n/mandate-near/contracts/mock-oracle)
+ │     Finished `release` profile [optimized] target(s) in 2.93s
+• Running an optimize for size post-step with wasm-opt --enable-nontrapping-float-to-int --enable-bulk-memory...
+• failed
+
+Here is the console command if you ever need to re-run it again:
+cargo near build non-reproducible-wasm --locked
+
+
+cargo-near has a new update available 0.22.0 → 0.23.0
+To update run: /Users/ehs4n/.cargo/bin/cargo-near near self-update
+Error: 
+   0: [91mFailed to read module[0m
+   1: [91m[parse exception: expected more elements in list][0m
+
+Location:
+   [35m/Users/ehs4n/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cargo-near-build-0.11.5/src/near/build/mod.rs[0m:[35m451[0m
+INFO: contract's near-sdk targets protocol version 88; rustc 1.95.0 accepted (bulk-memory opcodes supported by nearcore VM)
+
+Modification timestamps of:
+ |    "/Users/ehs4n/mandate-near/target/wasm32-unknown-unknown/release/mock_oracle.wasm" = SystemTime { tv_sec: 1793990487, tv_nsec: 713438208 }
+ |    "/Users/ehs4n/mandate-near/target/near/mock_oracle/mock_oracle.wasm" = SystemTime { tv_sec: 1793982812, tv_nsec: 868010801 }
+
+
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    a_missing_oracle_price_rejects_and_counts_a_strike
+
+test result: FAILED. 7 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 322.19s
+
+error: test failed, to rerun pass `-p mandate-vault --test execute_path`

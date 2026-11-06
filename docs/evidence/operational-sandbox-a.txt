@@ -22,4 +22,37 @@ test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
      Running tests/gas.rs (target/debug/deps/gas-5013040329367e6d)
 
 running 2 tests
-test gas_by_feed_count ... 
+test gas_by_feed_count ... ok
+test gas_per_call ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 242.44s
+
+     Running tests/keeper.rs (target/debug/deps/keeper-351d9891c7191981)
+
+running 4 tests
+test keeper_does_nothing_without_a_proposal ... ok
+test keeper_runs_a_proposal_then_reports_the_signed_intent_once ... ok
+test keeper_waits_for_registration_without_executing ... ok
+test keeper_waits_while_paused_without_executing ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 116.74s
+
+     Running tests/recovery_protocol.rs (target/debug/deps/recovery_protocol-c6be37f918cb64d0)
+
+running 8 tests
+test committed_marker_is_not_proof_of_terminal_delivery_or_absence_of_refund ... ok
+test failed_second_action_rolls_back_the_first_debit_and_scheduled_transfer ... ok
+test global_supply_exposes_future_voucher_preseeded_outside_both_sinks ... ok
+test native_voucher_retains_confirmed_refund_and_each_retry_requires_a_new_unit ... ok
+test preexisting_named_sentinel_can_erase_the_proof_and_enable_duplicate_debit ... ok
+test same_receipt_marker_commits_with_the_debit_and_survives_a_masking_credit ... ok
+test unique_voucher_cancellation_wins_and_blocks_two_delayed_originals ... ok
+test unique_voucher_original_wins_preserves_the_withdrawal_return_and_cannot_be_forged ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 310.22s
+
+     Running tests/sandbox.rs (target/debug/deps/sandbox-6c011d517d904b1e)
+
+running 4 tests
+test a_new_agent_waits_24_hours_on_a_real_chain ... ok
+test outside_accounts_cannot_invoke_callbacks_or_migration ... 
