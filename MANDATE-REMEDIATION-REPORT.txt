@@ -1,4 +1,5 @@
 UPDATE, 2026-11-06 (later). This block supersedes the statements below that the fixes are uncommitted or that nothing was committed, pushed or deployed.
+- Latest main commit: 7379f3c (HEAD and origin/main equal).
 - Committed and pushed to main: 0de5c48 (audit fixes), 166736b (round-two remediation), 9b573d1 (sandbox evidence and site), 63d40ee (merge of main), 2d6c1da (logo restored), 6001298 (operational report), 3bba41d (logo, earlier).
 - Site deployed to mandatenear.xyz from main. HTTP checks only: /, /dashboard/, /site.mjs, /assets/logo.svg return 200. Visual check of the vault section in a browser has not been done.
 - F26 (Critical) remains OPEN. Verdict unchanged: NO-GO for real funds.

@@ -1,5 +1,5 @@
 UPDATE, 2026-11-06 (later). This block supersedes the statements below that changes are unpublished or that publication checks are pending.
-- Committed and pushed to main (2d6c1da is the latest main commit). The site was deployed to mandatenear.xyz and HTTP checks pass. A browser visual check is still pending.
+- Committed and pushed to main. 7379f3c is the latest main commit; HEAD and origin/main are equal. The local preview fixture (scripts/dashboard-fixture.py) now serves /assets/logo.svg, /assets/logo-light.svg and /dashboard/. The site was deployed to mandatenear.xyz and HTTP checks pass. A browser visual check is still pending.
 - Final serial sandbox verification is still pending. Partial sandbox runs are in docs/evidence and are not final.
 - Verdict unchanged: NO-GO for real funds. F26 remains open.
 

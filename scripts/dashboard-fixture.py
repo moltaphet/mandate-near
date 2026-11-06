@@ -60,6 +60,9 @@ class Handler(BaseHTTPRequestHandler):
                  "/audit.mjs": (SITE / "audit.mjs", "text/javascript; charset=utf-8"),
                  "/site.mjs": (SITE / "site.mjs", "text/javascript; charset=utf-8"),
                  "/favicon.svg": (SITE / "favicon.svg", "image/svg+xml"),
+                 "/assets/logo.svg": (ROOT.parent / "assets" / "logo.svg", "image/svg+xml"),
+                 "/assets/logo-light.svg": (ROOT.parent / "assets" / "logo-light.svg", "image/svg+xml"),
+                 "/dashboard/": (ROOT / "index.html", "text/html; charset=utf-8"),
                  "/dashboard/index.html": (ROOT / "index.html", "text/html; charset=utf-8"),
                  "/dashboard/live.mjs": (ROOT / "live.mjs", "text/javascript; charset=utf-8"),
                  "/live.mjs": (ROOT / "live.mjs", "text/javascript; charset=utf-8")}
