@@ -1,0 +1,164 @@
+PRE-HARDENING PARTIAL EVIDENCE; original dispatch header follows.
+FINAL FROZEN-REVISION SANDBOX GROUP B
+Command: cargo test --offline -p mandate-vault --test agent --test execute_path --test intents_registration --test pyth_path --test withdraw --test withdrawal_lifecycle --test sealed_deployment -- --test-threads=1
+Scope: local sandbox; supplied Intents fixture; oracle/MPC stand-ins. No live signing/funds/relay publication.
+Reference source fingerprint: docs/evidence/operational-sandbox-sources.json
+
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on artifact directory
+   Compiling mandate-vault v0.1.0 (/Users/ehs4n/mandate-near/contracts/vault)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 6.24s
+     Running tests/agent.rs (target/debug/deps/agent-d545893fe6b52146)
+
+running 5 tests
+test a_gate_that_closes_is_reported_as_rejected ... ok
+test an_unretained_proposal_outcome_is_unknown ... ok
+test quote_driven_rebalance_reaches_a_signed_intent_and_mock_relay_acknowledgement ... ok
+test the_agent_proposes_and_the_keeper_executes_it ... ok
+test the_agent_refuses_a_second_proposal_before_spending_gas ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 164.19s
+
+     Running tests/execute_path.rs (target/debug/deps/execute_path-2fe618f602e21540)
+
+running 8 tests
+test a_funded_trade_is_signed_and_intents_accepts_it ... ok
+test a_missing_oracle_price_rejects_and_counts_a_strike ... ok
+test a_paused_vault_does_not_execute ... ok
+test a_signed_intent_blocks_the_next_proposal ... ok
+test a_tampered_payload_is_rejected_by_the_real_verifier ... ok
+test an_old_price_is_refused_by_the_mandate_age_limit ... ok
+test an_unfunded_vault_is_rejected_and_three_strikes_halt_the_vault ... ok
+test execute_without_a_proposal_is_refused ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 306.08s
+
+     Running tests/intents_registration.rs (target/debug/deps/intents_registration-b6f1e2bb0b45f49b)
+
+running 2 tests
+test signer_stand_in_rejects_a_key_request_for_another_account ... ok
+test vault_registers_its_mpc_key_on_the_real_intents_contract ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 68.25s
+
+     Running tests/pyth_path.rs (target/debug/deps/pyth_path-6c121aea7e1a0a66)
+
+running 4 tests
+test pyth_confidence_one_unit_over_limit_rejects_without_quota_or_signature ... ok
+test pyth_documented_response_signs_exact_intent_and_fixture_verifies_it ... ok
+test pyth_null_traded_price_rejects_without_quota_or_signature ... FAILED
+test pyth_twenty_asset_callback_chain_fits_gas_and_checks_every_held_feed ... FAILED
+
+failures:
+
+---- pyth_null_traded_price_rejects_without_quota_or_signature stdout ----
+
+thread 'pyth_null_traded_price_rejects_without_quota_or_signature' (23199788) panicked at contracts/vault/tests/common/mod.rs:132:22:
+error: eyre::Report - error running a build command with `cargo near ...`
+NOTE: if `cargo-near` CLI is not installed, see https://github.com/near/cargo-near?tab=readme-ov-file#installation
+
+Original command output:
+• Collecting cargo project metadata...
+• done
+
+• Checking rustc version...
+• done
+
+• Checking the host environment...
+• done
+
+• Generating ABI
+ │    Compiling mandate-vault v0.1.0 (/Users/ehs4n/mandate-near/contracts/vault)
+ │ error[E0425]: cannot find function `validate_or_panic` in this scope
+ │    --> contracts/vault/src/migration.rs:129:5
+ │     |
+ │ 129 |     validate_or_panic(&legacy.mandate);
+ │     |     ^^^^^^^^^^^^^^^^^ not found in this scope
+ │ 
+ │ error[E0425]: cannot find function `validate_or_panic` in this scope
+ │    --> contracts/vault/src/migration.rs:131:9
+ │     |
+ │ 131 |         validate_or_panic(&pending.mandate);
+ │     |         ^^^^^^^^^^^^^^^^^ not found in this scope
+ │ 
+ │ For more information about this error, try `rustc --explain E0425`.
+ │ error: could not compile `mandate-vault` (lib) due to 2 previous errors
+Here is the console command if you ever need to re-run it again:
+cargo near build non-reproducible-wasm --locked
+
+
+cargo-near has a new update available 0.22.0 → 0.23.0
+To update run: /Users/ehs4n/.cargo/bin/cargo-near near self-update
+Error: 
+[build-command metadata omitted]
+
+Location:
+   [35m/Users/ehs4n/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cargo-near-build-0.11.5/src/cargo_native/compile.rs[0m:[35m216[0m
+INFO: contract's near-sdk targets protocol version 88; rustc 1.95.0 accepted (bulk-memory opcodes supported by nearcore VM)
+
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- pyth_twenty_asset_callback_chain_fits_gas_and_checks_every_held_feed stdout ----
+
+thread 'pyth_twenty_asset_callback_chain_fits_gas_and_checks_every_held_feed' (23200129) panicked at contracts/vault/tests/common/mod.rs:132:22:
+error: eyre::Report - error running a build command with `cargo near ...`
+NOTE: if `cargo-near` CLI is not installed, see https://github.com/near/cargo-near?tab=readme-ov-file#installation
+
+Original command output:
+• Collecting cargo project metadata...
+• done
+
+• Checking rustc version...
+• done
+
+• Checking the host environment...
+• done
+
+• Generating ABI
+ │    Compiling mandate-vault v0.1.0 (/Users/ehs4n/mandate-near/contracts/vault)
+ │ error[E0425]: cannot find function `validate_or_panic` in this scope
+ │    --> contracts/vault/src/migration.rs:129:5
+ │     |
+ │ 129 |     validate_or_panic(&legacy.mandate);
+ │     |     ^^^^^^^^^^^^^^^^^ not found in this scope
+ │ 
+ │ error[E0425]: cannot find function `validate_or_panic` in this scope
+ │    --> contracts/vault/src/migration.rs:131:9
+ │     |
+ │ 131 |         validate_or_panic(&pending.mandate);
+ │     |         ^^^^^^^^^^^^^^^^^ not found in this scope
+ │ 
+ │ For more information about this error, try `rustc --explain E0425`.
+ │ error: could not compile `mandate-vault` (lib) due to 2 previous errors
+Here is the console command if you ever need to re-run it again:
+cargo near build non-reproducible-wasm --locked
+
+
+cargo-near has a new update available 0.22.0 → 0.23.0
+To update run: /Users/ehs4n/.cargo/bin/cargo-near near self-update
+Error: 
+[build-command metadata omitted]
+
+Location:
+   [35m/Users/ehs4n/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cargo-near-build-0.11.5/src/cargo_native/compile.rs[0m:[35m216[0m
+INFO: contract's near-sdk targets protocol version 88; rustc 1.95.0 accepted (bulk-memory opcodes supported by nearcore VM)
+
+
+
+failures:
+    pyth_null_traded_price_rejects_without_quota_or_signature
+    pyth_twenty_asset_callback_chain_fits_gas_and_checks_every_held_feed
+
+test result: FAILED. 2 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; finished in 73.05s
+
+error: test failed, to rerun pass `-p mandate-vault --test pyth_path`
+
+PRE-HARDENING PARTIAL RUN — NOT FINAL VERIFICATION
+Exit code: 101
+Completed targets: 4; passed:17; failed:2; ignored:0
+Exact Cargo target duration sum: 611.57 seconds
+Observed elapsed: 761.68 seconds (polling/approval gaps included)
+Failures were transitional ABI-generation compile errors: validate_or_panic was temporarily missing at migration.rs129/131 during source hardening. No semantic regression conclusion.
+Root authorized pause and full frozen-revision restart including all13targets after reviewed callback/provider hardening.

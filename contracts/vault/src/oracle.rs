@@ -7,8 +7,15 @@
 //!   when no report is within its `recency_duration_sec` (600 s on mainnet).
 //!   Its `timestamp` is the time of the call, not of the price.
 //! - `get_asset(asset_id)` lists the individual reports with their real
-//!   timestamps. The newest one is the price's publish time, so the
-//!   mandate's own (stricter, at most 300 s) age limit can be enforced.
+//!   timestamps. A report newer than the aggregate snapshot makes the two
+//!   reads inconsistent, so that asset is omitted. Otherwise the oldest
+//!   report within the aggregate's recency window supplies a conservative
+//!   publish time for the mandate's own (stricter) age limit.
+//!
+//! The aggregate value is retained: this adapter does not choose an individual
+//! reporter. It assumes the oracle aggregates only reports within the stated
+//! recency window and does not backdate reports or remove them between reads.
+//! The oracle remains trusted for its price and aggregation correctness.
 //!
 //! An asset missing from either answer gets no price. The engine then
 //! rejects the trade with `MissingPrice`: the vault fails closed.
@@ -83,15 +90,37 @@ pub fn to_price(p: &OraclePrice, publish_time_sec: u64) -> Result<Price, OracleE
 }
 
 /// Unix seconds of the newest report, if there is one.
+/// This is informational; aggregate freshness must use all eligible reports.
 pub fn latest_report_sec(asset: &AssetView) -> Option<u64> {
     asset.reports.iter().map(|r| r.timestamp.0 / 1_000_000_000).max()
+}
+
+/// Conservative publication time for an unchanged aggregate/report snapshot.
+///
+/// Compare nanoseconds before rounding to seconds, so a report arriving later
+/// in the same second cannot make an earlier aggregate appear fresh. Reports
+/// outside recency did not contribute under this adapter's oracle policy.
+fn aggregate_publish_time_sec(data: &PriceData, asset: &AssetView) -> Option<u64> {
+    let snapshot = data.timestamp.0;
+    if asset.reports.iter().any(|report| report.timestamp.0 > snapshot) {
+        return None;
+    }
+    let recency_ns = u64::from(data.recency_duration_sec) * 1_000_000_000;
+    let earliest = snapshot.saturating_sub(recency_ns);
+    asset
+        .reports
+        .iter()
+        .filter(|report| report.timestamp.0 >= earliest)
+        .map(|report| report.timestamp.0 / 1_000_000_000)
+        .min()
 }
 
 /// Prices for the assets of `mandate`, keyed by Intents asset id.
 ///
 /// `assets` maps a feed id to its `get_asset` answer. An asset is included
-/// only if the oracle returned a usable price for it and a report with a
-/// timestamp exists. Everything else is left out on purpose.
+/// only if the oracle returned a usable aggregate and its report snapshot has
+/// at least one eligible report and no report newer than the aggregate read.
+/// Everything else is left out on purpose; the engine rejects missing prices.
 pub fn prices_for(
     mandate: &Mandate,
     data: &PriceData,
@@ -103,7 +132,10 @@ pub fn prices_for(
             continue;
         };
         let Some(oracle_price) = &entry.price else { continue };
-        let Some(published) = assets.get(&cfg.price_feed_id).and_then(latest_report_sec) else {
+        let Some(published) = assets
+            .get(&cfg.price_feed_id)
+            .and_then(|asset| aggregate_publish_time_sec(data, asset))
+        else {
             continue;
         };
         if let Ok(price) = to_price(oracle_price, published) {
@@ -163,6 +195,22 @@ mod tests {
         }
     }
 
+    fn report(timestamp_ns: u64, multiplier: u128) -> Report {
+        Report {
+            oracle_id: "reporter.near".into(),
+            timestamp: U64(timestamp_ns),
+            price: OraclePrice { multiplier: U128(multiplier), decimals: 8 },
+        }
+    }
+
+    fn fresh_assets(now_sec: u64) -> BTreeMap<String, AssetView> {
+        let timestamp_ns = (now_sec - 10) * 1_000_000_000;
+        BTreeMap::from([
+            ("wrap.near".into(), AssetView { reports: vec![report(timestamp_ns, 450_000_000)] }),
+            (USDC_FEED.into(), AssetView { reports: vec![report(timestamp_ns, 100_000_000)] }),
+        ])
+    }
+
     #[test]
     fn real_mainnet_answers_parse() {
         let a: AssetView = serde_json::from_str(WNEAR_ASSET).unwrap();
@@ -194,7 +242,7 @@ mod tests {
 
     #[test]
     fn asset_without_reports_gets_no_price() {
-        let mut a = assets();
+        let mut a = fresh_assets(1_793_697_676);
         a.insert("wrap.near".into(), AssetView { reports: vec![] });
         let prices = prices_for(&sample(), &live_data(1_793_697_676_000_000_000), &a);
         assert!(!prices.contains_key(WNEAR));
@@ -202,10 +250,17 @@ mod tests {
     }
 
     #[test]
-    fn publish_time_comes_from_the_newest_report() {
-        let prices = prices_for(&sample(), &live_data(1_793_697_676_000_000_000), &assets());
-        assert_eq!(prices[WNEAR].publish_time_sec, 1_782_588_756);
-        assert_eq!(prices[USDC].publish_time_sec, 1_782_588_756);
+    fn publish_time_comes_from_the_oldest_recent_report() {
+        let now = 1_793_697_676;
+        let mut a = fresh_assets(now);
+        a.get_mut("wrap.near")
+            .unwrap()
+            .reports
+            .push(report((now - 20) * 1_000_000_000, 440_000_000));
+        let prices = prices_for(&sample(), &live_data(now * 1_000_000_000), &a);
+        assert_eq!(prices[WNEAR].publish_time_sec, now - 20);
+        assert_eq!(prices[USDC].publish_time_sec, now - 10);
+        assert_eq!(prices[WNEAR].mantissa, U64(450_000_000), "retain the oracle aggregate");
     }
 
     fn market(prices: BTreeMap<String, Price>, now_sec: u64) -> Market {
@@ -221,10 +276,9 @@ mod tests {
         }
     }
 
-    /// The oracle's real state today: the newest reports are months old, so
-    /// even a non-null aggregate is refused by the mandate's own age limit.
+    /// A non-null aggregate with no reports in its recency window is inconsistent.
     #[test]
-    fn months_old_reports_are_rejected_as_stale() {
+    fn months_old_reports_with_a_non_null_aggregate_fail_closed() {
         let now_ns = 1_793_697_676_000_000_000;
         let prices = prices_for(&sample(), &live_data(now_ns), &assets());
         let err = check_trade(
@@ -234,7 +288,76 @@ mod tests {
             &market(prices, now_ns / 1_000_000_000),
         )
         .unwrap_err();
-        assert_eq!(err.code(), "StalePrice");
+        assert_eq!(err.code(), "MissingPrice");
+    }
+
+    #[test]
+    fn a_later_report_cannot_refresh_an_earlier_aggregate() {
+        let now = 1_793_697_676;
+        let mut a = fresh_assets(now);
+        // The aggregate still says $4.50, but the later snapshot reports $9.00.
+        a.get_mut("wrap.near").unwrap().reports =
+            vec![report((now + 1) * 1_000_000_000, 900_000_000)];
+        let prices = prices_for(&sample(), &live_data(now * 1_000_000_000), &a);
+        assert!(!prices.contains_key(WNEAR));
+        assert!(prices.contains_key(USDC));
+    }
+
+    #[test]
+    fn a_later_report_in_the_same_second_invalidates_the_snapshot() {
+        let now_ns = 1_793_697_676_000_000_000;
+        let mut a = fresh_assets(now_ns / 1_000_000_000);
+        a.get_mut("wrap.near").unwrap().reports.push(report(now_ns + 1, 450_000_000));
+        assert!(!prices_for(&sample(), &live_data(now_ns), &a).contains_key(WNEAR));
+    }
+
+    #[test]
+    fn a_fresh_report_does_not_hide_a_stale_contributing_report() {
+        let now = 1_793_697_676;
+        let mut a = fresh_assets(now);
+        a.get_mut("wrap.near")
+            .unwrap()
+            .reports
+            .push(report((now - 100) * 1_000_000_000, 440_000_000));
+        let prices = prices_for(&sample(), &live_data(now * 1_000_000_000), &a);
+        assert_eq!(prices[WNEAR].publish_time_sec, now - 100);
+        let err =
+            check_trade(&sample(), &TradingState::default(), &buy_near(), &market(prices, now))
+                .unwrap_err();
+        assert_eq!(err, TradeError::StalePrice(WNEAR.into()));
+    }
+
+    #[test]
+    fn reports_outside_aggregate_recency_do_not_age_its_price() {
+        let now = 1_793_697_676;
+        let mut a = fresh_assets(now);
+        a.get_mut("wrap.near")
+            .unwrap()
+            .reports
+            .push(report((now - 601) * 1_000_000_000, 100_000_000));
+        let prices = prices_for(&sample(), &live_data(now * 1_000_000_000), &a);
+        assert_eq!(prices[WNEAR].publish_time_sec, now - 10);
+    }
+
+    #[test]
+    fn recency_boundary_is_conservative_to_the_nanosecond() {
+        let now_ns = 1_793_697_676_000_000_000;
+        let data = live_data(now_ns);
+        let boundary = now_ns - u64::from(data.recency_duration_sec) * 1_000_000_000;
+        let at_boundary = AssetView { reports: vec![report(boundary, 450_000_000)] };
+        assert_eq!(aggregate_publish_time_sec(&data, &at_boundary), Some(boundary / 1_000_000_000));
+        let too_old = AssetView { reports: vec![report(boundary - 1, 450_000_000)] };
+        assert_eq!(aggregate_publish_time_sec(&data, &too_old), None);
+    }
+
+    #[test]
+    fn zero_recency_accepts_only_reports_at_the_snapshot() {
+        let now_ns = 1_793_697_676_000_000_000;
+        let data = PriceData { recency_duration_sec: 0, ..live_data(now_ns) };
+        let report_at = AssetView { reports: vec![report(now_ns, 450_000_000)] };
+        assert_eq!(aggregate_publish_time_sec(&data, &report_at), Some(now_ns / 1_000_000_000));
+        let report_before = AssetView { reports: vec![report(now_ns - 1, 450_000_000)] };
+        assert_eq!(aggregate_publish_time_sec(&data, &report_before), None);
     }
 
     #[test]

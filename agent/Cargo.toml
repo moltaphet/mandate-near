@@ -10,10 +10,14 @@ publish = false
 
 [dependencies]
 near-api.workspace = true
-near-sdk.workspace = true
+near-sdk = { workspace = true, features = ["non-contract-usage"] }
 tokio.workspace = true
 serde = { version = "1", features = ["derive"] }
 sha2 = "0.10"
+mandate-vault = { path = "../contracts/vault" }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+chrono.workspace = true
+bs58 = "0.5"
 
 [lints]
 workspace = true

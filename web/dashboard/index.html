@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Mandate · How a trade is checked</title>
-<meta name="description" content="Nine locks, checked in order. Each lock names its rule, the value it checked, the test that proves it, and the command to rerun that test.">
+<title>Mandate · Vault audit</title>
+<meta name="description" content="Read a public vault at one final NEAR block. Inspect authority, rules, signing reservations, withdrawals and exact Intents balances; sample illustrations are separate.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -21,6 +21,7 @@
   body { min-height: 100vh; background: radial-gradient(900px 500px at 12% -10%, #17314a 0%, transparent 60%), var(--night); }
   :focus-visible { outline: 2px solid var(--open); outline-offset: 3px; border-radius: 6px; }
   button { font: inherit; }
+  [hidden] { display: none !important; }
 
   .page { max-width: 1280px; margin: 0 auto; padding: 24px 36px 36px; display: grid; gap: 22px;
     grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); }
@@ -170,26 +171,91 @@
     .attacks table th:first-child, .attacks table td.n { display: none; }
     .attacks td.res { white-space: normal; }
   }
+
+  /* A block anchor joins every observed field to the same chain snapshot. */
+  .audit-modes { grid-column: 1 / -1; display: flex; gap: 8px; flex-wrap: wrap; }
+  .audit-modes button, .audit-submit { border: 1px solid var(--line); border-radius: 7px; padding: 10px 15px; background: var(--panel); color: var(--ink); cursor: pointer; }
+  .audit-modes button[aria-pressed="true"] { border-color: var(--hold); color: var(--hold); background: rgba(245,185,74,.08); }
+  .live-audit { grid-column: 1 / -1; display: grid; gap: 20px; min-width: 0; }
+  .live-head h1 { color: var(--ink); max-width: 22ch; }
+  .live-head .lede { max-width: 80ch; }
+  .audit-form { display: grid; grid-template-columns: 1fr 1.4fr 1.4fr; gap: 14px; border: 1px solid var(--line); background: var(--panel); border-radius: 14px; padding: 20px; }
+  .audit-field { display: grid; align-content: start; gap: 7px; min-width: 0; }
+  .audit-field label { font-size: 12px; color: var(--ink); }
+  .audit-field input, .audit-field select { width: 100%; min-width: 0; padding: 10px; background: var(--night); border: 1px solid var(--line); border-radius: 5px; color: var(--ink); font-family: var(--mono); font-size: 12px; }
+  .audit-field small { color: var(--mute); font-size: 11px; line-height: 1.4; }
+  .audit-submit { justify-self: start; align-self: end; color: var(--night); background: var(--hold); border-color: var(--hold); font-weight: 600; }
+  .audit-status { margin: 0; color: var(--mute); font-size: 13px; line-height: 1.5; }
+  .audit-status.error { color: var(--shut); } .audit-status.observed { color: var(--hold); }
+  .block-anchor { border-left: 3px solid var(--hold); background: rgba(245,185,74,.06); padding: 16px 20px; display: grid; grid-template-columns: auto 1fr; gap: 8px 22px; align-items: baseline; }
+  .block-anchor strong { font-family: var(--mono); font-size: 28px; color: var(--hold); grid-row: span 2; word-break: break-all; }
+  .block-anchor code, .block-anchor p { grid-column: 1 / -1; margin: 0; overflow-wrap: anywhere; font-size: 12px; color: var(--mute); }
+  .audit-kicker { font-family: var(--mono); font-size: 11px; letter-spacing: .1em; color: var(--hold); }
+  .audit-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  .audit-card { min-width: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 20px; }
+  .audit-card h3 { margin: 0 0 16px; font-family: var(--display); font-size: 21px; line-height: 1.15; }
+  .audit-card dl { margin: 0; display: grid; gap: 9px; }
+  .audit-row { display: grid; grid-template-columns: 135px 1fr; gap: 12px; font-size: 13px; line-height: 1.5; border-top: 1px solid var(--line); padding-top: 8px; }
+  .audit-row dt { color: var(--mute); } .audit-row dd { margin: 0; overflow-wrap: anywhere; font-family: var(--mono); font-size: 12px; }
+  .audit-note { color: var(--mute); font-size: 12px; line-height: 1.55; margin: 15px 0 0; }
+  .audit-details { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 12px; }
+  .audit-details summary { font-size: 12px; color: var(--hold); cursor: pointer; }
+  .audit-details dl, .audit-details .audit-scroll { margin-top: 14px; }
+  .audit-blockers { margin: 15px 0 0; padding-left: 18px; color: var(--hold); font-size: 12px; line-height: 1.6; }
+  .audit-timeline { padding-left: 21px; margin: 0; display: grid; gap: 17px; }
+  .audit-timeline li::marker { color: var(--hold); } .audit-timeline strong { font-size: 13px; font-weight: 600; }
+  .audit-timeline p { font-size: 12px; line-height: 1.5; color: var(--mute); margin: 5px 0 0; overflow-wrap: anywhere; }
+  .audit-timeline a { color: var(--hold); font-size: 12px; }
+  .audit-scroll { overflow-x: auto; } .audit-scroll td { font-family: var(--mono); font-size: 11.5px; overflow-wrap: anywhere; min-width: 110px; }
+  .sample-page { grid-column: 1 / -1; display: grid; gap: 22px; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); }
+  @media (max-width: 980px) { .sample-page, .audit-grid { grid-template-columns: 1fr; } .audit-form { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 600px) { .audit-form { grid-template-columns: 1fr; padding: 16px; } .audit-card { padding: 16px; } .audit-row { grid-template-columns: 1fr; gap: 3px; } .block-anchor { grid-template-columns: 1fr; } .block-anchor strong { grid-row: auto; } }
 </style>
 </head>
 <body>
 <div class="page">
   <div class="banner" role="note">
-    <span><b>SAMPLE DATA.</b> Not on-chain. The contract is not wired to the chain yet (milestone M3).</span>
-    <span>Mandate v1 · NEAR · simulated values</span>
+    <span><b>READ ONLY.</b> Inspect a public vault or open the separate sample illustration. No wallet connection or transactions.</span>
+    <span>Mandate · public observations</span>
   </div>
 
   <header class="top">
     <div class="word">Mandate<span>.</span></div>
     <nav class="nav" aria-label="Related pages">
       <a href="../site/index.html">Evidence and status</a>
-      <a href="../../docs/PROJECT.md">Project definition</a>
+      <a href="https://github.com/moltaphet/mandate-near/blob/main/docs/PROJECT.md">Project definition</a>
       <a href="#about">About</a>
       <a href="#faq">FAQ</a>
-      <a href="../../README.md">README</a>
+      <a href="https://github.com/moltaphet/mandate-near/blob/main/README.md">README</a>
     </nav>
   </header>
 
+  <nav class="audit-modes" aria-label="Dashboard mode">
+    <button type="button" data-audit-mode="live" aria-pressed="true">Observed state</button>
+    <button type="button" data-audit-mode="sample" aria-pressed="false">Sample illustration</button>
+  </nav>
+
+  <section class="live-audit" id="live-view" aria-labelledby="audit-title">
+    <div class="live-head">
+      <div class="eyebrow">Public vault inspection</div>
+      <h1 id="audit-title">One block. Every observed field.</h1>
+      <p class="lede">Read the current owner, mandate, queues and Intents ledger from one final block. A stored signature is shown as a signature; settlement stays unverified. Custody safety requires separate deployment and recovery evidence.</p>
+    </div>
+    <form class="audit-form" id="audit-form">
+      <div class="audit-field"><label for="audit-network">Network</label><select id="audit-network"><option value="mainnet">NEAR mainnet</option><option value="testnet">NEAR testnet</option><option value="local-fixture">Local RPC fixture · no live evidence</option></select></div>
+      <div class="audit-field"><label for="audit-account">Public vault account</label><input id="audit-account" name="account" placeholder="your-vault.near" required maxlength="64" autocomplete="off" spellcheck="false"><small>Use the exact deployed account; this page does not deploy or sign.</small></div>
+      <div class="audit-field"><label for="audit-rpc">Public RPC endpoint</label><input id="audit-rpc" name="rpc" value="https://rpc.mainnet.near.org" required maxlength="512" type="url" spellcheck="false"><small>HTTPS for public networks. Local fixture mode accepts loopback HTTP only.</small></div>
+      <div class="audit-field"><label for="audit-code">Expected vault code hash · optional</label><input id="audit-code" name="code_hash" maxlength="64" autocomplete="off" spellcheck="false"><small>Without a supplied expectation, code identity is explicitly unverified.</small></div>
+      <div class="audit-field"><label for="audit-receipt">Explorer receipt reference · optional</label><input id="audit-receipt" name="receipt" type="url" maxlength="256" spellcheck="false"><small>A validated explorer link is a reference, not authenticated settlement evidence.</small></div>
+      <button class="audit-submit" type="submit">Read vault</button>
+    </form>
+    <p class="audit-status" id="audit-status" role="status">No account connected. Enter a public vault to read a final-block snapshot.</p>
+    <noscript><p class="audit-status error">JavaScript is required for public RPC reads. The sample illustration does not establish live state.</p></noscript>
+    <div id="audit-output" aria-live="polite"></div>
+  </section>
+
+  <section class="sample-page" id="sample-view" hidden aria-label="Separate fixed sample illustration">
+  <div class="banner" role="note"><span><b>SAMPLE ILLUSTRATION.</b> Every scenario and receipt below is fixed sample data. The attack table is dated sandbox evidence.</span><span>No live state below</span></div>
   <main class="col">
     <div>
       <div class="eyebrow" id="kicker">Proposal 0412 · approved</div>
@@ -245,14 +311,15 @@
     <dl class="t-rows">
       <div class="t-row"><dt>Swap</dt><dd id="r-swap">20 USDC → wNEAR<span class="tag">sample</span></dd></div>
       <div class="t-row"><dt>Notional</dt><dd id="r-notional">$20.00<span class="tag">sample</span></dd></div>
-      <div class="t-row"><dt>NAV</dt><dd id="r-nav">$1,482.10<span class="tag">sample</span></dd></div>
+      <div class="t-row"><dt>NAV</dt><dd id="r-nav">$1,500.00<span class="tag">sample</span></dd></div>
       <div class="t-row"><dt>Result</dt><dd id="r-result" class="good">Signed by MPC<span class="tag">sample</span></dd></div>
-      <div class="t-row"><dt>Intent</dt><dd id="r-intent">not produced yet (M3)</dd></div>
+      <div class="t-row"><dt>Intent</dt><dd id="r-intent">sample only; no transaction sent</dd></div>
       <div class="t-row"><dt>Reason</dt><dd>9f86d081…0f00a08<span class="tag">sample</span></dd></div>
-      <div class="t-row"><dt>Expires</dt><dd>60 s after proposal (contract rule)</dd></div>
+      <div class="t-row"><dt>Proposal TTL</dt><dd>60 s from proposal</dd></div>
+      <div class="t-row"><dt>Intent TTL</dt><dd>120 s from gate approval, if signed</dd></div>
       <div class="t-row"><dt>On-chain</dt><dd>No trade yet. See evidence page.</dd></div>
     </dl>
-    <div class="bar-title"><span>Vault weights <span class="tag">sample</span></span><span>cap 60%</span></div>
+    <div class="bar-title"><span>Weights before trade <span class="tag">sample</span></span><span>cap 60%</span></div>
     <div class="bar" id="bar" role="img" aria-label="Asset weights"></div>
     <div class="legend" id="legend"></div>
     <div class="t-foot">This receipt shows what the dashboard checked. It is not an on-chain record. Each tagged field is sample data.</div>
@@ -261,8 +328,8 @@
 
     <section class="attacks" aria-labelledby="attacks-title">
       <div class="eyebrow">Attack replay · recorded on a local sandbox, 2026-11-05</div>
-      <h2 id="attacks-title">Eight attacks, each blocked.</h2>
-      <p class="lede">Each row is an attack the vault must refuse. The results are copied from <code>docs/evidence/attacks.txt</code>. The script <code>scripts/attack-demo.sh</code> writes that file by running every attack against the real contract on a local NEAR sandbox. Nothing here ran on-chain.</p>
+      <h2 id="attacks-title">Eight recorded attack results.</h2>
+      <p class="lede">These are historical sandbox results from 5 November, copied from <code>docs/evidence/attacks.txt</code>. This page displays them and sends no transactions. Rerun <code>scripts/attack-demo.sh</code> for current results: an incoherent future oracle report can now be rejected as <code>MissingPrice</code> before the engine's <code>FuturePrice</code> check.</p>
       <div class="scroll">
       <table>
         <thead><tr><th>#</th><th>Attack</th><th class="hide-sm">Expected</th><th>Observed</th><th>Result</th></tr></thead>
@@ -285,17 +352,17 @@
     <div>
       <div class="eyebrow">About</div>
       <h2 id="about-title">A treasury that checks itself before it signs.</h2>
-      <p><strong>Mandate</strong> is a policy layer for NEAR agents. An agent can propose a trade. The vault contract holds the only signing key for the treasury on NEAR Intents, and it signs only after nine rules pass, in order, against limits the owner wrote.</p>
-      <p>The agent cannot withdraw, cannot change the rules, and cannot skip a rule. It has no key. If it is compromised, the worst it can do is propose trades that the contract then rejects.</p>
-      <p>This page shows the rules, the checks, and the commands that prove them. It does not show live trading, because no live trade exists yet.</p>
+      <p><strong>Mandate</strong> is a policy layer for NEAR agents. The agent proposes a trade; the vault checks it against nine gates before requesting a contract-derived MPC signature. Owner withdrawals use a separate delayed path.</p>
+      <p>The agent has no treasury signing key and cannot directly withdraw or change owner controls. A compromised agent can still propose harmful trades that pass the limits and lose money. Deployment authority, the oracle, NEAR Intents and MPC remain trust assumptions.</p>
+      <p>This sample mode illustrates rules and links their tests. Observed state mode separately reads a selected vault. Public state alone does not establish an actual funded live vault trade.</p>
     </div>
     <div>
       <div class="eyebrow">Status, precisely</div>
       <div class="tags">
-        <div class="tagrow"><span class="pill proven">Proven</span><span>The contract can get an MPC signature that mainnet <code>intents.near</code> accepts (checked by <code>simulate_intents</code>).</span></div>
-        <div class="tagrow"><span class="pill tested">Tested</span><span>The nine rules, the owner controls and the proposal gate. Run with <code>./scripts/verify.sh --integration</code>.</span></div>
-        <div class="tagrow"><span class="pill planned">Planned</span><span>Live balances and prices into the vault, the MPC call from execution, the keeper, the OutLayer agent, and the 24-hour delay on loosening limits (M3 to M5).</span></div>
-        <div class="tagrow"><span class="pill sample">Sample</span><span>Every number on this page. None of it is read from the chain yet.</span></div>
+        <div class="tagrow"><span class="pill proven">Simulated</span><span>A separate spike's testnet MPC signature was accepted by mainnet <code>simulate_intents</code> under an implicit account. No funded vault settlement is established by that check.</span></div>
+        <div class="tagrow"><span class="pill tested">Tested</span><span>Gates, owner controls, funded matched ledger settlement, atomic refusal and replay against the sandbox Intents fixture with a stand-in signer/oracle. Run <code>./scripts/verify.sh --integration</code>; this page sends no transactions.</span></div>
+        <div class="tagrow"><span class="pill planned">Still open</span><span>Actual vault live signing, funded settlement, post-delay withdrawal, recovery and solver publication evidence; OutLayer agent. Deterministic rebalancing, explicit metadata-bound relay publication and unique withdrawal receipts are implemented with local tests. Receipts prove initial debit, not terminal FT delivery/refund completion.</span></div>
+        <div class="tagrow"><span class="pill sample">Sample</span><span>The receipt and interactive scenarios in this mode are fixed illustrations. The attack table is dated recorded sandbox output. Use Observed state for separate public RPC observations.</span></div>
       </div>
     </div>
   </section>
@@ -309,15 +376,15 @@
     <div>
       <details class="q" open>
         <summary>Is this trading live on NEAR?</summary>
-        <p>No. The signature path from the contract to the MPC network was proven on testnet, and the signature was accepted by mainnet <code>intents.near</code>. The vault does not yet read live balances or prices, and it does not yet call the MPC network from its execution path. That is milestone M3.</p>
+        <p>No live funded vault trade is verified. The execution path reads balances and oracle data and calls a stand-in signer in sandbox tests. R1 used a separate testnet spike and mainnet simulation. Actual vault live signing and settlement still need transaction evidence.</p>
       </details>
       <details class="q">
         <summary>Can the agent move the money?</summary>
-        <p>No. The agent can only propose a trade with a minimum output and a reason hash. It has no key on the vault account. The vault signs only after all nine rules pass, and the signed bytes fix the amount, deadline and nonce.</p>
+        <p>The agent cannot directly withdraw or sign for the treasury. It can propose trades that the vault approves, so its decisions can change balances and lose money inside the limits. The contract constructs the signed amount, deadline and nonce.</p>
       </details>
       <details class="q">
         <summary>What happens if the price feed fails?</summary>
-        <p>Trading stops. A missing or stale price is a rejection, not a guess. The price-freshness lock closes, and the trade is never valued with an old number.</p>
+        <p>Missing, stale or incoherent data prevents signing. Approved prices must remain within their configured age when signing is requested; equality at the age boundary is allowed. The contract does not re-price or guarantee freshness when an already issued intent settles.</p>
       </details>
       <details class="q">
         <summary>Why this order of locks?</summary>
@@ -325,11 +392,11 @@
       </details>
       <details class="q">
         <summary>Who can change the rules?</summary>
-        <p>Only the owner. The owner can be an individual account or a DAO account. Tightening a limit takes effect at once. Loosening a limit is planned to take 24 hours, and the owner can cancel it in that window. Pause always works. These delays are planned for version 1, not yet built.</p>
+        <p>Only the authorized owner. Tightening applies immediately; loosening is queued for 24 hours and can be cancelled. Pause blocks new and unsigned execution work; already issued signatures retain their deadline. These controls are implemented. A distinct recoverable owner is required; DAO/multisig integration remains to be demonstrated.</p>
       </details>
       <details class="q">
         <summary>What if the agent is compromised or spams proposals?</summary>
-        <p>It can only propose, and each proposal is checked. Only one proposal can be pending at a time, and none is accepted while a signed intent is still open. The circuit breaker halts proposals after three rejections in a row, and only the owner can resume them. The breaker's counting runs in the execution path, which is part of M3, so it is not active yet.</p>
+        <p>It can choose harmful permitted trades or disrupt availability. Only one proposal can be pending at a time, and none is accepted while a signed intent is open. Three gate rejections halt proposals until the owner resumes them. Strike counting is implemented and sandbox-tested.</p>
       </details>
       <details class="q">
         <summary>Where is the proof?</summary>
@@ -341,87 +408,88 @@
       </details>
       <details class="q">
         <summary>Is the data on this page real?</summary>
-        <p>No. Values in the table, the receipt and the scenarios are sample data, and each one is labelled. Chain-backed values replace them when the contract is wired (M3).</p>
+        <p>The scenarios and receipt in Sample illustration are fixed data, and its attacks are dated sandbox output. Observed state reads public account views and ledger balances at one final block; it does not re-run trade gates or authenticate settlement receipts.</p>
       </details>
     </div>
   </section>
   <footer class="foot">
     <span>Each lock is a rule in the vault contract. The table shows the test that proves it.</span>
-    <span>Sample data · M3 pending</span>
+    <span>Sample scenarios · dated sandbox evidence · no live transactions</span>
   </footer>
+  </section>
 </div>
 
 <script>
 // Each lock: the rule in plain words, the test that proves it, and the command that reruns it.
 const LOCKS = [
   { name: "Structure", rule: "The trade swaps two different assets, both listed in the mandate, with non-zero amounts.", test: "structural_rules" },
-  { name: "Lock & cooldown", rule: "No signed intent is still open, and the cooldown since the last trade has passed.", test: "one_signed_intent_at_a_time" },
+  { name: "Lock & cooldown", rule: "No signed intent is still open, and the cooldown since the last signing reservation has passed.", test: "one_signed_intent_at_a_time" },
   { name: "Price freshness", rule: "Every asset the vault trades or holds has an oracle price no older than the mandate allows.", test: "price_freshness" },
   { name: "Balance", rule: "The vault holds at least the amount it is asked to sell.", test: "insufficient_balance" },
   { name: "Trade size", rule: "The trade's value in USD does not exceed the per-trade maximum.", test: "max_trade_size_boundary" },
-  { name: "Daily turnover", rule: "Today's total traded value, including this trade, stays within the daily maximum. The day resets at 00:00 UTC.", test: "daily_turnover_resets_at_utc_midnight" },
+  { name: "Daily turnover", rule: "Reserved signing-request value for the approval snapshot's UTC day, including this request, stays within the daily maximum. Failed or unfilled requests are not automatically refunded; settlement-day turnover is separate.", test: "daily_turnover_resets_at_utc_midnight" },
   { name: "Slippage", rule: "The guaranteed minimum output is at least the oracle value of the input, minus the allowed slippage.", test: "slippage_boundary_is_exact" },
   { name: "Drawdown lock", rule: "If NAV has fallen past the drawdown limit from its high-water mark, only moves into stable assets are allowed.", test: "drawdown_breaker_allows_only_derisking" },
-  { name: "Position limit", rule: "After the trade, no single non-stable asset exceeds the position cap, measured in the worst case.", test: "position_cap_uses_worst_case" }
+  { name: "Position limit", rule: "Non-stable destination exposure stays below the cap. Other over-cap holdings may not increase their weight, allowing de-risking from an already excessive position.", test: "position_cap_uses_worst_case" }
 ];
 
 // Passing checks: the value each lock compared, in plain text (sample values).
 const PASS_CHECK = [
   "USDC → wNEAR, both listed, amounts > 0",
-  "no signed intent open; last trade 14 min ago, cooldown 5 min",
-  "wNEAR and USDC prices 9 s and 11 s old, limit 60 s",
-  "vault holds 20.00 USDC, trade needs 20.00",
+  "no signed intent open; last signing reservation 14 min ago, cooldown 5 min",
+  "USDC, wNEAR, ETH and BTC prices 8–12 s old, limit 60 s",
+  "vault holds 700.00 USDC, trade needs 20.00",
   "notional $20.00 ≤ max $50.00",
   "today $0.00 + $20.00 ≤ max $200.00",
   "min out ≥ fair value × 99% (limit 1%)",
-  "NAV $1,482.10, high-water $1,500.00, drop 1.2% (limit 15%)",
-  "wNEAR 42% after trade ≤ cap 60%"
+  "NAV $1,500.00, high-water $1,500.00, drop 0% (limit 15%)",
+  "wNEAR $649.80 / NAV $1,499.80 = 43.33% after trade ≤ cap 60%; other holdings below cap"
 ];
 
 const SCENARIOS = {
   ok: {
-    id: "0412", fail: -1, swap: "20 USDC → wNEAR", notional: "$20.00", nav: "$1,482.10",
+    id: "0412", fail: -1, swap: "20 USDC → wNEAR", notional: "$20.00", nav: "$1,500.00",
     kicker: "Proposal 0412 · approved", head: "All nine locks opened.",
     lede: "The vault contract checked this trade against the mandate, in order. Every check passed, so the contract asked the MPC network to sign the exact bytes it built.",
     checks: {}
   },
   size: {
-    id: "0413", fail: 4, swap: "80 USDC → wNEAR", notional: "$80.00", nav: "$1,482.10", code: "TradeTooLarge",
+    id: "0413", fail: 4, swap: "80 USDC → wNEAR", notional: "$80.00", nav: "$1,500.00", code: "TradeTooLarge",
     kicker: "Proposal 0413 · rejected", head: "Blocked at lock 5.",
     lede: "The trade's value is above the per-trade maximum, so the contract rejected it before any signature was requested.",
-    checks: { 4: "notional $80.00 > max $50.00" }
+    checks: { 3: "vault holds 700.00 USDC, trade needs 80.00", 4: "notional $80.00 > max $50.00" }
   },
   stale: {
-    id: "0414", fail: 2, swap: "20 USDC → wNEAR", notional: "$20.00", nav: "$1,482.10", code: "StalePrice",
+    id: "0414", fail: 2, swap: "20 USDC → wNEAR", notional: "$20.00", nav: "$1,500.00", code: "StalePrice",
     kicker: "Proposal 0414 · rejected", head: "Blocked at lock 3.",
     lede: "The wNEAR price is older than the mandate allows, so the contract refuses to value the trade. It fails closed.",
     checks: { 2: "wNEAR price 4 min old > limit 60 s" }
   },
   slip: {
-    id: "0415", fail: 6, swap: "20 USDC → wNEAR", notional: "$20.00", nav: "$1,482.10", code: "SlippageExceeded",
+    id: "0415", fail: 6, swap: "20 USDC → wNEAR", notional: "$20.00", nav: "$1,500.00", code: "SlippageExceeded",
     kicker: "Proposal 0415 · rejected", head: "Blocked at lock 7.",
     lede: "The guaranteed minimum output is too far below the oracle value of the input, so the trade could fill at a bad price.",
-    checks: { 6: "min out $3.00 < fair value × 99% ($3.96)" }
+    checks: { 6: "min out $15.00 < input oracle value × 99% ($19.80)" }
   },
   unknown: {
-    id: "0416", fail: 0, swap: "20 USDC → PEPE", notional: "—", nav: "$1,482.10", code: "AssetNotAllowed",
+    id: "0416", fail: 0, swap: "20 USDC → PEPE", notional: "—", nav: "$1,500.00", code: "AssetNotAllowed",
     kicker: "Proposal 0416 · rejected", head: "Blocked at lock 1.",
     lede: "PEPE is not in the mandate's asset list. The vault does not trade assets its owner did not approve.",
     checks: { 0: "PEPE is not listed in the mandate" }
   },
   drawdown: {
-    id: "0417", fail: 7, swap: "200 USDC → ETH", notional: "$200.00", nav: "$1,206.40", code: "DrawdownDeRiskOnly",
+    id: "0417", fail: 7, swap: "20 USDC → ETH", notional: "$20.00", nav: "$1,200.00", code: "DrawdownDeRiskOnly",
     kicker: "Proposal 0417 · rejected", head: "Blocked at lock 8.",
     lede: "NAV has fallen past the drawdown limit, and this trade buys a non-stable asset. The drawdown lock allows only de-risking.",
-    checks: { 7: "NAV $1,206.40 is 19.6% below high-water $1,500.00 (limit 15%); ETH is not stable" }
+    checks: { 0: "USDC → ETH, both listed, amounts > 0", 3: "vault holds 560.00 USDC, trade needs 20.00", 7: "NAV $1,200.00 is 20% below high-water $1,500.00 (limit 15%); ETH is not stable" }
   }
 };
 
 const ASSETS = [
-  { id: "USDC", weight: .46, color: "#0c7a58" },
+  { id: "USDC", weight: 700 / 1500, color: "#0c7a58" },
   { id: "wNEAR", weight: .42, color: "#2f5d8a" },
   { id: "ETH", weight: .07, color: "#6e4bb3" },
-  { id: "BTC", weight: .05, color: "#b87b00" }
+  { id: "BTC", weight: 65 / 1500, color: "#b87b00" }
 ];
 
 // ---- Lock dials ----
@@ -532,10 +600,16 @@ function renderDetail() {
     <div class="cmd"><span class="p">$</span> ${cmd}
 <span class="o"># expected output: test result: ok. 1 passed; 0 failed</span></div>
     <button class="copy" type="button" id="copy">Copy command</button>`;
-  document.getElementById("copy").addEventListener("click", (e) => {
-    navigator.clipboard?.writeText(cmd);
-    e.currentTarget.textContent = "Copied";
-    setTimeout(() => (e.currentTarget.textContent = "Copy command"), 1400);
+  document.getElementById("copy").addEventListener("click", async (e) => {
+    const button = e.currentTarget;
+    try {
+      if (!navigator.clipboard) throw new Error("Clipboard unavailable");
+      await navigator.clipboard.writeText(cmd);
+      button.textContent = "Copied";
+    } catch {
+      button.textContent = "Could not copy; select the command";
+    }
+    setTimeout(() => { button.textContent = "Copy command"; }, 2200);
   });
 }
 
@@ -559,7 +633,7 @@ function render(name) {
   document.getElementById("door").className = "door-state " + (ok ? "open" : "shut");
   document.getElementById("door").textContent = ok ? "Door open" : "Door sealed";
   document.getElementById("door-note").textContent = ok
-    ? "All nine rules passed. A signature request is ready for the MPC network (milestone M3)."
+    ? "This sample passes the nine illustrated checks. No signature request is sent by this page."
     : `Lock ${s.fail + 1} stayed closed. No signature was requested.`;
 
   document.getElementById("t-id").textContent = "PROPOSAL " + s.id;
@@ -572,7 +646,7 @@ function render(name) {
   const result = document.getElementById("r-result");
   result.firstChild.textContent = ok ? "Signed by MPC" : `${LOCKS[s.fail].name} · ${s.code}`;
   result.className = ok ? "good" : "bad";
-  document.getElementById("r-intent").textContent = ok ? "not produced yet (M3)" : "none: never signed";
+  document.getElementById("r-intent").textContent = ok ? "sample only; no transaction sent" : "sample rejection; no signature";
 
   document.querySelectorAll("[data-scenario]").forEach((b) =>
     b.setAttribute("aria-pressed", String(b.dataset.scenario === name)));
@@ -584,5 +658,6 @@ document.querySelectorAll("[data-scenario]").forEach((b) =>
   b.addEventListener("click", () => render(b.dataset.scenario)));
 render("ok");
 </script>
+<script type="module" src="live.mjs"></script>
 </body>
 </html>

@@ -1,7 +1,8 @@
 //! Shared sandbox world for the integration tests.
 //!
-//! Real: the `intents.near` wasm (exact mainnet code, see tests/fixtures/README.md)
-//! and the vault. Stand-ins, sandbox only: the MPC signer (`mock-externals`,
+//! Real: the supplied Intents wasm fixture (see tests/fixtures/README.md)
+//! and the vault. Current deployed/source identity needs separate verification.
+//! Stand-ins, sandbox only: the MPC signer (`mock-externals`,
 //! which holds a test key and enforces the `v1.signer` calling convention)
 //! and the price oracle (`mock-oracle`, same answer shapes and recency rule).
 
@@ -138,6 +139,21 @@ pub async fn world() -> testresult::TestResult<World> {
 /// The sandbox world with `extra` assets beyond wNEAR and USDC. The mandate allows MAX_ASSETS
 /// in all (20 now), so `extra` is at most 18.
 pub async fn world_with_extra(extra: usize) -> testresult::TestResult<World> {
+    world_with_provider(extra, None).await
+}
+
+/// Same funded-asset fixture, initialized through the actual Pyth deployment path.
+pub async fn world_with_pyth(extra: usize) -> testresult::TestResult<World> {
+    let mut config = mandate_with_extra(extra);
+    for (i, asset) in
+        config["assets"].as_array_mut().expect("fixture assets").iter_mut().enumerate()
+    {
+        asset["price_feed_id"] = json!(format!("{:064x}", i + 1));
+    }
+    world_with_provider(extra, Some(config)).await
+}
+
+async fn world_with_provider(extra: usize, pyth: Option<Value>) -> testresult::TestResult<World> {
     let vault_wasm = build_contract(None)?;
     let mock_wasm = build_contract(Some("../mock-externals/Cargo.toml"))?;
     let oracle_wasm = build_contract(Some("../mock-oracle/Cargo.toml"))?;
@@ -210,17 +226,22 @@ pub async fn world_with_extra(extra: usize) -> testresult::TestResult<World> {
             .assert_success();
     }
 
+    let provider = pyth.is_some();
+    let mut initialization = json!({
+        "owner": owner,
+        "mandate": pyth.unwrap_or_else(|| mandate_with_extra(extra)),
+        "signer": mpc_id,
+        "intents": intents_id,
+        "oracle": oracle_id,
+    });
+    if provider {
+        initialization["oracle_kind"] = json!("pyth");
+    }
     Contract::deploy(vault_id.clone())
         .use_code(vault_wasm)
         .with_init_call(
-            "new_with_externals",
-            json!({
-                "owner": owner,
-                "mandate": mandate_with_extra(extra),
-                "signer": mpc_id,
-                "intents": intents_id,
-                "oracle": oracle_id,
-            }),
+            if provider { "new_with_oracle" } else { "new_with_externals" },
+            initialization,
         )?
         .with_signer(signer.clone())
         .send_to(&network)

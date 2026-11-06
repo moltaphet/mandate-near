@@ -1,0 +1,137 @@
+MANDATE FINAL FAST VERIFICATION
+Observed UTC time: 2026-11-06 18:42:01 UTC
+Workspace: /Users/ehs4n/mandate-near
+Scope: frozen Rust implementation after final voucher supply/source checks, Pyth
+preview validation repair, generated callback size caps, and current web assets.
+
+RESULT
+All eight requested commands exited 0. No retry or escalation was required.
+Rust library tests: 235 passed (vault 226, agent 7, keeper 2; three mock libraries 0).
+Agent integration tests: 13 passed (autonomous 6, protocol 7).
+JavaScript tests: 31 passed (dashboard 25, main-site 6).
+Deployment inspection Python tests: 12 passed.
+Total across these non-overlapping FAST test commands: 291 passed; 0 failed.
+Rust and JavaScript counters reported 0 ignored/skipped.
+Formatting, strict all-target Clippy, site bundle parity and allowed local references passed.
+
+FROZEN ARTIFACT
+Successful build command: cargo near build non-reproducible-wasm --locked
+Build working directory: /Users/ehs4n/mandate-near/contracts/vault
+Binary: /Users/ehs4n/mandate-near/target/near/mandate_vault/mandate_vault.wasm
+Size independently rechecked for this record: 384464 bytes
+SHA-256 independently rechecked: def86f513ce545d3ffc1125080e76ae58cf6077cc06b55382466097baf64e8fa
+ABI: /Users/ehs4n/mandate-near/target/near/mandate_vault/mandate_vault_abi.json
+
+PRESERVED HISTORY
+The previous operational-fast.txt was copied unchanged to
+docs/evidence/operational-fast-historical.txt before this record was written.
+That earlier record reported 278 tests against an earlier implementation and
+web test set. It is historical evidence and is not relabeled as this final run.
+
+LIMITS
+This record covers FAST local verification only. The independent final serial
+sandbox suite is recorded separately; its result must not be inferred here.
+These commands did not deploy, sign, settle, withdraw or recover on a live chain.
+No live oracle selection, production ownership setup, complete chain history or
+production authority sealing is proved by passing local tests.
+No browser layout, interaction, responsive, accessibility or hosted-site QA ran
+in this FAST task. Node tests verify JavaScript behavior with controlled inputs.
+Site bundle parity confirms the packaged inspection asset matches the tested
+shared reader; it does not prove visual rendering, deployment or live RPC data.
+All six generated callback attributes now explicitly cap response reads at
+MAX_ANSWER_BYTES. Compilation verifies SDK syntax. Existing native tests cover
+manual size guards and malformed signature handling; no reachable oversized
+successful-response fixture exists for a generated wrapper in the current
+sandbox mocks. Generated-wrapper runtime rejection remains UNVERIFIED.
+Permissionless low-gas execute grief remains UNVERIFIED; no minimum-gas change
+was made without runtime evidence.
+check-claims.sh checks allowed local references only, explicitly does not verify
+external citations or security claims, and runs no tests.
+No prohibited file, credential or secret-like fixture was read in this task.
+Only command summaries/test names are saved below; no account secret, signature
+value or environment-variable output is included.
+
+COMMAND RESULTS
+
+cargo fmt --all -- --check
+exit_code: 0
+(no output)
+
+cargo clippy --offline --workspace --all-targets -- -D warnings
+exit_code: 0
+Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.79s
+
+cargo test --offline --workspace --lib
+exit_code: 0
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.91s
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 226 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.95s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+cargo test --offline -p mandate-agent --test autonomous --test protocol
+exit_code: 0
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 5.31s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.25s
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.59s
+
+node --test web/dashboard/live.test.mjs web/site/site.test.mjs
+exit_code: 0
+ok 1 - atomic final-block snapshot pins every subsequent vault and ledger read
+ok 2 - wrong network stops before querying the account
+ok 3 - wrong code identity stops before reading vault views
+ok 4 - missing expected code never implies verified identity
+ok 5 - oracle provider is observed explicitly and only supported names are accepted
+ok 6 - an undeployed account is rejected
+ok 7 - a mixed-block view is not combined with the snapshot
+ok 8 - account metadata and ledger must have the same block height as the anchor
+ok 9 - one failed member invalidates the whole read, never producing partial balances
+ok 10 - large token values format exactly across 6, 24 and 30 decimals
+ok 11 - deadline equality is expired, not open
+ok 12 - unknown latest history never invents rejection or settlement
+ok 13 - signatures and debit observations remain distinct from settlement and delivery
+ok 14 - untrusted RPC strings are literal text and never become markup
+ok 15 - schema refuses malformed balances, unsafe numbers and incoherent outcomes
+ok 16 - queued rules are shown separately and do not replace current rules
+ok 17 - withdrawal phase uses recorded baseline; maturity equality does not bypass guards
+ok 18 - incoherent receipt phase, authority or sink observations are refused
+ok 19 - a safely requeued withdrawal shows that owner authorization is still required
+ok 20 - account, RPC and receipt links reject executable URLs, credentials and wrong explorers
+ok 21 - receipt references are links with no settlement inference
+ok 22 - RPC transport rejects invalid envelopes, malformed bytes and oversized responses
+ok 23 - timeout aborts the RPC and no snapshot is accepted
+ok 24 - read-only client cannot request mutation or account access-key lists
+ok 25 - out-of-order responses and cancelled reads never replace newer state
+ok 26 - vault sharing drops RPC, receipt and unrelated URL data
+ok 27 - invalid account text and unsupported or fixture networks cannot be shared
+ok 28 - share link refuses executable/file URLs, credentials and invalid code hashes
+ok 29 - shared links are bounded identity prefill, never a custom RPC instruction
+ok 30 - clipboard success is only returned after the real write resolves
+ok 31 - clipboard unavailable or rejected reports failure without echoing raw errors
+1..31
+# tests 31
+# suites 0
+# pass 31
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 263.827667
+
+python3 -B scripts/inspect_deployment_test.py
+exit_code: 0
+............
+----------------------------------------------------------------------
+Ran 12 tests in 0.046s
+
+OK
+
+python3 -B scripts/build-web.py --check
+exit_code: 0
+Site audit asset matches the tested shared reader.
+
+bash scripts/check-claims.sh
+exit_code: 0
+Allowed local references checked. External citations and security claims are not verified; no tests were run.

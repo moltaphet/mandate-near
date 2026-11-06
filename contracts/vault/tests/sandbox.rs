@@ -5,6 +5,8 @@
 //! `cargo near new` template.
 
 use near_api::{AccountId, Contract, NearToken, NetworkConfig, Signer};
+use near_sdk::base64::Engine;
+use near_sdk::base64::engine::general_purpose::STANDARD as BASE64;
 use near_sdk::serde_json::{Value, json};
 use std::sync::Arc;
 
@@ -108,6 +110,48 @@ impl Env {
 }
 
 #[tokio::test]
+async fn outside_accounts_cannot_invoke_callbacks_or_migration() -> testresult::TestResult<()> {
+    let e = setup().await?;
+    for method in [
+        "on_derived_key",
+        "on_key_registered",
+        "on_balances",
+        "on_price_data",
+        "on_pyth_prices",
+        "on_assets",
+        "on_salt",
+        "on_signed",
+        "on_withdrawal_balance",
+        "on_withdrawal_prepared",
+        "on_withdrawn",
+        "on_withdrawal_cancelled",
+        "on_withdrawal_reconciled",
+        "migrate",
+    ] {
+        let args = if method == "on_withdrawal_prepared" {
+            json!({ "withdrawal_id": "1", "balance_before": "100" })
+        } else {
+            json!({})
+        };
+        let error = e
+            .vault
+            .call_function(method, args)
+            .transaction()
+            .with_signer(e.stranger.clone(), e.signer.clone())
+            .send_to(&e.network)
+            .await?
+            .into_result()
+            .expect_err("outside callback must be refused");
+        let message = format!("{error:?}");
+        assert!(message.contains("private"), "{method}: {message}");
+    }
+    assert_eq!(e.view("get_owner").await, json!(e.owner));
+    assert_eq!(e.view("get_pending_proposal").await, Value::Null);
+    assert_eq!(e.view("get_withdrawal_status").await, Value::Null);
+    Ok(())
+}
+
+#[tokio::test]
 async fn owner_controls_on_a_real_chain() -> testresult::TestResult<()> {
     let env = setup().await?;
     let (owner, stranger) = (env.owner.clone(), env.stranger.clone());
@@ -201,5 +245,103 @@ async fn a_new_agent_waits_24_hours_on_a_real_chain() -> testresult::TestResult<
     assert_eq!(env.view("get_pending_agent").await, json!(null));
     assert_eq!(env.view("get_agent").await, json!(stranger));
 
+    Ok(())
+}
+
+#[tokio::test]
+async fn wasm_migration_consumes_historical_state_and_writes_current_state()
+-> testresult::TestResult<()> {
+    let e = setup().await?;
+    let vault_id = e.vault.account_id().clone();
+    let original_mandate = json!({
+        "assets": [
+            { "asset_id": "nep141:wrap.near", "decimals": 24, "price_feed_id": "wrap.near" },
+            { "asset_id": "nep141:usdc.testnet", "decimals": 6, "price_feed_id": "usdc" },
+        ],
+        "stable_assets": ["nep141:usdc.testnet"],
+        "max_trade_usd": "50000000",
+        "max_daily_turnover_usd": "200000000",
+        "max_position_bps": 6000,
+        "max_slippage_bps": 100,
+        "max_drawdown_bps": 1500,
+        "min_trade_interval_sec": 300,
+        "max_price_age_sec": 60,
+    });
+    let mut queued_mandate = original_mandate.clone();
+    queued_mandate["max_trade_usd"] = json!("75000000");
+
+    // Independently emitted by the original compiled Vault implementations.
+    // Patching old STATE exercises the actual Wasm init(ignore_state) wrapper;
+    // it is neither deployed-mainnet evidence nor a funded upgrade test.
+    for (commit, state) in [
+        ("77ebc0c", include_bytes!("fixtures/legacy-77ebc0c-state.borsh").as_slice()),
+        ("0de5c48", include_bytes!("fixtures/legacy-0de5c48-state.borsh").as_slice()),
+    ] {
+        e._sandbox
+            .patch_state(vault_id.as_str().parse()?)
+            .storage(BASE64.encode(b"STATE"), BASE64.encode(state))
+            .send()
+            .await?;
+
+        let external = e
+            .vault
+            .call_function("migrate", json!({}))
+            .transaction()
+            .with_signer(e.stranger.clone(), e.signer.clone())
+            .send_to(&e.network)
+            .await?
+            .into_result()
+            .expect_err("outside account must not migrate historical state");
+        let external = format!("{external:?}");
+        assert!(external.contains("private"), "{commit}: {external}");
+
+        assert!(e.call(&vault_id, "migrate", json!({}), 0).await, "{commit}: self migration");
+        assert_eq!(e.view("get_owner").await, json!("owner.testnet"), "{commit}");
+        assert_eq!(e.view("is_paused").await, json!(true), "{commit}");
+        assert_eq!(e.view("get_mandate").await, original_mandate, "{commit}");
+        assert_eq!(
+            e.view("get_pending_mandate").await,
+            json!({ "mandate": queued_mandate, "effective_sec": 1_793_784_076_u64 }),
+            "{commit}"
+        );
+        assert_eq!(e.view("get_agent").await, json!("agent.testnet"), "{commit}");
+        assert_eq!(
+            e.view("get_pending_agent").await,
+            json!({ "agent": "replacement.testnet", "effective_sec": 1_793_784_076_u64 }),
+            "{commit}"
+        );
+        assert_eq!(
+            e.view("get_trading_state").await,
+            json!({
+                "last_trade_at_sec": null,
+                "day_start_sec": 0,
+                "day_turnover_usd": "0",
+                "high_water_mark_usd": "0",
+                "signed_intent_expires_at_sec": 0,
+            }),
+            "{commit}"
+        );
+        assert_eq!(
+            e.view("get_externals").await,
+            json!(["v1.signer", "intents.near", "price-oracle.near"]),
+            "{commit}"
+        );
+        assert_eq!(e.view("get_pending_proposal").await, Value::Null, "{commit}");
+        assert_eq!(e.view("get_pending_withdrawal").await, Value::Null, "{commit}");
+        assert_eq!(e.view("get_withdrawal_status").await, Value::Null, "{commit}");
+        assert_eq!(e.view("is_in_flight").await, json!(false), "{commit}");
+
+        let repeated = e
+            .vault
+            .call_function("migrate", json!({}))
+            .transaction()
+            .with_signer(vault_id.clone(), e.signer.clone())
+            .send_to(&e.network)
+            .await?
+            .into_result()
+            .expect_err("a migrated state must not be migrated twice");
+        let repeated = format!("{repeated:?}");
+        assert!(repeated.contains("already current"), "{commit}: {repeated}");
+    }
     Ok(())
 }

@@ -3,297 +3,151 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Mandate — What is built, what is proven, how to check it</title>
-<meta name="description" content="Mandate: an AI trading vault where a NEAR contract is the only signer. Status, evidence and reproduction steps.">
+<meta name="theme-color" content="#efebe2">
+<meta name="referrer" content="no-referrer">
+<meta name="description" content="Mandate separates agent proposals from on-chain trade authority. Inspect public NEAR vault state, owner rules and evidence in one dashboard.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Mandate — Your agent proposes. Your rules decide.">
+<meta property="og:description" content="Inspect public NEAR vault state, owner rules and the evidence behind an experimental agent-security vault.">
+<meta property="og:url" content="https://mandatenear.xyz/">
+<meta name="twitter:card" content="summary">
+<link rel="canonical" href="https://mandatenear.xyz/">
+<link rel="icon" type="image/svg+xml" href="./favicon.svg">
+<title>Mandate — Your agent proposes. Your rules decide.</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --paper: #efebe2; --card: #f8f6f1; --ink: #111; --soft: #5b5a55; --rule: rgba(17,17,17,.14);
-    --pass: #00875f; --block: #d93a12; --amber: #b87a00; --mute: #8a877f;
-    --serif: "DM Serif Display", Georgia, serif; --mono: "IBM Plex Mono", ui-monospace, monospace; --sans: "Inter", system-ui, sans-serif;
-  }
-  * { box-sizing: border-box; }
-  html { scroll-behavior: smooth; }
-  body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--sans); line-height: 1.6; -webkit-font-smoothing: antialiased; }
-  a { color: var(--ink); text-underline-offset: 3px; }
-  code, .mono { font-family: var(--mono); font-size: .92em; }
-  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 28px; }
-  section { padding: 56px 0; border-top: 1px solid var(--rule); }
-  h2 { font-family: var(--serif); font-weight: 400; font-size: 40px; line-height: 1.1; margin: 0 0 14px; }
-  .kicker { font-family: var(--mono); font-size: 12px; text-transform: uppercase; letter-spacing: .14em; color: var(--soft); }
-  .lede { font-size: 17px; color: var(--soft); max-width: 680px; margin: 0 0 24px; }
-
-  header.top { display: flex; justify-content: space-between; align-items: center; padding: 22px 0; }
-  .brand { font-family: var(--serif); font-size: 26px; }
-  .brand i { color: var(--block); font-style: normal; }
-  nav.links { display: flex; gap: 20px; font-family: var(--mono); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
-  nav.links a { text-decoration: none; color: var(--soft); }
-  nav.links a:hover { color: var(--ink); }
-
-  .hero { padding: 40px 0 56px; }
-  .hero h1 { font-family: var(--serif); font-weight: 400; font-size: clamp(44px, 6vw, 76px); line-height: 1; margin: 16px 0 20px; letter-spacing: -.02em; }
-  .hero h1 em { font-style: italic; }
-  .status-line { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 26px; }
-  .pill { font-family: var(--mono); font-size: 12px; padding: 7px 12px; border: 1px solid var(--rule); border-radius: 999px; background: var(--card); }
-  .pill.pass { border-color: rgba(0,135,95,.4); color: var(--pass); }
-  .pill.todo { border-color: rgba(184,122,0,.45); color: var(--amber); }
-  .pill.no { border-color: rgba(217,58,18,.4); color: var(--block); }
-
-  table { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--rule); font-size: 14px; }
-  th, td { text-align: left; vertical-align: top; padding: 14px 16px; border-bottom: 1px solid var(--rule); }
-  th { font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--soft); font-weight: 500; background: #f1eee6; }
-  tr:last-child td { border-bottom: 0; }
-  td .mono { display: block; margin-top: 6px; color: var(--soft); font-size: 12px; word-break: break-word; }
-  .st { font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; }
-  .st.pass { color: var(--pass); } .st.todo { color: var(--amber); } .st.no { color: var(--block); }
-
-  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  .card { background: var(--card); border: 1px solid var(--rule); border-radius: 4px; padding: 22px; }
-  .card h3 { font-family: var(--serif); font-weight: 400; font-size: 22px; margin: 0 0 8px; }
-  .card p { margin: 0; color: var(--soft); font-size: 14px; }
-
-  ol.flow { list-style: none; counter-reset: s; padding: 0; margin: 0; border-top: 1px solid var(--rule); }
-  ol.flow li { counter-increment: s; display: grid; grid-template-columns: 56px 1fr auto; gap: 14px; padding: 16px 0; border-bottom: 1px solid var(--rule); align-items: start; }
-  ol.flow li::before { content: counter(s, decimal-leading-zero); font-family: var(--mono); font-size: 13px; color: var(--soft); padding-top: 2px; }
-  ol.flow b { font-weight: 600; }
-  ol.flow p { margin: 4px 0 0; color: var(--soft); font-size: 14px; }
-
-  .verify { background: #15181c; color: #e7ece9; border-radius: 6px; padding: 20px 22px; font-family: var(--mono); font-size: 13px; line-height: 1.75; overflow-x: auto; }
-  .verify .c { color: #7fe3b8; }
-  .verify .o { color: #8a95a0; }
-  .step { margin: 26px 0 8px; font-family: var(--serif); font-size: 22px; }
-
-  .notdone { columns: 2; column-gap: 32px; padding: 0; margin: 0; list-style: none; }
-  .notdone li { break-inside: avoid; padding: 9px 0; border-bottom: 1px dashed var(--rule); font-size: 15px; }
-  .notdone li::before { content: "▢ "; color: var(--amber); }
-
-  .demo { border: 1px dashed var(--rule); border-radius: 4px; padding: 18px 20px; background: #f3f0e8; font-size: 14px; color: var(--soft); }
-  .demo a { font-weight: 600; }
-
-  footer { border-top: 1px solid var(--rule); padding: 28px 0 48px; font-size: 13px; color: var(--soft); }
-
-  @media (max-width: 760px) { .grid2 { grid-template-columns: 1fr; } .notdone { columns: 1; } h2 { font-size: 32px; } nav.links { display: none; } }
+:root{--paper:#efebe2;--card:#f8f6f1;--ink:#111;--soft:#5b5a55;--rule:rgba(17,17,17,.14);--pass:#00875f;--pass-ink:#006f4e;--amber-ink:#845b00;--block:#b93316;--amber:#956600;--serif:"DM Serif Display",Georgia,serif;--mono:"IBM Plex Mono",ui-monospace,monospace;--sans:Inter,system-ui,sans-serif}
+*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:100px}body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);line-height:1.6;-webkit-font-smoothing:antialiased}a{color:inherit;text-underline-offset:4px}button,input,select{font:inherit}button,a,input,select,summary{touch-action:manipulation}button{cursor:pointer}button:disabled{cursor:wait;opacity:.65}:focus-visible{outline:2px solid var(--pass);outline-offset:4px}[hidden]{display:none!important}.wrap{width:min(1160px,100%);margin:auto;padding:0 28px}.skip{position:fixed;top:8px;left:8px;z-index:10;transform:translateY(-150%);background:var(--ink);color:var(--card);padding:10px 18px}.skip:focus{transform:none}.mono,code{font-family:var(--mono)}.eyebrow{font:11px var(--mono);letter-spacing:.13em;text-transform:uppercase;color:var(--soft)}.muted{color:var(--soft)}.badge{display:inline-flex;gap:7px;align-items:center;padding:5px 10px;border:1px solid var(--rule);border-radius:99px;font:10px var(--mono);text-transform:uppercase;letter-spacing:.04em;background:var(--card)}.badge.green{color:var(--pass-ink);border-color:rgba(0,135,95,.28)}.badge.amber{color:var(--amber-ink);border-color:rgba(149,102,0,.28)}.dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}.button{display:inline-flex;align-items:center;justify-content:center;gap:18px;min-height:46px;padding:11px 18px;border:1px solid var(--ink);border-radius:5px;font-size:13px;font-weight:600;text-decoration:none;background:var(--ink);color:var(--card)}.button.light{background:transparent;color:var(--ink);border-color:var(--rule)}.button:hover{background:#2c2c27;color:var(--card)}.button.light:hover{background:var(--card);color:var(--ink)}.text-link{font-size:12px;font-weight:600}.section{padding:76px 0;border-top:1px solid var(--rule)}.section-head{display:flex;justify-content:space-between;align-items:end;gap:28px;margin-bottom:30px}.section-head h2{font:400 clamp(32px,4vw,45px)/1.1 var(--serif);margin:10px 0 0;letter-spacing:-.025em}.section-head p{max-width:450px;color:var(--soft);font-size:14px;margin:0}.top{position:sticky;top:0;z-index:5;border-bottom:1px solid var(--rule);background:rgba(239,235,226,.97);backdrop-filter:blur(12px)}.top-inner{display:flex;align-items:center;justify-content:space-between;gap:24px;min-height:76px}.brand{display:flex;align-items:center;gap:9px;text-decoration:none;font-size:18px;font-weight:700;letter-spacing:-.06em}.brand svg{width:26px;height:28px}.nav{display:flex;gap:27px;align-items:center}.nav a{text-decoration:none;color:var(--soft);font:11px var(--mono);text-transform:uppercase;letter-spacing:.06em}.nav a:hover,.nav a[aria-current]{color:var(--ink)}.top-action{font-size:11px;min-height:36px;padding:6px 12px}.hero{padding:74px 0 52px}.hero-grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(290px,.85fr);gap:62px;align-items:center}.hero h1{font:400 clamp(43px,5.3vw,70px)/1.01 var(--serif);letter-spacing:-.04em;margin:23px 0}.hero h1 em{font-weight:400}.hero .lede{max-width:580px;font-size:16px;color:var(--soft);margin:0 0 26px}.hero-actions{display:flex;gap:10px;flex-wrap:wrap}.hero-note{font:11px/1.7 var(--mono);color:var(--soft);margin:22px 0 0}.boundary{border:1px solid var(--rule);border-radius:8px;background:var(--card);padding:24px;box-shadow:0 9px 30px rgba(17,17,17,.035)}.boundary-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:25px}.boundary ol{list-style:none;margin:0;padding:0}.boundary li{display:grid;grid-template-columns:32px 1fr auto;gap:12px;align-items:start;padding:17px 0;border-top:1px solid var(--rule)}.boundary .number{font:12px var(--mono);color:var(--soft);padding-top:4px}.boundary b{font-size:13px;font-weight:600}.boundary li p{font-size:12px;color:var(--soft);margin:4px 0 0}.boundary .arrow{font-size:17px;color:var(--pass)}.boundary-foot{font:10px/1.8 var(--mono);color:var(--soft);border-top:1px solid var(--rule);margin:0;padding-top:17px}.facts{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--rule);margin-top:58px}.fact{padding:23px 20px 0 0}.fact+ .fact{padding-left:26px;border-left:1px solid var(--rule)}.fact strong{font:400 34px/1 var(--serif)}.fact p{font-size:11px;color:var(--soft);margin:8px 0 0}
+.dashboard{border:1px solid var(--rule);border-radius:8px;background:var(--card);overflow:hidden}.dashboard-bar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:17px 24px;border-bottom:1px solid var(--rule)}.dashboard-bar strong{font-size:13px}.dashboard-bar .right{display:flex;align-items:center;gap:15px}.inline-button{padding:0;background:none;border:0;color:var(--soft);font:11px var(--mono);text-decoration:underline;text-underline-offset:4px}.audit-form{padding:24px}.connect-row{display:grid;grid-template-columns:180px minmax(0,1fr) 150px;gap:16px;align-items:end}.audit-field{min-width:0}label{display:block;font:11px var(--mono);margin-bottom:8px;color:var(--soft)}input,select{width:100%;min-width:0;border:1px solid var(--rule);background:var(--paper);border-radius:4px;padding:12px;color:var(--ink);font:12px var(--mono);height:44px}input::placeholder{color:#6e6a61}small{display:block;color:var(--soft);font-size:11px;margin-top:6px}.audit-submit{height:44px;min-height:44px}.advanced{margin-top:18px}.advanced summary{font:11px var(--mono);color:var(--soft);cursor:pointer;width:fit-content}.advanced-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:17px}.advanced-grid .wide{grid-column:1/-1}.status-wrap{padding:0 24px 19px}.audit-status{font:11px/1.7 var(--mono);color:var(--soft);margin:0;overflow-wrap:anywhere}.audit-status.error{color:var(--block)}.audit-status.observed{color:var(--pass-ink)}.read-only-note{font-size:11px;color:var(--soft);margin:8px 0 0}.file-note{padding:14px 18px;border:1px solid rgba(149,102,0,.25);background:#f5efdf;border-radius:5px;font-size:12px;margin-bottom:20px}.file-note code{overflow-wrap:anywhere}.audit-output{border-top:1px solid var(--rule);padding:24px;background:var(--paper)}.empty{display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:36px;padding:26px 12px}.empty h3{font:400 27px var(--serif);margin:0 0 8px}.empty p{font-size:13px;color:var(--soft);max-width:400px;margin:0}.empty-graphic{display:grid;grid-template-columns:1fr 1fr;gap:12px}.empty-card{border:1px solid var(--rule);border-radius:5px;padding:18px;background:var(--card)}.empty-card span{display:block;font:9px var(--mono);text-transform:uppercase;letter-spacing:.07em;color:var(--soft)}.empty-card i{display:block;height:5px;width:65%;background:#d9d5cc;border-radius:4px;margin-top:18px}.empty-card i+ i{width:40%;margin-top:8px}.block-anchor{display:grid;grid-template-columns:1fr auto;gap:6px 18px;margin-bottom:22px;padding:18px 20px;border:1px solid var(--rule);border-left:3px solid var(--pass);border-radius:4px;background:var(--card);overflow-wrap:anywhere}.block-anchor strong{font:400 28px var(--serif);grid-column:2;grid-row:1/3}.block-anchor code,.block-anchor p{grid-column:1/-1;font-size:10px;color:var(--soft);margin:0}.audit-kicker{font:10px var(--mono);color:var(--soft)}.block-anchor>span:not(.audit-kicker){font:11px var(--mono);color:var(--soft)}.audit-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.audit-card{min-width:0;margin:0;padding:22px;background:var(--card);border:1px solid var(--rule);border-radius:5px}.audit-card h3{font:400 25px var(--serif);margin:0 0 17px}.audit-row{display:grid;grid-template-columns:minmax(95px,.85fr) minmax(0,1.15fr);gap:16px;border-bottom:1px solid var(--rule);padding:9px 0;font-size:12px}.audit-row dt{color:var(--soft)}.audit-row dd{margin:0;overflow-wrap:anywhere}dl{margin:0}.audit-note,.audit-blockers{font-size:11px;line-height:1.8;color:var(--soft);margin:15px 0 0}.audit-blockers{padding-left:16px}.audit-details{margin-top:14px}.audit-details summary{font-size:11px;color:var(--soft);cursor:pointer}.audit-scroll{max-width:100%;overflow-x:auto;margin-top:12px}table{width:100%;border-collapse:collapse;text-align:left}th,td{vertical-align:top;padding:10px 8px;border-bottom:1px solid var(--rule);font-size:11px}th{font:9px var(--mono);text-transform:uppercase;color:var(--soft)}td{overflow-wrap:anywhere}.audit-timeline{padding-left:17px;margin:0}.audit-timeline li{font-size:12px;margin-bottom:15px}.audit-timeline p{font-size:11px;color:var(--soft);margin:4px 0;overflow-wrap:anywhere}.audit-card:last-child{grid-column:1/-1}.section-foot{display:flex;justify-content:space-between;gap:20px;margin:17px 0 0;font-size:11px;color:var(--soft)}.section-foot p{margin:0}
+.rules-grid{display:grid;grid-template-columns:repeat(3,1fr);border-left:1px solid var(--rule);border-top:1px solid var(--rule)}.rule{padding:25px;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule)}.rule .index{font:10px var(--mono);color:var(--pass-ink)}.rule h3{font:400 23px var(--serif);margin:12px 0 8px}.rule p{font-size:12px;color:var(--soft);margin:0}.guard-note{border-left:2px solid var(--pass);padding:0 0 0 18px;max-width:760px;color:var(--soft);font-size:12px;margin:26px 0 0}.proof-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}.proof-card{background:var(--card);border:1px solid var(--rule);border-radius:6px;padding:28px}.proof-card h3{font:400 29px var(--serif);margin:16px 0 20px}.proof-card ul{list-style:none;padding:0;margin:0}.proof-card li{padding:12px 0;border-top:1px solid var(--rule);font-size:12px}.proof-card li b{display:block;font-weight:600;margin-bottom:3px}.proof-card li span{color:var(--soft)}.proof-card .text-link{display:inline-block;margin-top:20px}.reproduce{display:grid;grid-template-columns:1fr 1.2fr;gap:30px;border-top:1px solid var(--rule);padding-top:26px;margin-top:26px;align-items:center}.reproduce h3{font:400 23px var(--serif);margin:0 0 6px}.reproduce p{font-size:12px;color:var(--soft);margin:0}.command{display:flex;gap:20px;align-items:center;justify-content:space-between;background:#171b1b;border-radius:5px;padding:17px 19px;color:#e5eae6;font:11px var(--mono);overflow:auto}.command code{white-space:nowrap}.command button{font:10px var(--mono);background:none;color:#abd8c6;border:0;padding:4px;flex:none}.copy-status{min-height:20px;font:10px var(--mono);color:var(--soft);margin:6px 0 0}.roadmap{display:grid;grid-template-columns:repeat(4,1fr);gap:26px}.milestone{border-top:2px solid var(--rule);padding-top:18px}.milestone:first-child{border-color:var(--pass)}.milestone .step-no{font:10px var(--mono);color:var(--soft)}.milestone h3{font:400 23px var(--serif);margin:13px 0 10px}.milestone p{font-size:12px;color:var(--soft);margin:12px 0 0}.faq-grid{display:grid;grid-template-columns:1fr 1.4fr;gap:70px}.faq-grid h2{font:400 40px/1.1 var(--serif);margin:10px 0}.faq-list details{border-bottom:1px solid var(--rule);padding:16px 0}.faq-list details:first-child{border-top:1px solid var(--rule)}.faq-list summary{cursor:pointer;font-size:13px;font-weight:500;padding-right:15px}.faq-list p{font-size:12px;color:var(--soft);margin:12px 0 0;max-width:580px}.footer{padding:29px 0 38px;border-top:1px solid var(--rule)}.footer-top{display:flex;justify-content:space-between;gap:24px;align-items:center}.footer-links{display:flex;gap:22px;font-size:11px}.footer p{font:10px/1.8 var(--mono);color:var(--soft);margin:19px 0 0}.footer-bottom{display:flex;justify-content:space-between;gap:24px;margin-top:23px;font:10px var(--mono);color:var(--soft)}
+@media(max-width:980px){.hero-grid{gap:30px;grid-template-columns:1.4fr 1fr}.hero h1{font-size:53px}.nav{gap:17px}.section-head{align-items:start}.section-head p{max-width:360px}.roadmap{gap:17px}.rule{padding:21px}.faq-grid{gap:38px}}
+@media(max-width:760px){html{scroll-padding-top:112px}.wrap{padding:0 20px}.top-inner{min-height:66px;flex-wrap:wrap;gap:0;padding-top:16px;padding-bottom:13px}.brand{font-size:17px}.top-action{margin-left:auto}.nav{order:3;width:100%;margin-top:16px;justify-content:space-between;gap:12px}.nav a{font-size:10px}.hero{padding:45px 0 35px}.hero-grid{grid-template-columns:1fr;gap:34px}.hero h1{font-size:clamp(43px,8vw,60px);max-width:600px}.hero .lede{font-size:14px}.boundary{padding:21px}.boundary ol{display:grid;grid-template-columns:1fr 1fr;gap:0 20px}.boundary li{grid-template-columns:23px 1fr;gap:8px}.boundary .arrow{display:none}.facts{margin-top:36px;grid-template-columns:1fr 1fr}.fact{padding:19px 15px 16px 0}.fact+.fact{padding-left:19px}.fact:nth-child(3){border-left:0;padding-left:0;border-top:1px solid var(--rule)}.fact:nth-child(4){border-top:1px solid var(--rule)}.fact strong{font-size:30px}.section{padding:47px 0}.section-head{display:block;margin-bottom:24px}.section-head h2{font-size:35px;margin-bottom:14px}.section-head p{max-width:100%;font-size:13px}.dashboard-bar{padding:15px 17px;align-items:start}.dashboard-bar .right{flex-wrap:wrap;justify-content:end;gap:7px 13px}.dashboard-bar .badge{font-size:8px}.audit-form{padding:18px}.connect-row{grid-template-columns:1fr}.advanced-grid{grid-template-columns:1fr}.advanced-grid .wide{grid-column:auto}.status-wrap{padding:0 18px 17px}.audit-output{padding:17px}.empty{grid-template-columns:1fr;gap:25px;padding:14px 0}.empty-graphic{gap:9px}.empty-card{padding:14px}.audit-grid{grid-template-columns:1fr;gap:13px}.audit-card{padding:18px}.audit-row{gap:12px;font-size:11px}.block-anchor{padding:15px}.block-anchor strong{font-size:24px}.section-foot{display:block}.section-foot p+p{margin-top:10px}.rules-grid{grid-template-columns:1fr 1fr}.rule{padding:18px}.rule h3{font-size:21px}.rule:last-child{grid-column:1/-1}.proof-grid{grid-template-columns:1fr;gap:14px}.proof-card{padding:22px}.reproduce{grid-template-columns:1fr;gap:18px}.roadmap{grid-template-columns:1fr 1fr;gap:25px 20px}.milestone h3{font-size:22px}.faq-grid{grid-template-columns:1fr;gap:20px}.faq-grid h2{font-size:35px}.footer-top{align-items:start}.footer-links{flex-direction:column;gap:9px}.footer-bottom{flex-direction:column;gap:9px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
 </style>
 </head>
 <body>
-
-<div class="wrap">
-  <header class="top">
-    <div class="brand">Mandate<i>.</i></div>
-    <nav class="links" aria-label="Sections">
-      <a href="#status">Status</a>
-      <a href="#trust">Trust</a>
-      <a href="#flow">Flow</a>
-      <a href="#proof">Proof</a>
-      <a href="#verify">Verify</a>
-      <a href="#related">Related</a>
-      <a href="#open">Not done</a>
-    </nav>
-  </header>
-
-  <section class="hero" style="border-top:0;padding-top:24px">
-    <div class="kicker">NEAR HACKATHON 2026 · AI Security &amp; Defense</div>
-    <h1>An AI agent that can propose trades, <em>but cannot move the money.</em></h1>
-    <p class="lede">Mandate splits the agent from the authority. The agent runs in a TEE and proposes swaps. A NEAR smart contract holds the only key to the treasury on NEAR Intents, and signs a trade only after checking it against the owner's rules. This page states exactly what is built, what is proven on mainnet, and what is not done yet.</p>
-    <div class="status-line" id="status" aria-label="Status summary">
-      <span class="pill pass">Core risk proven on mainnet</span>
-      <span class="pill pass">Trade rules built and tested</span>
-      <span class="pill todo">On-chain trade flow: in progress (M3)</span>
-      <span class="pill todo">Agent on OutLayer: not started (M4)</span>
-      <span class="pill no">No live trade yet</span>
+<a class="skip" href="#vault">Skip to vault dashboard</a>
+<header class="top">
+ <div class="wrap top-inner">
+  <a class="brand" href="#home" aria-label="Mandate home"><svg viewBox="0 0 28 30" aria-hidden="true"><path fill="currentColor" d="M2 2h24v26h-6V8H8v20H2z"/><path fill="currentColor" d="m9 13 5 5 8-8v7l-8 8-5-5z"/></svg>Mandate</a>
+  <nav class="nav" aria-label="Main navigation"><a href="#vault">Vault dashboard</a><a href="#rules">The rules</a><a href="#evidence">Evidence</a><a href="#roadmap">What's next</a></nav>
+  <a class="button light top-action" href="https://github.com/moltaphet/mandate-near" rel="noopener noreferrer" target="_blank">Source ↗</a>
+ </div>
+</header>
+<main id="home">
+ <div class="wrap">
+  <section class="hero" aria-labelledby="hero-title">
+   <div class="hero-grid">
+    <div>
+     <span class="eyebrow">NEAR · Agent security · Mandate</span>
+     <h1 id="hero-title">Your agent proposes.<br><em>Your rules decide.</em></h1>
+     <p class="lede">Give an agent room to act, with limits you can inspect. Mandate checks trades on-chain before requesting a signature. The owner keeps a separate, delayed withdrawal path.</p>
+     <div class="hero-actions"><a class="button" href="#vault">Open vault dashboard <span aria-hidden="true">↗</span></a><a class="button light" href="#evidence">See the evidence</a></div>
+     <p class="hero-note"><span class="dot" style="display:inline-block;color:var(--amber);margin-right:6px"></span>Experimental prototype. Live funded execution is unverified.</p>
     </div>
+    <aside class="boundary" aria-label="Trade authorization flow">
+     <div class="boundary-top"><span class="eyebrow">The authority boundary</span><span class="badge green">On-chain rules</span></div>
+     <ol>
+      <li><span class="number">01</span><div><b>The agent proposes</b><p>Assets, input amount, minimum output.</p></div><span class="arrow" aria-hidden="true">↓</span></li>
+      <li><span class="number">02</span><div><b>The vault checks</b><p>Balances, fresh prices and owner limits.</p></div><span class="arrow" aria-hidden="true">↓</span></li>
+      <li><span class="number">03</span><div><b>A signature is requested</b><p>Only after every required gate passes.</p></div><span class="arrow" aria-hidden="true">↓</span></li>
+      <li><span class="number">04</span><div><b>Intents can settle the trade</b><p>Publication and fill are separate steps.</p></div></li>
+     </ol>
+     <p class="boundary-foot">A signature is not a settlement receipt.<br>Permitted trades can still lose money.</p>
+    </aside>
+   </div>
+   <div class="facts" aria-label="Contract limits">
+    <div class="fact"><strong>9</strong><p>Ordered trade gates</p></div>
+    <div class="fact"><strong>20</strong><p>Maximum mandate assets</p></div>
+    <div class="fact"><strong>24h</strong><p>Loosening &amp; withdrawal delay</p></div>
+    <div class="fact"><strong>NEAR</strong><p>Intents &amp; Chain Signatures</p></div>
+   </div>
   </section>
-
-  <section id="trust">
-    <div class="kicker">Trust model</div>
-    <h2>Who can do what, and what enforces it</h2>
-    <p class="lede">Each row names the mechanism that enforces the limit. "Nothing" means the limit is a promise, not a guarantee.</p>
-    <table>
-      <thead><tr><th>Actor</th><th>Can</th><th>Cannot</th><th>Enforced by</th></tr></thead>
-      <tbody>
-        <tr><td><b>Owner</b></td><td>Set the mandate, pause, unpause</td>Bypass the contract's checks on a trade, because trades go through the gates regardless</td><td>Contract: <span class="mono">set_mandate</span> needs a full-access key and 1 yocto</td></tr>
-        <tr><td><b>Agent</b> (TEE, planned)</td><td>Propose a swap</td><td>Sign, withdraw, change the mandate, bypass a gate</td><td>Contract. The agent has no key.</td></tr>
-        <tr><td><b>Keeper</b> (planned)</td><td>Trigger steps, delay a trade</td><td>Change a trade, sign anything</td><td>Contract. The signed bytes fix amounts, deadline and nonce.</td></tr>
-        <tr><td><b>Solver</b></td><td>Fill a signed trade at or above the minimum</td><td>Take more than the signed <span class="mono">token_diff</span></td><td>NEAR Intents verifier</td></tr>
-        <tr><td><b>Signer (MPC)</b></td><td>Sign a payload the contract asks for</td><td>Be asked by anyone but the vault contract</td><td>Chain Signatures: the derived key is bound to the contract account</td></tr>
-        <tr><td><b>Anyone with agent access</b></td><td>Stop trading</td><td>Move funds</td><td>Contract (see the rows above)</td></tr>
-      </tbody>
-    </table>
-  </section>
-
-  <section id="flow">
-    <div class="kicker">Flow</div>
-    <h2>One trade, six steps</h2>
-    <p class="lede">The trade passes two transactions by design: a decision, then an execution. Each step says whether it exists today.</p>
-    <ol class="flow">
-      <li><div><b>Decision.</b> The agent reads the market and proposes a swap with a minimum output.<p>Runs inside an OutLayer TEE, pinned by code hash. Results are returned to the contract by yield and resume.</p></div><span class="st todo">planned · M4</span></li>
-      <li><div><b>Balances and prices.</b> The contract reads the vault's balances on <span class="mono">intents.near</span> and a fresh oracle price.<p>Stale prices are rejected. Oracle feed format is still to be confirmed.</p></div><span class="st todo">planned · M3</span></li>
-      <li><div><b>Mandate check.</b> Nine gates, in a fixed order. The first closed gate rejects the trade with a named code.<p>Exact 256-bit USD math. Each rule has boundary tests and a property test.</p></div><span class="st pass">built · tested</span></li>
-      <li><div><b>Intent bytes.</b> The contract builds the exact <span class="mono">raw_ed25519</span> payload with a V1 expirable nonce.<p>Proven: the same bytes built by the vault's code pass mainnet <span class="mono">simulate_intents</span> checks.</p></div><span class="st pass">built · proven</span></li>
-      <li><div><b>Signature.</b> The contract asks the MPC network for an Ed25519 signature over those bytes.<p>Proven on testnet: the signature is accepted by mainnet <span class="mono">intents.near</span>. The vault wiring is not done.</p></div><span class="st todo">proven parts · wiring M3</span></li>
-      <li><div><b>Settlement.</b> A solver publishes the signed intent and settles atomically.<p>Not run for a real trade yet.</p></div><span class="st todo">planned · M5</span></li>
-    </ol>
-  </section>
-
-  <section id="proof">
-    <div class="kicker">Evidence</div>
-    <h2>Each claim, its evidence, and how to reproduce it</h2>
-    <p class="lede">Only claims marked "proven" or "tested" have evidence you can rerun. The rest are plans.</p>
-    <table>
-      <thead><tr><th>Claim</th><th>Status</th><th>Evidence</th></tr></thead>
-      <tbody>
-        <tr>
-          <td>A contract can get an MPC signature that <span class="mono">intents.near</span> accepts as its own intent.<span class="mono">R1 · part 2</span></td>
-          <td><span class="st pass">proven on mainnet</span></td>
-          <td>Testnet MPC signature, verified locally, then checked with <span class="mono">simulate_intents</span> on mainnet. Report: <span class="mono">docs/spikes/R1.md</span>. Rerun: <span class="mono">spikes/r1-part2.sh</span></td>
-        </tr>
-        <tr>
-          <td>A payload built by the vault's own code passes signature, nonce and salt checks.</td>
-          <td><span class="st pass">proven on mainnet</span></td>
-          <td>Valid V1 nonce with the live salt fails only on balance. A fake salt is rejected with <span class="mono">invalid salt</span>. Rerun: <span class="mono">cargo run --release</span> in <span class="mono">spikes/r1-intents-signing</span></td>
-        </tr>
-        <tr>
-          <td>A tampered intent is rejected.</td>
-          <td><span class="st pass">proven on mainnet</span></td>
-          <td>Payload changed after signing: <span class="mono">invalid signature</span>. Wrong <span class="mono">verifying_contract</span>: rejected.</td>
-        </tr>
-        <tr>
-          <td>Nine mandate gates reject each violation with a named code.</td>
-          <td><span class="st pass">unit and property tests</span></td>
-          <td>Boundary tests per gate. A property test re-derives every rule for 20,000 random trades. A coverage guard checks that approvals and every rejection type occur. Rerun: <span class="mono">cargo test -p mandate-vault engine::</span></td>
-        </tr>
-        <tr>
-          <td>Owner controls work on a real chain: re-init blocked, non-owner rejected, pause and unpause.</td>
-          <td><span class="st pass">sandbox test</span></td>
-          <td>Deployed to a local NEAR sandbox and called through transactions. Rerun: <span class="mono">./scripts/verify.sh --integration</span></td>
-        </tr>
-        <tr>
-          <td>The vault registers its MPC-derived key on the real <span class="mono">intents.near</span> contract, using predecessor auth.</td>
-          <td><span class="st pass">sandbox test</span></td>
-          <td>The exact mainnet <span class="mono">intents.near</span> wasm runs in a local sandbox. The test reads the key back from it and refuses a second registration. The MPC signer there is a stand-in that enforces the call convention. Fixture check: <span class="mono">scripts/fetch-intents-fixture.sh</span>. Rerun: <span class="mono">./scripts/verify.sh --integration</span></td>
-        </tr>
-        <tr>
-          <td>The vault's trading flow runs end to end on a chain.</td>
-          <td><span class="st todo">not yet</span></td>
-          <td>Milestone M3. No evidence exists yet, and none is claimed.</td>
-        </tr>
-        <tr>
-          <td>The agent runs in a verifiable TEE.</td>
-          <td><span class="st todo">not yet</span></td>
-          <td>Milestone M4. No attestation exists yet.</td>
-        </tr>
-      </tbody>
-    </table>
-  </section>
-
-  <section id="verify">
-    <div class="kicker">Verify it yourself</div>
-    <h2>Three commands, about ten minutes</h2>
-    <p class="lede">You need Rust (installed automatically from <span class="mono">rust-toolchain.toml</span>) and Python 3. No keys, no accounts, no funds.</p>
-
-    <div class="step">1 · Contract rules and sandbox</div>
-    <div class="verify">
-      <div><span class="c">$</span> ./scripts/verify.sh --integration</div>
-      <div class="o">==&gt; Formatting ... ok</div>
-      <div class="o">==&gt; Lints (warnings are errors) ... ok</div>
-      <div class="o">test result: ok. 75 passed; 0 failed</div>
-      <div class="o">test owner_controls_on_a_real_chain ... ok</div>
-      <div class="o">All checks passed.</div>
+  <section class="section" id="vault" aria-labelledby="vault-title">
+   <div class="section-head"><div><span class="eyebrow">01 / Your vault</span><h2 id="vault-title">Everything on one page.</h2></div><p>Inspect the owner, current rules, queued changes and listed balances. Every observation comes from one final block. No wallet is needed to read a public vault.</p></div>
+   <p class="file-note" id="file-notice" hidden>This page needs an HTTP server for its dashboard module. From the repository root, run <code>python3 -B scripts/dashboard-fixture.py</code>, then open <a href="http://127.0.0.1:8124/#vault">the local preview</a>.</p>
+   <div class="dashboard" id="live-view">
+    <div class="dashboard-bar"><strong>Vault dashboard</strong><div class="right"><span class="badge"><span class="dot"></span>Read-only</span><button class="inline-button" id="share-vault" type="button" disabled>Copy vault link</button><button class="inline-button" id="load-fixture" type="button" hidden>Local test vault</button></div></div>
+    <form class="audit-form" id="audit-form">
+     <div class="connect-row">
+      <div class="audit-field"><label for="audit-network">Network</label><select id="audit-network"><option value="mainnet">NEAR mainnet</option><option value="testnet">NEAR testnet</option><option value="local-fixture">Local fixture · test data</option></select></div>
+      <div class="audit-field"><label for="audit-account">Public vault account</label><input id="audit-account" placeholder="your-vault.near" required minlength="2" maxlength="64" autocomplete="off" spellcheck="false" autocapitalize="none"></div>
+      <button class="button audit-submit" type="submit" id="read-vault" disabled>Read vault <span aria-hidden="true">↗</span></button>
+     </div>
+     <details class="advanced"><summary>RPC &amp; verification options</summary><div class="advanced-grid">
+      <div class="audit-field"><label for="audit-rpc">Public RPC endpoint</label><input id="audit-rpc" type="url" value="https://rpc.mainnet.near.org" required maxlength="512" spellcheck="false"><small>HTTPS on public networks. Local fixtures use loopback HTTP.</small></div>
+      <div class="audit-field"><label for="audit-code">Expected vault code hash · optional</label><input id="audit-code" maxlength="44" autocomplete="off" spellcheck="false"><small>Without a supplied hash, code identity stays unverified.</small></div>
+      <div class="audit-field wide"><label for="audit-receipt">Explorer receipt reference · optional</label><input id="audit-receipt" type="url" maxlength="256" spellcheck="false"><small>A reference link does not authenticate settlement.</small></div>
+     </div></details>
+    </form>
+    <div class="status-wrap"><p class="audit-status" id="audit-status" role="status" aria-live="polite">No vault connected. Enter a public account to read its state.</p><p class="read-only-note">No deposit, signature, transaction or wallet permission is requested by this dashboard.</p></div>
+    <noscript><p class="file-note">Enable JavaScript to read contract state. The evidence and rule descriptions below remain available.</p></noscript>
+    <div class="audit-output" id="audit-output">
+     <div class="empty"><div><span class="eyebrow">A clear view of the vault</span><h3 style="margin-top:12px">Start with an account.</h3><p>Your rules, balances, queues and latest outcomes will appear here. No account state or sample balance is loaded yet.</p></div><div class="empty-graphic" aria-hidden="true"><div class="empty-card"><span>Owner &amp; agent</span><i></i><i></i></div><div class="empty-card"><span>Current rules</span><i></i><i></i></div><div class="empty-card"><span>Intents balances</span><i></i><i></i></div><div class="empty-card"><span>Latest outcomes</span><i></i><i></i></div></div></div>
     </div>
-
-    <div class="step">2 · Signature checks on live mainnet</div>
-    <div class="verify">
-      <div><span class="c">$</span> cd spikes/r1-intents-signing &amp;&amp; cargo run --release</div>
-      <div class="o">[PASS] valid signature, no intents</div>
-      <div class="o">[PASS] payload modified after signing</div>
-      <div class="o">[PASS] wrong verifying_contract</div>
-      <div class="o">[PASS] valid token_diff, unfunded account</div>
-      <div class="o">[PASS] vault-built token_diff, V1 nonce with live salt</div>
-      <div class="o">[PASS] vault-built token_diff, salt never issued</div>
-      <div class="o">R1 part 1: all 6 cases behaved as expected.</div>
-    </div>
-
-    <div class="step">3 · The dashboard (sample data)</div>
-    <div class="verify">
-      <div><span class="c">$</span> cd web/dashboard &amp;&amp; python3 -m http.server 8767</div>
-      <div class="o">open http://localhost:8767/index.html</div>
-    </div>
-    <p class="lede" style="margin-top:14px">The dashboard renders scenarios from fixed sample data. It does not query the chain, so use steps 1 and 2 to check the claims.</p>
+   </div>
+   <div class="section-foot"><p>Observed state shows what the contract records. It does not certify custody or settlement.</p><p id="share-status" role="status"></p></div>
   </section>
-
-  <section id="related">
-    <div class="kicker">Related work</div>
-    <h2>What already exists, and where Mandate differs</h2>
-    <p class="lede">Similar pieces exist. We list them here so the difference is stated by us, not discovered by a reviewer. Claims about other projects come from their public docs or secondary reports, and are marked as such.</p>
-    <table>
-      <thead><tr><th>Project</th><th>What it does</th><th>Who holds the signing power</th><th>Where the rules run</th></tr></thead>
-      <tbody>
-        <tr>
-          <td><b>OutLayer Agent Custody</b><span class="mono"><a href="https://app.outlayer.ai/docs/agent-custody">docs</a></span></td>
-          <td>TEE-held wallet for agents, with policies, spending limits and a freeze switch from the owner's dashboard.</td>
-          <td>Keys derived inside a TEE. The agent holds only an API key.</td>
-          <td>Inside the TEE. The contract does not verify each policy decision on-chain.</td>
-        </tr>
-        <tr>
-          <td><b>Shade Agents</b><span class="mono">secondary source: <a href="https://cryptoguide.vercel.app/en/guide/advanced/near-protocol-ai-chain-abstraction-2026">guide</a></span></td>
-          <td>AI agents whose off-chain logic runs in a TEE, with Chain Signatures for cross-chain actions.</td>
-          <td>Chain Signatures, gated by an on-chain agent contract that checks attestations.</td>
-          <td>Off-chain logic in the TEE. The on-chain contract decides which agent may act.</td>
-        </tr>
-        <tr>
-          <td><b>RHEA AI Vault</b><span class="mono">planned, not confirmed live: <a href="https://www.bankless.com/read/nears-intents-and-ai-bets-fuel-revival">report</a></span></td>
-          <td>Planned automated yield across chains, using Shade Agents.</td>
-          <td>Not documented.</td>
-          <td>Not documented.</td>
-        </tr>
-        <tr>
-          <td><b>Mandate</b> (this project)</td>
-          <td>A treasury on NEAR Intents that trades only if the contract's nine gates pass.</td>
-          <td>The vault contract alone. The MPC key is derived for its account, and the agent holds no key.</td>
-          <td><b>On-chain.</b> Every trade is checked by the contract before MPC is asked to sign. The signed bytes fix amount, deadline and nonce.</td>
-        </tr>
-      </tbody>
-    </table>
-    <p class="lede" style="margin-top:18px">The difference is where trust sits. In TEE-based wallets, the policy runs inside the TEE and its result arrives as a signed message, so a reviewer must trust the TEE and the operator. In Mandate, the policy is the contract's code, and the signature exists only after that code accepts the trade. Our claim is narrower than "we have policies". It is that the enforcement point is on-chain and the signing key is unusable without passing it.</p>
-    <p class="lede">We have not tested any competing project. This comparison comes from their public documents.</p>
+  <section class="section" id="rules" aria-labelledby="rules-title">
+   <div class="section-head"><div><span class="eyebrow">02 / The mandate</span><h2 id="rules-title">Limits before signatures.</h2></div><p>Every proposed trade passes the same ordered checks. The first refusal has a named reason. The agent cannot replace the bytes the vault constructs.</p></div>
+   <div class="rules-grid">
+    <article class="rule"><span class="index">01 / Structure</span><h3>Allowed assets.</h3><p>Different listed assets, with positive input and minimum output.</p></article>
+    <article class="rule"><span class="index">02 / Timing</span><h3>Room between trades.</h3><p>No outstanding intent, and the configured cooldown has elapsed.</p></article>
+    <article class="rule"><span class="index">03 / Prices</span><h3>Fresh enough to decide.</h3><p>Held and traded assets need accepted, recent oracle data.</p></article>
+    <article class="rule"><span class="index">04 / Balance</span><h3>Spend what is held.</h3><p>The listed Intents balance must cover the proposed input.</p></article>
+    <article class="rule"><span class="index">05 / Trade size</span><h3>A cap per request.</h3><p>Oracle-valued input cannot exceed the owner's trade limit.</p></article>
+    <article class="rule"><span class="index">06 / Turnover</span><h3>A daily allowance.</h3><p>Approved signing requests reserve quota for their UTC approval day.</p></article>
+    <article class="rule"><span class="index">07 / Slippage</span><h3>A minimum worth taking.</h3><p>Minimum output value must fit the allowed oracle-value slippage.</p></article>
+    <article class="rule"><span class="index">08 / Drawdown</span><h3>De-risk at the threshold.</h3><p>When observed NAV trips the drawdown guard, only stable destinations pass.</p></article>
+    <article class="rule"><span class="index">09 / Position</span><h3>Keep exposure bounded.</h3><p>Non-stable position limits apply, with a non-worsening de-risking exception.</p></article>
+   </div>
+   <p class="guard-note">The oracle is trusted for market correctness. Stable assets are owner-configured, and freshness does not prove a peg. Pause stops new and unsigned work; an already issued signature remains valid until its deadline.</p>
   </section>
-
-  <section id="open">
-    <div class="kicker">Not done</div>
-    <h2>What is missing, stated plainly</h2>
-    <ul class="notdone">
-      <li>A trade that moves funds through the vault on a chain (M3)</li>
-      <li>Oracle price feed for wNEAR and USDC (the feed currently returns no price)</li>
-      <li>MPC signing called from the vault, with measured gas (M3)</li>
-      <li>Agent running in OutLayer TEE with attestation (M4)</li>
-      <li>Keeper and solver publishing (M5)</li>
-      <li>A dashboard fed by chain data (currently sample data)</li>
-      <li>SHIELD incident gate (API key pending approval)</li>
-      <li>Threat model document (planned)</li>
-      <li>Repository public and branch protection on <span class="mono">main</span></li>
-      <li>A recorded demo of a live trade and a live attack</li>
-    </ul>
+  <section class="section" id="evidence" aria-labelledby="evidence-title">
+   <div class="section-head"><div><span class="eyebrow">03 / Evidence</span><h2 id="evidence-title">Built, tested, still to prove.</h2></div><p>A local test, a historical simulation and a funded live receipt establish different things. The submission keeps those boundaries visible.</p></div>
+   <div class="proof-grid">
+    <article class="proof-card"><span class="badge green"><span class="dot"></span>Local evidence</span><h3>The working core.</h3><ul>
+     <li><b>Ordered gates &amp; owner delays</b><span>Unit, boundary and property tests; sandbox access-control checks.</span></li>
+     <li><b>Signing &amp; matched settlement</b><span>Sandbox vault flow, a stand-in signer and the supplied Intents verifier fixture. Historical mainnet simulations are separate evidence.</span></li>
+     <li><b>Withdrawal lifecycle &amp; proof guards</b><span>Delivery, refund, owner-rearmed retries and adversarial receipt tests. Sandbox maturity injection does not prove 24 elapsed hours.</span></li>
+     <li><b>Autonomous reference strategy</b><span>Two-asset rebalancing, integer math and quote binding. No LLM or TEE is claimed.</span></li>
+     <li><b>Connected public dashboard</b><span>Pinned block, exact base-unit formatting and text-only rendering of RPC data.</span></li>
+    </ul><a class="text-link" href="https://github.com/moltaphet/mandate-near/tree/main/contracts/vault/tests" target="_blank" rel="noopener noreferrer">Review the tests ↗</a></article>
+    <article class="proof-card"><span class="badge amber"><span class="dot"></span>Live evidence pending</span><h3>The release boundary.</h3><ul>
+     <li><b>A functioning oracle</b><span>Choose and validate actual feeds, units and updater availability.</span></li>
+     <li><b>A reviewed, sealed deployment</b><span>Distinct recoverable owner, exact artifact and permanently inert proof sinks. Fresh issuer history matters.</span></li>
+     <li><b>Actual vault MPC → funded fill</b><span>The current source has not demonstrated the complete path on a live chain.</span></li>
+     <li><b>A real 24-hour withdrawal</b><span>Elapsed delay, receiver deltas and late/failure recovery need intended-chain receipts.</span></li>
+     <li><b>TEE attestation &amp; operational history</b><span>OutLayer integration is planned. Relay acknowledgement is not fill verification.</span></li>
+    </ul><a class="text-link" href="https://github.com/moltaphet/mandate-near/blob/main/docs/OPERATIONAL-READINESS.md" target="_blank" rel="noopener noreferrer">Read the release gates ↗</a></article>
+   </div>
+   <div class="reproduce"><div><h3>Reproduce the local checks.</h3><p>Rust, cargo-near, Python 3 and Node.js 22+. Test counts and failures come from the actual run.</p></div><div><div class="command"><code>./scripts/verify.sh --integration</code><button id="copy-verify" type="button" aria-label="Copy verification command" disabled>Copy</button></div><p class="copy-status" id="copy-status" role="status"></p></div></div>
   </section>
-
-  <section>
-    <div class="grid2">
-      <div class="card">
-        <h3>Source and history</h3>
-        <p>Commits, pull requests and the R1 report are in the repository. The repository is private until submission.</p>
-      </div>
-      <div class="card">
-        <h3>Chain references</h3>
-        <p>Verifier: <a href="https://nearblocks.io/address/intents.near">intents.near</a> · MPC signer: <a href="https://nearblocks.io/address/v1.signer">v1.signer</a>. Anyone can read both on-chain.</p>
-      </div>
-    </div>
+  <section class="section" id="roadmap" aria-labelledby="roadmap-title">
+   <div class="section-head"><div><span class="eyebrow">04 / What's next</span><h2 id="roadmap-title">Prove the path. Then expand.</h2></div><p>The next milestone is reproducible live execution. More features do not substitute for custody, oracle and recovery evidence.</p></div>
+   <div class="roadmap">
+    <article class="milestone"><span class="step-no">01</span><h3>Contract &amp; clients</h3><span class="badge green">Built locally</span><p>Gates, delayed controls, autonomous reference agent and this public reader.</p></article>
+    <article class="milestone"><span class="step-no">02</span><h3>Deployment review</h3><span class="badge amber">Required</span><p>Freeze the artifact. Validate governance, fresh issuer history, sinks and oracle feeds.</p></article>
+    <article class="milestone"><span class="step-no">03</span><h3>Funded live proof</h3><span class="badge amber">Unverified</span><p>Actual vault signing, matching settlement, elapsed withdrawal delay and recovery.</p></article>
+    <article class="milestone"><span class="step-no">04</span><h3>Attested agent</h3><span class="badge">Planned</span><p>Add OutLayer attestation and operational monitoring after the core path is proven.</p></article>
+   </div>
   </section>
-
-  <footer>
-    Mandate · NEAR HACKATHON 2026 · MIT licensed · Development is AI-assisted (Claude Code), using the official NEAR agent skills.
-  </footer>
-</div>
-
+  <section class="section" id="questions" aria-labelledby="faq-title">
+   <div class="faq-grid"><div><span class="eyebrow">The practical questions</span><h2 id="faq-title">Know the boundary.</h2></div><div class="faq-list">
+    <details><summary>Can the agent withdraw or sign on its own?</summary><p>The agent can propose trades. It has no owner withdrawal authority or treasury signing authority through the contract API. It can still cause economically harmful trades that fit the mandate. Enforcement also depends on a correctly sealed vault and trusted external contracts.</p></details>
+    <details><summary>What does this dashboard actually do?</summary><p>It reads one final-block snapshot of a public vault: controls, current and queued rules, Intents ledger balances, signing reservations and latest recorded outcomes. It sends no wallet transactions. Unknown history and settlement stay explicitly unverified.</p></details>
+    <details><summary>What happens when a withdrawal result is unknown?</summary><p>The vault keeps a guard. Under the reviewed fresh-issuer and inert-sink prerequisites, unique voucher proof can establish cancellation or initial debit. Safe retries require owner rearming. Debit proof does not confirm terminal delivery or exclude a later refund. Apply requires 280 TGas; dispatched recovery requires 140 TGas.</p></details>
+    <details><summary>Does pause cancel a signature that already exists?</summary><p>No. Pause prevents new execution and unsigned callback work. An already issued intent can remain executable until its stored deadline. The contract reserves signing quota before the signer call.</p></details>
+    <details><summary>Is Mandate ready for real funds?</summary><p>No mainnet readiness is claimed. Governance, oracle availability, a fresh sealed deployment, actual vault MPC and funded settlement, elapsed withdrawals and intended-chain failure recovery remain release requirements.</p></details>
+    <details><summary>Does the agent run in a TEE today?</summary><p>No. The reference strategy is a deterministic two-asset rebalancer. OutLayer delivery and attestation are planned; the on-chain mandate remains the authorization boundary.</p></details>
+   </div></div>
+  </section>
+ </div>
+</main>
+<footer class="footer"><div class="wrap"><div class="footer-top"><a class="brand" href="#home">Mandate</a><div class="footer-links"><a href="https://github.com/moltaphet/mandate-near" target="_blank" rel="noopener noreferrer">Repository ↗</a><a href="https://nearblocks.io/address/intents.near" target="_blank" rel="noopener noreferrer">Intents verifier ↗</a><a href="https://nearblocks.io/address/v1.signer" target="_blank" rel="noopener noreferrer">Chain Signatures ↗</a></div></div><p>Oracle-valued limits bound authorization, not profitability. Source/audit correspondence, external administrative roles and deployment custody require independent review.</p><div class="footer-bottom"><span>Mandate · NEAR Hackathon 2026 · MIT</span><span>Built with AI-assisted development · Prototype</span></div></div></footer>
+<script>if(location.protocol==='file:'){document.getElementById('file-notice').hidden=false;document.getElementById('audit-status').textContent='Open the HTTP preview above to enable the dashboard.';}</script>
+<script type="module" src="./site.mjs" onerror="if(location.protocol==='file:')document.getElementById('file-notice').hidden=false;document.getElementById('audit-status').className='audit-status error';document.getElementById('audit-status').textContent='Dashboard module unavailable. Open the HTTP preview or reload the served site.';"></script>
 </body>
 </html>

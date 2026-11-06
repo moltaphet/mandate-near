@@ -1,13 +1,22 @@
 # Mandate — Project Definition
 
 Status legend used throughout:
-**[PROVEN]** demonstrated on NEAR mainnet · **[TESTED]** covered by a test that reruns from this repo · **[PLANNED]** designed, not built · **[OPEN]** a decision not yet taken.
+**[SIMULATED]** accepted by mainnet `simulate_intents`, without settlement · **[TESTED]** covered by a rerunnable test (environment stated) · **[LIVE]** actual deployment transaction evidence · **[PLANNED]** designed, not built · **[OPEN]** unresolved.
+
+6 November implementation refresh: the dashboard now reads selected public
+vault state and listed Intents balances at one final block, while sample mode
+remains separate. Immutable PriceOracle/Pyth adapters, deterministic two-asset
+autonomous preparation, explicit Message Bus publication and the unique-voucher
+withdrawal protocol are implemented. Final combined release verification is
+pending. Usable
+live feeds, owner governance, exact deployed MPC/settlement and withdrawal
+recovery evidence remain OPEN. See [OPERATIONAL-READINESS.md](OPERATIONAL-READINESS.md).
 
 ---
 
 ## 1. One sentence
 
-Mandate is an on-chain policy layer for NEAR agents: a smart contract that holds the only key to an agent's treasury on NEAR Intents and signs a trade only when it satisfies an owner-defined mandate.
+Mandate is an on-chain policy layer for NEAR agents: a vault that authorizes trade signatures against owner-defined rules, with a separate delayed owner withdrawal path. The Rust reference agent accepts manual plans or deterministically rebalances two assets from holdings, oracle values and quotes. TEE and model inference are planned. Permitted trades can still lose money, and custody depends on the sealed deployment, NEAR Intents and MPC trust assumptions.
 
 ## 2. Problem
 
@@ -22,7 +31,7 @@ Mandate moves the decision to a place the owner can read and the chain can enfor
 
 ## 3. Thesis
 
-Enforcement point matters more than policy richness. If the contract is the only signer, then a trade that violates the mandate cannot be signed no matter what the agent, keeper or operator does. The contract's rules are public, versioned and testable, and the signature exists only after they pass.
+Enforcement point matters more than policy richness. With the intended contract as the sole request path, every bypass-capable vault permission sealed, and correct trusted external behavior, the vault requests a trade signature only after its rules pass. The rules and source are public and testable. Owner withdrawals are separately authorized and delayed; permitted trades can still lose money.
 
 ## 4. Scope of version 1
 
@@ -31,12 +40,12 @@ In scope:
 - A nine-gate trade check, executed on-chain before any MPC signature.
 - Signing through NEAR Chain Signatures (`v1.signer`, Ed25519) for the vault's own NEAR Intents account.
 - Settlement through NEAR Intents `token_diff` intents with V1 expirable nonces.
-- An SDK and a stable interface so that any agent can propose trades.
-- Two agent integrations: an OutLayer-hosted agent and a plain script agent.
-- A keeper script that anyone can run.
-- A `simulate` view for owners to test a proposal against the current mandate.
+- A stable contract interface and reference Rust clients; a separate SDK is planned.
+- Manual-plan and deterministic two-asset Rust agents; an OutLayer-hosted agent and inference are planned.
+- A permissionless Rust keeper with execution/public outbox by default and explicit quote-bound Message Bus publication.
+- `simulate_mandate_change` for rule changes; the pure engine can evaluate trades locally. A general on-chain trade-simulation view is not implemented.
 - A 24-hour delay on mandate changes that loosen limits.
-- An optional external gate from SHIELD (NEAR Intents incident service), once the partner key is approved.
+- An optional SHIELD incident gate is planned; partner access and implementation remain open.
 
 Out of scope for version 1 (stated, not hidden):
 - Pooled deposits from several investors, shares and NAV accounting. This adds inflation and manipulation surfaces we do not want to ship half-built.
@@ -48,7 +57,7 @@ Out of scope for version 1 (stated, not hidden):
 
 | Actor | Can do | Cannot do | What enforces the limit |
 |---|---|---|---|
-| Owner (account or DAO) | Set mandate, pause, unpause, withdraw | Bypass the gates on a trade; change a limit to looser without the delay | Contract: full-access key and 1 yoctoNEAR for `set_mandate` and `unpause`; 24-hour delay for loosening |
+| Owner (account or DAO) | Set mandate, pause, unpause, withdraw | Bypass the gates on a trade; change a limit to looser without the delay | Contract: owner predecessor and exactly 1 yoctoNEAR for `set_mandate` and `unpause`; 24-hour delay for loosening |
 | Agent (OutLayer TEE or script) | Propose a trade with a minimum output | Sign, withdraw, change the mandate, skip a gate | Contract. The agent holds no key on the vault account. |
 | Keeper (anyone) | Trigger the next step, delay a trade | Change a trade or signed bytes; sign anything | Contract. Signed bytes fix amount, deadline, nonce. |
 | Solver | Fill the signed trade at or above the minimum | Take more than the signed `token_diff` | NEAR Intents verifier |
@@ -56,7 +65,7 @@ Out of scope for version 1 (stated, not hidden):
 | Oracle operator | Publish prices | Set prices the contract trusts without a freshness check | Contract: staleness bound, fail closed |
 
 Residual trust, stated explicitly:
-- The MPC network has a threshold of signers (currently about eight nodes). We depend on its threshold assumption.
+- We depend on the MPC threshold and on the intended external contracts and their administrative permissions. Current deployed membership, roles and code hashes must be verified before funds.
 - The price oracle is operated by a third party. We reject stale or missing prices, but we cannot independently verify a price's correctness.
 - The owner's key is a single point of authority. Mitigations are in section 8.
 
@@ -89,40 +98,40 @@ Components:
 - **Vault contract** (Rust, near-sdk 5.30): mandate storage, trading state, the nine gates, the MPC call, intent storage, owner controls. Built, with tests.
 - **Gate engine**: a pure function `check_trade`. Built, with unit and property tests.
 - **Exact math**: 256-bit USD valuation with conservative rounding. Built, with tests.
-- **Intent builder**: `raw_ed25519` `token_diff` payload and V1 nonce. Built and proven on mainnet `simulate_intents`.
-- **Keeper script** (TypeScript): anyone can run it. [PLANNED]
-- **Agent integrations**: OutLayer agent [PLANNED], script agent [PLANNED].
+- **Intent builder**: `raw_ed25519` `token_diff` payload and V1 nonce. Built; historical author-recorded mainnet simulation and sandbox fixture verification, not a live funded vault trade.
+- **Keeper** (Rust): existing execution/outbox sandbox coverage; explicit publication is implemented with matching quote metadata. Final combined client verification and live binary/relay operation remain open.
+- **Agent integrations**: manual script with existing sandbox coverage; deterministic two-asset strategy and final-snapshot gate preview implemented. OutLayer and model inference [PLANNED].
 - **SDK**: typed client over the vault's public methods. [PLANNED]
-- **Evidence site and dashboard**: static pages with sample data, labelled as sample. Built; not yet reading the chain.
+- **Evidence site and dashboard**: selected public vault state and Intents balances can be read at one final block; fixed sample mode is separate. Public RPC data does not independently authenticate custody or settlement.
 
 ## 7. Trade lifecycle
 
-Two transactions by design, because one would exceed the gas budget once oracle reads, balance reads and the MPC call are combined. [BUILT and sandbox-tested with a stand-in MPC signer. Not yet run on mainnet.]
+Two phases by design: the agent submits a proposal, then a permissionless caller executes it. Keeping planned TEE work outside execution avoids combining its gas with balance/oracle/signing calls. The implemented path is sandbox-tested with a stand-in MPC signer; a requirement to split the plain-script path has not been measured. It has not run end to end with funds on a live chain.
 
 **Transaction 1, decision.**
-1. Agent runs in OutLayer (or as a script) and produces a proposal: pair, amount in, minimum out, a reason hash.
+1. The Rust reference agent accepts a manual plan or builds an exact-input proposal from two-asset holdings, target band and a matching solver quote. It previews every gate and refreshes final state before proposing. OutLayer is planned.
 2. The proposal is stored with an expiry. A new proposal cannot replace an unexecuted one before its expiry.
 
 **Transaction 2, execution.** Permissionless: any account can call it.
-1. Read the vault's balances, then the price and publish time of each asset the trade touches or the vault holds (`get_price_data` and `get_asset`).
-2. Read prices. Any missing or stale price is a `MissingPrice` or `StalePrice` rejection. The contract fails closed.
-3. Read vault balances on `intents.near`.
+1. Read the vault's balances on NEAR Intents.
+2. Read oracle data for assets held or traded, with price/time coherence checks. Missing, stale or incoherent prices prevent signing.
+3. Retain execution identity and configuration revision across callbacks; changed or expired work must not advance to signing.
 4. Run the nine gates in fixed order (section 8). The first closed gate rejects with a named code.
 5. If all pass, build the `token_diff` payload and V1 nonce with the live salt.
-6. Call `v1.signer.sign` with the EdDSA payload, attaching the required deposit and gas.
-7. Store the signed intent and update trading state: last trade time, daily turnover, high-water mark, intent expiry.
+6. Reserve trading state from the approved snapshot before dispatching `v1.signer.sign` with the EdDSA payload, required deposit and gas.
+7. Store a successful signed intent. Signing failure or a lost answer does not automatically refund the reserved turnover, cooldown or high-water accounting.
 8. [PLANNED] Emit an event with the intent hash, mandate version, and result. The contract emits no events yet; the result is in the transaction's return value and the stored state.
 
-**Off-chain publication.** A solver or keeper publishes the signed intent to the solver relay. The solver settles atomically; `token_diff` guarantees at least the signed minimum or nothing.
+**Off-chain publication.** Default keeper mode writes a public signed-intent handoff. Explicit `--publish <public-relay-config.json>` enables the implemented Message Bus path after matching quote/proposal metadata, current signed state, exact amounts, vault/verifier and deadlines. Acknowledgement and an initial relay status are recorded separately; even relay-reported `SETTLED` retains `settlement_verified: false`. Continuous status monitoring and independent final receipt/ledger verification are not implemented. Live publication/fill remains unverified; the Intents settlement trust assumption is separate.
 
 ## 8. Mandate
 
 ### 8.1 Fields
 
-- `assets`: up to 20 entries (`MAX_ASSETS`; the execute gas limit, see [SECURITY.md](SECURITY.md) SR-3). Each has `asset_id` (NEAR Intents id), `decimals`, `price_feed_id`.
+- `assets`: up to 20 supported NEP141 entries (`MAX_ASSETS`; see [SECURITY.md](../SECURITY.md) SR-3). Each has `asset_id`, `decimals`, `price_feed_id`. Traded/custodied NEP245 assets are unsupported; the protocol's internal NEP245 voucher is a control marker, not a mandate asset.
 - `stable_assets`: subset of `assets`, used for de-risking.
 - `max_trade_usd`, `max_daily_turnover_usd`: micro-dollars.
-- `max_position_bps`: cap on any non-stable asset's weight after a trade.
+- `max_position_bps`: cap on the non-stable destination's conservative weight. Other non-stable holdings above the cap may remain only when their weight does not increase; this preserves de-risking from an already excessive position.
 - `max_slippage_bps`: hard cap 500 (5%).
 - `max_drawdown_bps`: drawdown threshold from the high-water mark.
 - `min_trade_interval_sec`: cooldown.
@@ -141,18 +150,41 @@ Checked in this order. The first failure ends the check and returns its code.
 | 3 | Price freshness | `MissingPrice`, `StalePrice`, `FuturePrice` | Every traded or held asset has a fresh price; at most 5 seconds ahead of block time |
 | 4 | Balance | `InsufficientBalance` | Vault holds `amount_in` |
 | 5 | Trade size | `TradeTooLarge` | Notional, rounded up, ≤ `max_trade_usd` |
-| 6 | Daily turnover | `TurnoverCapExceeded` | Today's turnover plus notional ≤ cap; the day resets at 00:00 UTC |
+| 6 | Daily turnover | `TurnoverCapExceeded` | The gate snapshot's UTC-day turnover plus notional ≤ cap; approval-day accounting resets at 00:00 UTC |
 | 7 | Slippage | `SlippageExceeded` | Value of `min_out` (rounded down) ≥ notional × (1 − slippage) |
 | 8 | Drawdown lock | `DrawdownDeRiskOnly` | If NAV < high-water mark × (1 − drawdown), only trades into stable assets |
-| 9 | Position limit | `PositionTooLarge` | Unless the destination is stable, worst-case position ≤ `max_position_bps` of worst-case NAV |
+| 9 | Position limit | `PositionTooLarge` | Non-stable destination stays below the cap; another over-cap holding may not increase its share of conservative NAV |
+
+Accounting is conservatively reserved at signing request, before the MPC
+Promise is dispatched, using the gate snapshot's time and state. Daily
+turnover and cooldown therefore count signing requests even when signing
+fails, the answer is lost or the intent is never filled. There is no
+automatic refund of that reservation. The
+high-water mark uses the snapshot's pre-trade NAV; it is not updated from an
+observed settlement result. A signature approved before midnight may settle
+on the next UTC day within its deadline. The daily cap is not a strict cap
+on actual settlement-day turnover.
 
 Design choices, stated:
 - Exposure rounds up and receipts round down, so every boundary errs toward rejection.
 - The received asset is valued at the larger of `min_out` and notional, because a solver may deliver more than the minimum.
 - NAV counts only mandate assets, so airdropped tokens cannot inflate it.
-- The high-water mark only rises, and only on approved trades.
+- The high-water mark only rises, when an approved snapshot is reserved before signing dispatch.
 
-Status: gates 1–9 are built and tested at the engine level. On-chain wiring [PLANNED].
+Status: gates 1–9 and the callback wiring are implemented and tested on a sandbox with the Intents fixture, stand-in signer and stand-in oracle. Live funded settlement remains unverified.
+
+The sandbox `matched_funded_settlement_is_atomic_and_replay_is_refused` test
+checks matched funded ledger settlement, atomic refusal and nonce replay. It
+does not use live MPC or establish current mainnet deployed identity.
+
+All post-request signing errors, including Failed Promise and malformed or
+oversized answers, retain the timed execution lock because a signature may
+already exist. Read/salt and pre-sign validation failures can release it.
+
+The salt callback also requires a recorded approval whose oldest approved-price
+deadline has not passed. Equality at the configured price-age boundary is
+allowed; a later signing request is refused. Prices are not re-evaluated when
+an issued intent settles.
 
 ## 9. Owner controls
 
@@ -170,13 +202,64 @@ Status: gates 1–9 are built and tested at the engine level. On-chain wiring [P
 | `simulate_mandate_change` | anyone (view) | none | Reports whether a mandate is valid, which fields it loosens, and whether `set_mandate` would apply it now or queue it. Changes nothing |
 | `request_withdrawal` | owner | 1 yocto | Queues a withdrawal of one mandate asset to a receiver, 24 h delay, replaces an earlier queue. Refused while an execution holds the lock or a signed intent is open |
 | `cancel_pending_withdrawal` | owner | 1 yocto | Cancels a queued withdrawal |
-| `apply_pending_withdrawal` | anyone | none | After the delay, sends it: the vault calls `ft_withdraw` on `intents.near` (predecessor is the vault). A failed call queues it again |
+| `apply_pending_withdrawal` | anyone | none | After the delay and only while owner-armed, requires ≥280 TGas; issues a unique voucher in `Preparing`, then marker-first/withdraw-last batch in `Dispatched` |
+| `rearm_pending_withdrawal` | owner | exactly 1 yocto | Arms one safe pending retry, preserving maturity; apply allocates a fresh ID |
+| `recover_withdrawal` | anyone | none | After 300 s, invalidates preparation or races a dispatched voucher to cancellation; dispatched recovery requires ≥140 TGas |
+| `get_withdrawal_status`, `get_last_withdrawal_outcome` | anyone (view) | none | Active withdrawal identity and bounded outcome; `DebitObserved` is initial debit, not terminal delivery |
+| `get_withdrawal_stage`, `get_withdrawal_protocol`, `is_withdrawal_retry_armed`, `get_withdrawal_recovery_accounts` | anyone (view) | none | `Preparing`/`Dispatched`/null, `unique_voucher_v1`, one-attempt arm and named proof sinks |
+| `get_chain_time_sec`, `get_last_proposal_outcome` | anyone (view) | none | Chain time and the last stored proposal/execution result, including a gate rejection |
 
-**Definition of loosening.** A change is loosening if it increases `max_trade_usd`, `max_daily_turnover_usd`, `max_position_bps`, `max_slippage_bps`, or `max_drawdown_bps`, decreases `min_trade_interval_sec` or `max_price_age_sec`, adds an asset, or moves an asset from non-stable to stable (which would relax the drawdown rule). Any change that is not loosening applies immediately. A change that mixes both directions is treated as loosening.
+`unique_voucher_v1` persists a never-reused withdrawal ID and `Preparing` before
+issuing exactly one Intents voucher and reading the victim balance in one
+receipt. Before dispatch, authenticated `mt_supply` must be one globally,
+source balance one and both sink balances zero. A former issuer's preseeded
+duplicate in any ledger is refused. The `Dispatched` batch moves that unit to `s.<vault>` first, then
+calls `ft_withdraw` last. Full terminal amount records `Delivered`; explicit
+zero/refund can requeue only the matching authorized generation, unarmed.
+Only the owner with exactly 1 yoctoNEAR may rearm a safe retry. Maturity is
+preserved and the next apply uses a new ID, bounding permissionless retry/storage
+grief to one attempt per arm.
 
-**Why these rules.** Tightening should be instant, since it reduces risk. Loosening needs a delay, so a compromised owner key cannot raise limits and drain the vault in one step. The owner can cancel a queued change, and the pause switch always works.
+Apply requires **280 TGas**. After **300 s**, preparation can be invalidated
+before any delayed callback dispatches. Dispatched recovery requires **140 TGas**
+and races the voucher to `c.<vault>`. Recovery requires supply one and source
+zero; sent=0/cancelled=1 proves cancellation
+before debit and requeues safely; sent=1/cancelled=0 consumes authorization as
+`DebitObserved`. Missing/failed or inconsistent proof retains the guard.
+Initial debit proof does not prove terminal FT delivery or absence of a later
+refund. Its guard release allows subsequent operations to overlap unresolved
+resolver/refund receipts.
 
-Status: built and sandbox-tested: `set_mandate` with the 24 h delay, `apply_pending_mandate`, `cancel_pending_mandate`, `simulate_mandate_change`, `pause`, `unpause`, `set_agent` with the 24 h delay for a later agent, `apply_pending_agent`, `cancel_pending_agent`, `request_withdrawal`, `cancel_pending_withdrawal`. The owner's withdrawal request and cancel run on the sandbox; the `ft_withdraw` call that the vault sends is run on the sandbox from the account that holds the balance, and the vault's own send after the 24 h delay is unit-tested only, because the sandbox clock cannot reach the delay. Also tested on testnet, where a loosening was queued and cancelled (see [docs/TESTNET.md](TESTNET.md)).
+The vault name must be at most **62 bytes**. Setup must prove both sinks are
+uncreated and without implicit, registered or proxy signing authority, then
+seal all bypass-capable vault permissions so they cannot later be created through
+the vault. An empty current signing list alone is insufficient. The vault never
+creates them. Intents code/admin behavior remains trusted; per-attempt voucher
+journal storage requires measured funding.
+All prior voucher issuance/burn/resolver/refund receipts must be complete before funding or
+enabling operations. Prefer fresh atomic account creation/deployment/initialization
+without adding access permissions; current counts do not authenticate that history.
+For release, require a fresh account never given issuer authority or authenticated
+absence of every prior canonical future-voucher issuance. Completion of known
+receipts alone cannot exclude a duplicate holder initiating a later burn/refund;
+current `mt_supply` is not lifetime issuance.
+
+Upgrading an existing Borsh state requires the private `migrate` method for a
+known legacy layout, called by the vault account in an authorized deployment
+transaction. Exactly four layouts are supported: `77ebc0c` pre-sequence,
+`0de5c48` sequence-enabled, pre-provider remediation and provider-enabled
+pre-voucher. The last preserves its provider. Owner must be distinct, the vault
+paused, no execution/pending proposal/queued withdrawal/active withdrawal guard
+present, and signed deadlines expired. Queued mandate/agent controls are preserved;
+mandates are revalidated. An active guard is never discarded. Legacy state cannot prove no withdrawal was
+dispatched; require final-receipt history or use a fresh deployment. Migration
+does not change owner identity or bypass removal of vault full-access keys.
+
+**Definition of loosening.** A change is loosening if it increases `max_trade_usd`, `max_daily_turnover_usd`, `max_position_bps`, `max_slippage_bps`, `max_drawdown_bps` or `max_price_age_sec`, decreases `min_trade_interval_sec`, adds or changes an asset configuration, or adds a stable classification. Other changes apply immediately. A change that mixes both directions is treated as loosening.
+
+**Why these rules.** Tightening invalidates unsigned work immediately. Loosening needs a delay, so a compromised owner key cannot raise limits and drain the vault in one step. The owner can cancel queued changes and pause unsigned execution. Already issued signatures retain their original deadline.
+
+Status: owner controls have unit and sandbox coverage. The 6 November 170 TGas lifecycle validation is historical pre-voucher evidence. The current `vault_withdrawal_reads_sends_and_confirms_the_actual_transfer` target must be run at 280 TGas with the final protocol. It probes clock advancement and may patch only request maturity in sandbox STATE; that mode does not prove 24 hours elapsed. Final combined protocol/client verification and actual live post-delay withdrawal remain required. Historical testnet evidence queued and cancelled a loosening (see [TESTNET.md](TESTNET.md)).
 
 ## 10. Owner identity
 
@@ -188,12 +271,12 @@ The contract must not assume the owner is an individual. [PLANNED: one sandbox t
 
 ## 11. Oracle policy
 
-- Prices are requested immediately before a trade with `get_price_data`, then read.
-- The contract accepts a price only if its publish time is within `max_price_age_sec`.
+- `new` and `new_with_externals` choose PriceOracle. `new_with_oracle` selects immutable `price_oracle` or `pyth`; there is no runtime provider setter. PriceOracle reads aggregate and individual reports; Pyth uses `list_prices_no_older_than`.
+- The contract accepts a price only with a coherent publish time within `max_price_age_sec`. Freshness is not independent verification of market correctness.
 - A zero price, an exponent above zero, or an exponent below −30 is a valuation error, never a panic.
 - Current state, observed on mainnet on 2026-10-31: `price-oracle.near` returns `null` for `wrap.near` and for the USDC asset id in `get_price_data`. The feed must be confirmed working before any trade. If it still returns no price, trading stays off and the evidence says so. The contract's own gate fails closed on a missing or stale price (sandbox attacks 5 and 6).
-- Pyth no longer supports NEAR (per Pyth's own documentation), so it is not used.
-- As a second check, the solver quote is compared with the oracle value. [PLANNED]
+- Pyth requires lowercase 64-hex feed IDs, positive signed price, nonnegative publication time, exponent -30 through 0, confidence below price and confidence/price within the slippage allowance. Equality at that allowance passes. Missing/invalid held or traded entries are refused by the engine. Unit/provider tests and `tests/pyth_path.rs` exercise sandbox wiring; live feed/updater, units and source/admin correspondence remain unverified. Both queried NEAR caches were null on 6 November; see [OPERATIONAL-READINESS.md](OPERATIONAL-READINESS.md).
+- The implemented autonomous quote preview and authoritative on-chain slippage gate compare the exact quoted min-out with oracle notional. This is no independent guard against a fresh incorrect oracle.
 
 ## 12. Agent integrations
 
@@ -203,10 +286,12 @@ The contract must not assume the owner is an individual. [PLANNED: one sandbox t
 - Secrets, if any, are bound to the wasm hash.
 - Outputs a proposal within the 900-byte result limit.
 
-### 12.2 Script agent [BUILT, sandbox and testnet]
-- A plain Rust process (`agent/`), with no TEE. It proposes one trade, then reports the vault's decision.
-- Tests: `contracts/vault/tests/agent.rs` (sandbox). Testnet: the proposal reached the vault; execution failed closed for lack of a registered key (see [docs/TESTNET.md](TESTNET.md)).
-- Exists to prove the vault is agent-agnostic: any process can propose; only the contract decides.
+### 12.2 Rust reference agent [IMPLEMENTED; final combined verification pending]
+- Manual `<public-plan.json>` mode is retained. `--auto <public-config.json>` deterministically rebalances exactly two listed assets toward a configured target outside its band, using actual ledger/oracle values and bounded exact-input quotes. No model inference or TEE is involved.
+- `--dry-run` performs public status/view/quote requests only: no signing/authentication settings, outbox, proposal or publication. The documented partner relay requires a JWT, so an unauthenticated quote request may fail. Set optional `expected_chain_id` to the reviewed network; all views are pinned by final hash and height.
+- Quotes must exceed configured validity, whose minimum is 450 seconds. Every gate is previewed with the shared engine; a fresh snapshot repeats readiness/strategy/gates before proposal. On-chain state races remain subject to authoritative vault checks.
+- Executing mode writes public quote/proposal/vault/verifier/exact-amount metadata for later explicit keeper publication. `--loop` repeats after completed decisions with a 30-second pause; errors can terminate the process. Live strategy and relay operation remain unverified.
+- Existing manual-client tests: `contracts/vault/tests/agent.rs`. Historical testnet: proposal reached the vault, execution refused without a registered identity ([TESTNET.md](TESTNET.md)). See current [agent usage](../agent/examples/README.md).
 
 Acceptance for both: each agent makes the same proposals through the same SDK, and the vault treats them identically.
 
@@ -219,37 +304,38 @@ Acceptance for both: each agent makes the same proposals through the same SDK, a
 
 ## 14. Keeper [BUILT, sandbox-tested; the binary has not yet run against a live chain]
 
-- A permissionless process (`keeper/`) that runs one tick per call: executes a pending proposal, or reports a signed intent to an outbox. After a failed tick it backs off, 5 s doubling up to 600 s.
+- A permissionless process (`keeper/`) that executes eligible proposals or writes a public signed-intent handoff by default. After failed work it uses bounded backoff, 5 s doubling up to 600 s.
+- Only explicit `--publish <public-relay-config.json>` enables Message Bus publication. Matching quote/proposal metadata, current signed result, vault/verifier, amounts, signature format and deadlines are checked before submission. Acknowledgement and one initial relay status are separate, always retaining `settlement_verified: false`; no continuous settlement monitor is implemented. See [keeper usage](../keeper/examples/README.md) and the [official protocol](https://docs.near-intents.org/integration/market-makers/message-bus/rpc).
 - Anyone can run it. The vault does not trust it.
 - If no keeper runs, no trade happens. This is a fail-safe, and is documented as such.
 
-## 15. SHIELD gate [OPEN, PARTNER KEY PENDING]
+## 15. SHIELD gate [PLANNED; partner access OPEN]
 
 - NEAR Intents SHIELD exposes incident status for chains, tokens and bridges.
 - When the key is approved, the agent checks SHIELD before proposing and refuses to propose a trade touching an incident scope.
 - SHIELD is an extra caution layer. It can only make the system stricter, so a bypass of this check removes a precaution but does not allow an unapproved trade.
-- Until the key arrives, the integration reports "SHIELD unavailable" and proceeds only with the rest of the gates.
+- This gate and an unavailable-status integration are not implemented. The intended optional behavior does not establish a current contract or client guarantee.
 
 ## 16. Claims policy
 
-Every claim on the README or evidence site carries one status: [PROVEN], [TESTED], [PLANNED] or [OPEN].
-- A [PROVEN] or [TESTED] claim must name the test or script that demonstrates it.
-- A CI job checks that each named test or script exists and runs. [PLANNED]
-- No demo, screenshot or dashboard value may be presented as on-chain. Simulated data is labelled wherever it appears.
+Claims distinguish historical [SIMULATED], stated-environment [TESTED], transaction-evidenced [LIVE], [PLANNED] and [OPEN]. Implemented code without a final run is described as implemented, with verification pending.
+- A simulation/test claim names the command and environment; it does not establish funded live settlement or final-revision verification.
+- `scripts/check-claims.sh` checks allowed-file references and test-name existence. It does not execute those tests. Verification scripts and fresh outputs establish runs separately.
+- Fixed samples are labelled and kept separate from public RPC observations. An observed snapshot or explorer reference does not independently authenticate custody, governance or settlement.
 
 ## 17. Threat model (summary)
 
 | Threat | Mitigation | Residual |
 |---|---|---|
 | Agent is prompt-injected | Agent cannot sign; gates reject out-of-mandate proposals | A permitted trade can still be a bad trade within limits |
-| Agent host compromised | No key on the agent; proposals are checked | Denial of service only |
+| Agent host compromised | No treasury signing key on the agent; proposals are checked | Availability attacks and harmful permitted trades |
 | Keeper malicious | Keeper cannot alter signed bytes or skip gates | Can delay |
 | Owner key stolen | Loosening delayed 24 h; pause instant; cancel available | Attacker can wait out the delay, then loosen |
 | Owner key lost | Pause still works with a function-call key; DAO owner recommended | Funds locked if no one can act |
-| Stale or manipulated price | Freshness bound; fail closed; solver cross-check | Oracle operator collusion |
+| Stale or manipulated price | Coherent price/time and freshness checks; slippage floor against oracle | A fresh incorrect oracle remains trusted |
 | MPC signer collusion | Threshold of MPC nodes | Threshold assumption |
 | Solver under-delivers | `token_diff` requires minimum or nothing | None within the trade |
-| Mandate misconfigured | `simulate` before going live; validation on set | Owner error is still possible |
+| Mandate misconfigured | `simulate_mandate_change` and validation on set; local engine evaluation | Owner error is still possible |
 | Re-initialisation | `#[init]` guard | — |
 | Stuck signed intent | Expiry; one outstanding intent at a time | Blocks new trades until expiry |
 | Stuck execution (failed callback) | The lock runs out after a 300 s window plus the 120 s intent lifetime; a late callback from an earlier execution changes nothing | Pauses trading for up to 7 minutes ([SECURITY.md](SECURITY.md) SR-1) |
@@ -258,7 +344,7 @@ The full threat model is in [THREAT_MODEL.md](../THREAT_MODEL.md). The self-revi
 
 ## 18. Metrics we will publish
 
-Each has a method and a target, and a result will be shown only if measured.
+Each has a method and a target; these targets are not completed measurements.
 
 | Metric | Method | Target |
 |---|---|---|
@@ -271,7 +357,7 @@ Each has a method and a target, and a result will be shown only if measured.
 
 ## 19. Plan and milestones
 
-Thirteen days remain before submission on 2026-11-14. Each milestone ends with evidence that reruns from this repository.
+Submission target: 2026-11-14 23:59 UTC. The numbered milestones below are planning checkpoints, not current implementation status. Each completed milestone needs dated, revision-bound evidence.
 
 | Days | Milestone | Evidence |
 |---|---|---|
@@ -297,7 +383,7 @@ Gates that must pass or the scope is cut:
 |---|---|---|---|
 | Oracle returns no price for the traded assets | High today | Blocks the live trade | Try the feed first; otherwise scope to sandbox with a labelled mock feed |
 | OutLayer limits or cost block the agent | Medium | Agent integration slips | Script agent is the required integration; OutLayer is additional |
-| Solver relay key not approved | Medium | No solver quotes | 1Click as fallback |
+| Solver relay access not approved | Medium | No solver quotes | Stop autonomous publication; evaluate a separately verified manual 1Click path later. No automatic fallback is implemented. |
 | SHIELD key not approved | High (pending) | Gate absent | Reported as unavailable; not a claim |
 | Scope too large for 13 days | High | Unfinished features | Scope cuts above, decided at gates |
 | A competitor ships the same idea | Unknown | Less novelty | Differentiation in section 22 |
@@ -306,9 +392,9 @@ Gates that must pass or the scope is cut:
 ## 21. Hackathon fit
 
 - **Track:** AI Security & Defense (primary). Also Agent Economy, Autonomous Business, and Unstoppable DeFi where the trade flow applies.
-- **Chain use:** Chain Signatures, NEAR Intents, OutLayer, NEAR AI (optional, private models only), NEP-330.
-- **Eligibility:** code written during the window, repository public before submission, a demo post on X, and a NEAR account for payout.
-- **Disclosure:** the repository states that all code was written during the window and that development is AI-assisted.
+- **Chain use:** NEAR Intents and Chain Signatures wiring (sandbox), mainnet signature simulations, and NEP-330 metadata. OutLayer and optional private NEAR AI inference are planned.
+- **Eligibility:** verify the organizer's official window, publication and submission requirements. Development began 2026-10-31; eligibility is not established by that date alone.
+- **Disclosure:** development is AI-assisted; live and simulated evidence are labelled separately.
 
 ## 22. Related work and differentiation
 
@@ -318,10 +404,14 @@ Gates that must pass or the scope is cut:
 
 Mandate's distinct claim is narrow and checkable: the signing key cannot be used for a trade that the vault's own code has not accepted, and the rules are readable on-chain.
 
+This depends on the sealed vault and external trust assumptions. Current
+competitor feature/audit comparisons are unverified; no exclusive novelty or
+superior security claim follows from these short descriptions.
+
 ## 23. Open decisions
 
-- **Loosening delay:** 24 hours is proposed. Owner-approved.
-- **Strategy:** a rebalancer toward target weights, with an optional regime input from a private NEAR AI model, or a rebalancer without AI. Owner-approved.
+- **Loosening delay:** 24 hours is implemented (`MANDATE_DELAY_SEC`); changing it requires a contract change.
+- **Strategy:** deterministic two-asset target/band rebalancing is implemented. Model-driven regimes and TEE operation remain optional planned work; strategy parameters and live operation need owner selection and evidence.
 - **Funding:** mainnet account and a small amount, to be funded by the owner.
 - **Solver key:** partner approval pending.
 - **SHIELD key:** partner approval pending.

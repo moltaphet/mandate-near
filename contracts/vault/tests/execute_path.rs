@@ -216,9 +216,15 @@ async fn a_tampered_payload_is_rejected_by_the_real_verifier() -> testresult::Te
     assert!(outcome.get("Executed").is_some(), "got {outcome}");
 
     let signed = view(&w.vault, &w.network, "get_signed_intent", json!({})).await;
-    let payload = signed["payload"].as_str().expect("payload").replace("-2000000", "-3000000");
-    let err = simulate(&w, signed_entry(&signed, &payload)).await;
-    assert!(err.is_err(), "a changed amount must not verify");
+    let original = signed["payload"].as_str().expect("payload");
+    let control = simulate(&w, signed_entry(&signed, original)).await?;
+    assert!(control["intents_executed"].to_string().contains("vault.sandbox"), "{control}");
+    let payload = original.replace("-2000000", "-3000000");
+    assert_ne!(payload, original, "the control and tampered bytes must differ");
+    let error = simulate(&w, signed_entry(&signed, &payload))
+        .await
+        .expect_err("a changed amount must not verify");
+    assert!(error.contains("invalid signature"), "{error}");
     Ok(())
 }
 

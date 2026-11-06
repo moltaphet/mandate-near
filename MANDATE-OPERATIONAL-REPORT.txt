@@ -1,0 +1,733 @@
+MANDATE — OPERATIONAL SECURITY AND HACKATHON REVIEW
+Review date: 6 November 2026
+Workspace: /Users/ehs4n/mandate-near
+Prepared against the current, changing working tree. FINAL COMBINED VERIFICATION PENDING.
+The final reviewer must insert the frozen revision/artifact manifest and final command results.
+Submission deadline supplied by the author: 14 November 2026, 23:59 UTC.
+Official contest rules, eligibility and judging criteria: UNVERIFIED.
+
+VERDICT: NO-GO FOR REAL FUNDS.
+
+The current source addresses the original balance-only recovery defect with a
+unique native Intents voucher. It also rejects static historical duplicate
+vouchers through current global supply and source/destination checks. Neither
+current supply nor an empty permission list proves that a formerly controlled
+issuer never minted a future voucher. Real-fund deployment must use a fresh
+account that was never given issuer access authority, or authenticate absence
+of every prior canonical voucher issuance. A previously minted voucher can be
+temporarily burned by its holder and later restored through an external refund.
+Waiting for known pre-seal receipts alone is insufficient.
+
+Other release blockers remain: usable live oracle feeds/updater, recoverable
+owner governance, exact deployed external code/administrative trust, actual
+vault-to-MPC signing, funded matched settlement and intended-chain withdrawal/
+failure recovery. Local implementation is not evidence those milestones ran.
+No professional audit, zero-defect result or hackathon rank is claimed.
+
+This report preserves F01–F27 from MANDATE-REMEDIATION-REPORT.txt and adds
+F28–F30, for 30 unique finding IDs.
+FIXED describes the concrete original counterexample within its stated scope.
+It does not mean all external deployments or asynchronous faults are safe.
+Historical line numbers and historical test counts are not current evidence.
+
+A. COVERAGE MAP
+
+Coverage combines inherited complete reading recorded in the prior remediation
+report with the current task owners' reading of changed files. New controls
+were independently reviewed where stated below. Full source coverage does not
+establish live execution. Partial coverage is retained where a current complete
+pass has not been confirmed. Final frontend source has been read; browser
+visual/interaction verification and final combined command results remain open.
+
+Contract sources:
+contracts/vault/src/lib.rs -> fully read in inherited review; current production controls/callbacks reviewed by contract owner; independent withdrawal reread
+contracts/vault/src/engine.rs -> fully read in inherited review; current production gates rechecked
+contracts/vault/src/mandate.rs -> fully read in inherited review; current validation rechecked
+contracts/vault/src/intent.rs -> fully read in inherited review; current signing excerpts checked
+contracts/vault/src/math.rs -> fully read in inherited review; current rounding/lint scope checked
+contracts/vault/src/oracle.rs -> fully read in inherited review; current coherence/provider path reviewed
+contracts/vault/src/migration.rs -> fully read; four recognized layouts reviewed
+contracts/vault/src/remediation_tests.rs -> fully read in inherited review; current contract owner review retained
+contracts/vault/src/pyth.rs -> fully read by provider owner; independently reread all production and selected tests
+contracts/vault/src/provider_tests.rs -> fully read independently, including current preview/setter parity regressions
+contracts/vault/src/withdrawal.rs -> fully read by state-machine owner; independently reread all production and selected tests
+contracts/mock-ft/src/lib.rs -> fully read in inherited review
+contracts/mock-oracle/src/lib.rs -> fully read, including current Pyth fixture methods
+contracts/mock-externals/src/lib.rs -> fully read in inherited review
+
+Contract tests:
+contracts/vault/tests/agent.rs -> fully read, including current autonomous fixture test
+contracts/vault/tests/attacks.rs -> fully read in inherited review
+contracts/vault/tests/execute_path.rs -> fully read in inherited review; current owner review retained
+contracts/vault/tests/gas.rs -> fully read
+contracts/vault/tests/intents_registration.rs -> fully read in inherited review
+contracts/vault/tests/keeper.rs -> fully read in inherited review
+contracts/vault/tests/sandbox.rs -> fully read in inherited review; current added callback/deployment controls partially reread independently
+contracts/vault/tests/settlement.rs -> fully read in inherited review
+contracts/vault/tests/withdraw.rs -> fully read in inherited review
+contracts/vault/tests/withdrawal_lifecycle.rs -> fully read by state-machine owner; independently reread current recovery cases
+contracts/vault/tests/pyth_path.rs -> fully read and authored
+contracts/vault/tests/recovery_protocol.rs -> fully read, including actual fixture duplicate-mint test
+contracts/vault/tests/sealed_deployment.rs -> fully read and authored
+contracts/vault/tests/common/mod.rs -> partially read; line 21 excluded, allowed helpers reviewed
+contracts/vault/tests/fixtures/README.md -> fully read in inherited review
+contracts/vault/tests/fixtures/generate-legacy-state.py -> fully read in inherited review
+contracts/vault/tests/fixtures/legacy-state-fixtures.md -> fully read in inherited review
+contracts/vault/tests/fixtures/intents-near-mainnet.wasm -> partially read: fixture runtime/export/hash evidence; source/audit identity not established
+contracts/vault/tests/fixtures/legacy-77ebc0c-state.borsh -> partially read: generated historical layout/hash/projection evidence
+contracts/vault/tests/fixtures/legacy-0de5c48-state.borsh -> partially read: generated historical layout/hash/projection evidence
+
+Clients and their tests, fully read by the current client reviewer:
+agent/src/lib.rs -> fully read
+agent/src/main.rs -> fully read
+agent/src/autonomous.rs -> fully read
+agent/src/relay.rs -> fully read
+agent/src/transport.rs -> fully read
+agent/tests/autonomous.rs -> fully read
+agent/tests/protocol.rs -> fully read
+agent/tests/common_http/mod.rs -> fully read
+agent/examples/README.md -> fully read
+agent/examples/rebalance-public.json -> fully read as public configuration
+keeper/src/lib.rs -> fully read
+keeper/src/main.rs -> fully read
+keeper/src/publication.rs -> fully read
+keeper/examples/README.md -> fully read
+keeper/examples/relay-public.json -> fully read as public configuration
+
+Scripts/documents/web:
+scripts/verify.sh -> fully read, including current thirteen sandbox targets
+scripts/attack-demo.sh -> fully read in inherited review
+scripts/check-claims.sh -> fully read in inherited review; current reference behavior checked
+scripts/fetch-intents-fixture.sh -> fully read in inherited review; no reviewed fixture overwrite claimed
+scripts/gas-report.sh -> fully read in inherited review
+scripts/build-web.py -> partially read in current preparation; frontend owner review retained
+scripts/dashboard-fixture.py -> partially read in current preparation; frontend owner review retained
+scripts/inspect-deployment.py -> partially read independently; deployment owner review retained
+scripts/inspect_deployment_test.py -> partially read in current preparation; deployment owner review retained
+README.md -> fully read; current recovery/claim edits reread
+SECURITY.md -> fully read
+THREAT_MODEL.md -> fully read
+docs/PROJECT.md -> fully read
+docs/ARCHITECTURE.md -> fully read
+docs/TESTNET.md -> fully read
+docs/OPERATIONAL-READINESS.md -> fully read
+docs/evidence/recovery-design.txt -> fully read in earlier pass; current changes partially reread
+docs/evidence/attacks.txt -> fully read in inherited review
+docs/evidence/gas-limit.txt -> fully read in inherited review
+docs/evidence/gas.txt -> fully read in inherited review
+docs/spikes/R1.md -> fully read in inherited review
+web/site/index.html -> fully read after the paper-site rewrite
+web/site/site.mjs -> fully read, including safe sharing, clipboard and navigation
+web/site/site.test.mjs -> fully read; utility tests are not mounted-browser layout tests
+web/dashboard/index.html -> fully read in inherited review; current changed/sample/render excerpts reread
+web/dashboard/live.mjs -> fully read independently; rule caps correctly parse the contract's U64 fields
+web/dashboard/live.test.mjs -> partially read in report preparation; frontend owner test review retained
+web/site/audit.mjs -> partially read: generated reader correspondence; final build check pending
+Cargo.toml -> fully read in inherited review; current overflow profile checked
+contracts/vault/Cargo.toml -> fully read
+contracts/mock-ft/Cargo.toml -> fully read in inherited review
+contracts/mock-oracle/Cargo.toml -> fully read in inherited review
+contracts/mock-externals/Cargo.toml -> fully read in inherited review
+agent/Cargo.toml -> fully read
+keeper/Cargo.toml -> fully read
+rust-toolchain.toml -> fully read
+rustfmt.toml -> fully read in inherited review; not independently reread now
+.github/workflows/ci.yml -> fully read in inherited review; current remote run UNVERIFIED
+MANDATE-REMEDIATION-REPORT.txt -> fully read as historical scope/ID/evidence reference
+MANDATE-AUDIT-REPORT.txt -> partially read in inherited review as historical reference
+spikes/r1-intents-signing/src/main.rs -> fully read in inherited review
+spikes/r1-mpc-contract/src/lib.rs -> fully read in inherited review
+spikes/r1-part2.sh -> fully read in inherited review
+
+Not provided as independently verified evidence: official judging rules; actual
+current vault MPC/funded settlement receipts; genuinely elapsed intended-chain
+24-hour withdrawal; complete historic issuer namespace evidence; externally
+authenticated source/audit/admin correspondence; actual DAO governance run.
+
+Excluded paths encountered in this or inherited listings; contents not reviewed:
+skipped: .env
+skipped: .env.example
+skipped: docs/RUN-WITHOUT-KEYS.md
+skipped: .claude/skills/near-ai-cloud/references/private-vs-anonymised.md
+skipped: .claude/skills/near-api-js/references/key_management.md
+skipped: .claude/skills/near-api-js/references/tokens_guide.md
+skipped: .claude/skills/near-intents/rules/api-tokens.md
+skipped: .claude/skills/near-kit/references/keys-and-testing.md
+contracts/vault/tests/common/mod.rs:21: secret-like value, redacted.
+Dependency directories, lockfile contents and Git internals were not audited.
+Specific built WASM bytes were consumed only to test actual deployment. Public
+upstream excerpts were used for voucher API/withdrawal semantics, not as proof
+of the current deployed source identity.
+
+B. FINDINGS TABLE — MOST SEVERE FIRST
+
+ID | Severity | File:line | Claim or behaviour | Evidence, exact current excerpt | Failure scenario, concrete input -> result | Suggested fix / current status | Confidence
+
+F28 | Critical | contracts/vault/src/lib.rs:775; contracts/vault/src/withdrawal.rs:4 | Static historical voucher preseed is rejected; current supply is not lifetime uniqueness proof. | "Self::voucher_snapshot_result() != Some((1, 1, 0, 0))"; "//! Current total supply is not lifetime issuance proof: release also requires a" | Former issuer mints withdrawal-1 to attacker ledger, sinks both 0. New source mint gives source1/supply2. Attacker moves duplicate to cancelled: sent0/cancelled1/source1; a direct old original can still debit20 from100. The new guard refuses this static case. A holder can instead temporarily burn a preseeded duplicate, hide it from current supply, and restore it via a later resolver refund after a proof snapshot. That dynamic race is not established as safe. | Current singleton/source/sink guards fix static preseed only. Require fresh atomic no-access-authority account, or authenticated absence of EVERY prior canonical voucher issuance; zero current keys/supply and completed known pre-seal receipts do not suffice. No random-ID assumption is used. | Verified by reading
+F26 | Critical | contracts/vault/src/lib.rs:853 | Original balance-masking deadlock has a voucher-based solution only under valid issuer/sink/external premises. | "if supply != 1 || source != 0 {" | Original case: balance100, withdrawal20, later credit25 ->105; lost final callback defeated balance-only reconciliation. Current recovery reads per-ID voucher proof instead of victim balance, so105 does not mask sent1/source0. Failed/missing/inconsistent proof still retains the guard and can block operations while Intents is unavailable or deployment premises fail. | Implemented identified voucher recovery and owner rearm. Final combined production race/gas tests pending; intended-chain recovery and external availability remain release blockers. Do not claim universal recovery or clear an unknown send solely from elapsed time. | Needs a test
+F01 | Critical | contracts/vault/src/lib.rs:1390 | Current constructors reject a self-owned vault; historical deployed account remains unsafe for sealing. | "owner != env::current_account_id()," | owner=vault -> initializer refuses. Historical mandate-vault2.testnet still reports owner=self; removing its account permissions would remove external owner control. | Preserved constructor/migration restriction. Use distinct recoverable owner. Actual fresh noAddKey deployment now has a sandbox runtime test; actual intended deployment still UNVERIFIED. | Verified by reading
+F02 | Critical | contracts/vault/src/lib.rs:638 | Unsafe NEP141 withdrawal receivers refused. | "receiver != env::current_account_id() && receiver != self.intents," | receiver=vault or configured Intents -> request rejects before queue. Without exclusion, assets could enter unsupported native vault custody or be miscredited/lost at Intents. | Preserved both exclusions, repeated before dispatch. Actual supported-token receiver storage remains a deployment obligation. | Verified by reading
+F24 | Critical | contracts/vault/src/withdrawal.rs:213 | A failed/malformed terminal result cannot authorize a duplicate unknown withdrawal. | "Ok(sent) if sent == active.request.amount => {" | Initial20 debit can commit even if a later receipt/result fails. Treating Failed as safe refund and reusing the matured request could debit another20. Current error/partial branch retains the identified guard; exact full amount records delivery. | Preserved fail-closed handling; explicit zero trusted refund is separate; new voucher cancellation prevents delayed old originals under valid uniqueness premises. | Verified by reading
+F03 | High | contracts/vault/src/lib.rs:1481 | Applied owner controls invalidate unsigned approval. | "&& ctx.revision == self.config_revision" | Approve20 under cap50, tighten to10 before salt callback -> configuration authority no longer matches, so no new signing request. Pause/unpause likewise advances revision. | Preserved revision fencing. Already dispatched signatures remain valid; pause is not signature revocation. | Verified by reading
+F04 | High | contracts/vault/src/lib.rs:1016 | Old balance vectors cannot be relabeled against reordered current assets. | "Ok(b) if b.len() == requested.len() => b," | Read [A,B,S] -> [0,60,40], change configuration to[B,A,S] before callback. Revision/requested-asset snapshot blocks false zero exposure for B. | Preserved immutable requested configuration and paired balances, bounded result lengths. | Verified by reading
+F06 | High | contracts/vault/src/lib.rs:732 | Withdrawal state precedes calls and prevents competing debit paths. | "self.active_withdrawal = Some(ActiveWithdrawal {" | Apply one matured request -> active ID/Preparing stored before issuance. Proposal/execute/second apply cannot debit concurrently while guard unresolved. Owner may queue later work, but cannot apply it through the guard. | Current Preparing/Dispatched stages and never-reused IDs preserved; automatic arm consumed before issuance; safe retries require owner rearm. | Verified by reading
+F07 | High | contracts/vault/src/lib.rs:1474 | Expired/stale execution callbacks cannot consume a newer proposal. | "self.execution_locked(now_sec())" | Execution1 startsT; atT+420 proposal2 is accepted before execution2. Late execution1 callback has no current timed authority and cannot clear proposal2. | Preserved ID/time/proposal fencing; post-request signing errors retain lock. | Verified by reading
+F27 | High | contracts/vault/src/lib.rs:1297 | Escaped signatures retain quota even if callback fails or arrives too late. | "self.trading = next_state.clone();" | Daily cap200, turnover180, input20. Signer may produce bytes, then callback arrives at outer-lock expiry. Recorded turnover is already200 before dispatch, so a further20 signing authorization cannot reuse the reservation. | Preserved pre-dispatch turnover/cooldown/HWM reservation. Failed/lost/unfilled requests do not automatically refund it. Settlement-day turnover is not measured. | Verified by reading
+F09 | High | contracts/vault/src/oracle.rs:105; contracts/vault/src/pyth.rs:55 | Coherence/input guards are implemented; live price correctness and updater are unproven. | "if asset.reports.iter().any(|report| report.timestamp.0 > snapshot) {"; "if u128::from(value.conf.0) * 10_000 > u128::from(mantissa) * u128::from(max_slippage_bps) {" | Earlier aggregate1 plus later report2 is omitted. Pyth price100000000/conf1000001 at100bps is omitted and MissingPrice refuses signing. A fresh wrong price can still pass all oracle-based economic checks. Queried live NEAR caches were null. | Adapter counterexamples fixed; provider choice immutable. Choose usable feeds/updater, units/quote currency and accepted administrator/source trust before funds. Staleness/confidence are not independent market-value guarantees. | Verified by reading
+F11 | High | agent/src/lib.rs:5 | Compromised agent can cause economic harm within gates. | "//! mandate, including economically harmful trades that still pass the gates." | Repeated permitted but poor choices can lose money. Agent lacks direct treasury signing authority but its proposals can cause authorized money movement. | Corrected code/docs scope. Final paper-site headline must avoid literal "cannot move money" and keep residual loss prominent. | Verified by reading
+F18 | High | contracts/vault/src/migration.rs:96 | Four recognized layouts can migrate only under quiescent conditions; migration is not custody history proof. | "env::panic_str("unsupported legacy vault state layout");" | Unknown/current/self-owned/unpaused/active state -> refuse. Recognized legacy fields convert, but old bytes cannot prove no arbitrary voucher mint or old dispatched withdrawal existed. | Strict private migration and original-source golden fixtures retained. Fresh deployment required unless complete relevant history is authenticated. Never discard an active guard. | Verified by reading
+F25 | High | contracts/vault/src/lib.rs:1262 | Salt delay cannot turn a fresh approval into a stale-price signing request. | "if now_sec() > price_deadline {" | Approve atT using max_age60; salt callback atT+61 -> refuse; T+60 -> permitted if other authority remains valid. | Stored oldest approved-price deadline and strict-later check retained. No settlement-time freshness claim. | Verified by reading
+F17 | High | contracts/vault/src/lib.rs:68; scripts/inspect-deployment.py:199 | Current deployed verifier/signer/source/audit/admin/custody trust is UNVERIFIED. | "pub const MAINNET_INTENTS: &str = "intents.near";"; ""read_only": True, "live_readiness": "UNVERIFIED"," | A passing fixture with a stand-in signer does not establish the binary, roles or authority currently protecting a funded live vault. Historical testnet Intents has no deployed code. | Independently bind exact deployed binaries to reviewed source/audit and inspect administrative trust; real vault signing/settlement receipts required. Inspector never upgrades observed counts into a readiness guarantee. | Needs a test
+F05 | Medium | contracts/vault/src/withdrawal.rs:220 | Zero terminal amount is trusted refund, not successful delivery. | "Ok(U128(0)) => {" | Underlying FT refuses receiver; Intents refunds and returns0 -> record failure, preserve matching request unarmed, no false Delivered. | Actual refund/new-ID retry fixture exists; real token/storage and intended-chain failure path remain unverified. | Verified by reading
+F29 | Medium | contracts/vault/src/lib.rs:556 | Pyth mandate preview previously accepted feed IDs that the authoritative setter refused. | "if let Err(error) = oracle_mandate_validation(&mandate, self.oracle_kind) {" | Pyth vault, mandate containing generic PriceOracle feed name -> old preview valid=true/Applied or Queued, actual setter rejects its non-64-lowercase-hex feed. This misleads owner tooling; it does not bypass on-chain validation. | FIXED: preview and setter share provider-specific validation. Two exact regressions check invalid preview/state preservation and valid immediate/queued outcome parity. | Verified by reading
+F08 | Medium | contracts/vault/src/withdrawal.rs:198 | Old callbacks cannot resurrect replaced/cancelled request authorization. | "if active.request_seq.0 == self.withdrawal_seq && self.pending_withdrawal.is_none() {" | A dispatched; owner queues B then cancels B; later A refund/cancellation must not restore A or overwrite B. | Preserved request generation, per-attempt ID/stage and unarmed requeue. | Verified by reading
+F12 | Medium | contracts/vault/src/mandate.rs:185 | Asset parsing accepts only bounded valid NEP141 AccountIds. | "id.len() <= 71 && account.parse::<AccountId>().is_ok()" | nep141:.near, near., a..b, a-_b, aa:bb, >64-byte account, or arbitrary NEP245 suffix -> reject. nep141:<valid account> -> supported. | Preserved NEP141-only custody/grammar/length bound. Internal NEP245 voucher is a control marker, not an added tradable asset. | Verified by reading
+F13 | Medium | scripts/verify.sh:50 | Current integration script includes gas and new protocol/deployment targets. | "--test gas"; "--test recovery_protocol --test pyth_path --test sealed_deployment" | Supported20-feed or voucher branch failure now fails an included target instead of being omitted. Without --integration, sandbox targets are not run. | Script coverage corrected. Final complete run of frozen candidate still pending; check-claims only checks references. | Verified by reading
+F14 | Medium | README.md:21; docs/OPERATIONAL-READINESS.md:28 | Current local docs distinguish implementation from historical/live results; published site can still present older claims. | "> Recent autonomous-client and unique-voucher recovery changes are implemented;"; "The published `https://mandatenear.xyz/` appearance was observed and matches that" | A judge can read an older published75-test/TEE/M3 page while current local code/docs have changed. Neither historical counts nor local HTML edits prove the deployed website or vault is current. | Final local paper-site claims corrected and source reviewed. Publication and matching remote source/deployment remain separate and UNVERIFIED. | Verified by reading
+F15 | Medium | web/dashboard/index.html:488 | Sample economics are fixed fixtures, not actual chain gate computation. | "const ASSETS = [" | Sample scenario may say one gate rejects; it does not establish that live holdings/prices/rules produce that first failure. | Preserve explicit sample mode and consistent fixtures. Connected reader shows observed state separately; do not label sample outcome as live execution. | Verified by reading
+F19 | Medium | contracts/vault/src/lib.rs:1254 | Expired intent cannot be requested from MPC even inside the300-second build window. | "if next_state.signed_intent_expires_at_sec <= now_sec() {" | Approved intent expiresT+120; salt returns atT+120 orT+200 -> refuse signing, rather than extend deadline without fresh gates. | Preserved exact-expiry rejection. | Verified by reading
+F20 | Medium | agent/src/lib.rs:252 | Missing historical outcome is Unknown, not invented rejection/expiry. | "_ => Ok(Outcome::Unknown)," | Superseded proposal ID has no matching retained outcome -> Unknown. Later one-entry state cannot prove what happened to that old ID. | Preserved proposal-associated outcome resolution and chain-time classification. Historical event/receipt indexing still absent. | Verified by reading
+F21 | Medium | keeper/src/lib.rs:144 | Semantic Failed result applies backoff even when transaction succeeds. | "if matches!(tick, Tick::Failed(_)) {" | Contract transaction success returns Failed -> keeper reports Failed, sleeps under tested bounded backoff, does not advertise a signature. | Preserved explicit Signed/Rejected/Failed interpretation; live keeper operation unverified. | Verified by reading
+F22 | Medium | keeper/src/lib.rs:84 | Readiness/chain time avoid avoidable paid execution and false expiry. | "return Ok(Tick::NotReady { reason: "the intents key is not registered" });" | Paused/unregistered/in-flight state -> wait instead of paid execute. Issued signature is handled before general pause/readiness; signed authorization may still settle. | Preserved readiness/outbox behavior. Current publication also requires explicit opt-in and matching current signed state/quote metadata. | Verified by reading
+F30 | Low | contracts/vault/src/lib.rs:472; contracts/vault/src/lib.rs:1004 | Typed callback result decoding now has an explicit64KiB bound; generated-wrapper runtime behavior is still untested. | "#[callback_result(max_bytes = MAX_ANSWER_BYTES)] key: Result<String, PromiseError>,"; "#[callback_result(max_bytes = MAX_ANSWER_BYTES)] balances: Result<Vec<U128>, PromiseError>," | Trusted external contract returns a very large response -> unrestricted SDK decoding could consume callback gas before the handler can return its normal failure. No arbitrary signing or safe duplicate withdrawal is demonstrated from this alone. | HARDENED: all six typed callback attributes now set MAX_ANSWER_BYTES; manual promise reads already checked it. Add actual Wasm-wrapper oversized-result regressions before claiming runtime failure-path proof. | Needs a test
+F16 | Low | web/dashboard/index.html:607 | Clipboard feedback waits for actual success. | "await navigator.clipboard.writeText(cmd);" | Browser denies clipboard -> displays failure rather than "Copied". | Corrected in current sample page. Final hosting/accessibility/browser verification pending. | Verified by reading
+F23 | Low | contracts/vault/src/lib.rs:1540 | Non-ASCII/odd hex salt fails safely instead of panicking on UTF-8 slicing. | "if !s.len().is_multiple_of(2) || !s.is_ascii() {" | Salt aéa -> conversion returnsNone before signing; safe failure, no attacker-triggered substring panic. | Preserved ASCII/byte-pair conversion and regression. | Verified by reading
+F10 | Info | contracts/vault/src/engine.rs:302 | Position cap allows non-worsening de-risking of pre-existing overweight holdings. | "let share_rises = wide_mul(held_after, nav_before) > wide_mul(held_before, nav_after);" | Weight80% ->70% may remain above60% cap if share falls. Unrelated slippage raising a60% holding above cap rejects. | Code matches stated de-risking exception. Do not promise every holding always finishes below cap. | Verified by reading
+
+B1. PUBLIC ENTRY POINT AND CALLBACK CHECKS
+
+Read-only bounded views: get_oracle_kind, get_trading_state, get_owner,
+get_mandate, is_paused, get_agent, get_pending_proposal, is_halted, get_strikes,
+get_intents_key, is_key_registered, get_externals, get_signed_intent,
+is_in_flight, get_chain_time_sec, get_last_proposal_outcome,
+get_withdrawal_status, get_last_withdrawal_outcome, get_pending_mandate,
+simulate_mandate_change, get_pending_agent, get_pending_withdrawal,
+is_withdrawal_retry_armed, get_withdrawal_stage, get_withdrawal_protocol,
+get_withdrawal_recovery_accounts. They expose current bounded state, not a
+complete historical ledger or independently authenticated settlement.
+
+new/new_with_externals/new_with_oracle: #[init], nonpayable, validated mandate,
+distinct owner, <=62-byte vault identity for named recovery sinks. Provider
+choice is immutable; PriceOracle defaults remain. Initializing empty state is
+permissionless, so create/deploy/init must be one authorized action batch.
+The fresh sandbox test verifies CreateAccount/Transfer/DeployContract/init
+without AddKey and retains zero account permissions before/after external owner
+controls. It proves runtime feasibility, not an actual mainnet deployment.
+
+migrate: private #[init(ignore_state)], self predecessor, exact full-input known
+Borsh decode. Four recognized layouts:77ebc0c pre-sequence,0de5c48 sequence,
+pre-provider remediation, provider-enabled pre-voucher. Provider-enabled layout
+preserves provider. Distinct owner, paused/quiescent state, expired signatures,
+no pending proposal/withdrawal and no active guard required. Unknown historical
+send/issuance cannot become safe solely by migration.
+
+set_mandate/cancel_pending_mandate; set_agent/cancel_pending_agent;
+request_withdrawal/cancel_pending_withdrawal/rearm_pending_withdrawal;
+unpause/resume_proposals: exactly1yoctoNEAR plus owner predecessor. pause:
+owner predecessor, zero deposit deliberately allowed for function-call kill
+switch; unsigned authority invalidated. propose: agent predecessor, no1yocto
+requirement deliberately; paused/halted/current run/withdrawal/open signature
+and pending proposal gates. Signer account is not substituted for predecessor.
+
+apply_pending_mandate/apply_pending_agent: permissionless; owner-fixed contents
+apply at now>=effective_sec. Replacing a queue computes a new now+86400 deadline.
+Tightening applies immediately and drops pending loosening. Mixed tightening/
+loosening is delayed. First agent is immediate by stated design; replacement
+waits24h. Requeuing resets time; it does not inherit a matured authorization.
+
+register_intents_key/on_derived_key/on_key_registered: permissionless trigger
+under fixed path/domain/current predecessor derivation; callbacks private.
+Vault attaches1yocto to Intents registration. Stand-in checks invocation shape;
+actual derived key/signature/deployed roles remain externally UNVERIFIED.
+
+execute: sets identified run and immutable asset/config snapshot before reads.
+Requires valid pending proposal, registered authority, allowed execution state,
+no unexpired signed intent and no active withdrawal. Permissionless keeper
+chooses timing, not trade bytes. Three rejected proposals halt until owner
+resume; outsider strike timing remains accepted availability exposure.
+
+on_balances/on_price_data/on_assets/on_pyth_prices/on_salt/on_signed: private.
+Before-sign stages retain ID/proposal/revision/time authority and bounded result
+parsing. Prices must cover every traded/held asset. PriceOracle coherence and
+Pyth signed/exponent/confidence guards apply before engine approval. on_salt
+requires recorded approval, live intent deadline and oldest approved-price
+deadline, builds exact payload/nonce and reserves quotas BEFORE MPC dispatch.
+Every post-request error retains the timed guard because a signature may have
+escaped. A stale final callback does not erase later work or refund reservation.
+
+apply_pending_withdrawal/on_withdrawal_balance/on_withdrawal_prepared/
+on_withdrawn/recover_withdrawal/on_withdrawal_cancelled/
+on_withdrawal_reconciled: entry apply is permissionless only after delay and
+owner arm; callback wrappers private and handler ID/stage checks precede mutation.
+No original batch exists before preparation proof. Dispatched is stored before
+send. Unknown result never becomes safe-to-resend merely because a call failed.
+Recovery is permissionless after300s; safe requeue is always unarmed. Explicit
+owner+1yocto rearm preserves maturity and authorizes one fresh-ID attempt.
+
+Promise parsing: read_promise uses promise_result_checked with64KiB limit.
+All six typed callback results now explicitly use
+#[callback_result(max_bytes = MAX_ANSWER_BYTES)]: on_derived_key,
+on_key_registered, on_balances, on_price_data, on_salt and on_signed.
+The near-sdk generated wrapper oversized-response path has not been exercised
+in this review; directly calling Rust handlers does not execute that wrapper.
+Voucher proof requires exactly4 results, ordered supply/source/sent/cancelled,
+non-null Option<U128> supply and single-element balance vectors. Failed,
+oversized, malformed, null or wrong-size proof fails closed. Cancellation
+success/failure is only acknowledgement; both branches subsequently require
+durable proof. Four read receipts are not an atomic snapshot; with truly unique
+immutable issuance and inert sinks, transient inconsistency may refuse proof,
+but cannot legitimately prove the losing destination won.
+
+Arithmetic/time/storage: USD math uses U256, input/exposure round up,
+minimum-output/NAV round down, checked output/ID/sequence/revision additions.
+Pyth signed ranges are validated before conversion; u64*10000 and u64*u16 fit
+u128. block_timestamp/1e9 supplies seconds;24h equality permits queued apply.
+Representable block timestamps bound real delay arithmetic. Trade quotas use
+approval-day UTC snapshot, not eventual settlement time. Collections/state are
+bounded locally; voucher journals persist on external Intents and grow with
+owner-authorized attempts. Receiver storage and external journal funding need
+measurement. Panic rollback covers the current receipt only, not earlier calls.
+
+B2. NINE ENGINE GATES, EXACT REFUSAL CONDITIONS AND ORDER
+
+Gate | File:line | Exact source excerpt | Interpretation
+Structure | contracts/vault/src/engine.rs:198 | "if trade.asset_in == trade.asset_out {" | Reject same asset; allowlist checks follow.
+Positive amounts | contracts/vault/src/engine.rs:207 | "if trade.amount_in == 0 || trade.min_amount_out == 0 {" | Both strictly positive.
+Outstanding signature | contracts/vault/src/engine.rs:212 | "if now < state.signed_intent_expires_at_sec {" | Equality expires the local lock.
+Cooldown | contracts/vault/src/engine.rs:219 | "if now < until_sec {" | until_sec is saturating last+interval; equality passes.
+Price coverage | contracts/vault/src/engine.rs:228 | "if held || id == trade.asset_in || id == trade.asset_out {" | All traded and positive-held mandate assets need prices.
+Future price | contracts/vault/src/engine.rs:330 | "if price.publish_time_sec > now.saturating_add(MAX_FUTURE_PRICE_SKEW_SEC) {" | At most5seconds future tolerated.
+Staleness | contracts/vault/src/engine.rs:333 | "if now.saturating_sub(price.publish_time_sec) > u64::from(mandate.max_price_age_sec) {" | Exact maximum age passes.
+Balance | contracts/vault/src/engine.rs:235 | "if balance_in < trade.amount_in {" | Exact available input passes.
+Size | contracts/vault/src/engine.rs:242 | "if notional > max_trade {" | Rounded-up input notional must fit.
+Turnover | contracts/vault/src/engine.rs:252 | "if would_be > max_daily {" | Same approval-day counter plus input notional must fit.
+Slippage | contracts/vault/src/engine.rs:259 | "if wide_mul(out_value, bps) < wide_mul(notional, bps - u128::from(mandate.max_slippage_bps)) {" | Floor min-output value must meet conservative oracle floor.
+Drawdown | contracts/vault/src/engine.rs:269 | "if tripped && !out_is_stable {" | Tripped drawdown only allows stable destination; prior gates remain.
+Destination position | contracts/vault/src/engine.rs:289 | "if wide_mul(position, bps) > wide_mul(nav_after, u128::from(mandate.max_position_bps)) {" | Conservative destination exposure; positive post-trade NAV required.
+Other positions | contracts/vault/src/engine.rs:302 | "let share_rises = wide_mul(held_after, nav_before) > wide_mul(held_before, nav_after);" | Over-cap non-stable holdings may remain only when share does not worsen.
+
+The first failure wins. Stable status skips neither freshness/size/slippage/
+turnover nor checks on other worsening holdings. HWM uses approved pre-trade
+NAV and cannot prove intermediate unobserved drawdown. Freshness and position
+valuation depend on the same trusted oracle; they are not independent market
+correctness or stable-peg guarantees.
+
+B3. SR-6 COMPLETE WITHDRAWAL AND RECOVERY TRACE
+
+1. Owner+1yocto queues listed positive NEP141 amount to safe receiver with
+   now+86400 deadline. Replacement starts a fresh timer. Cancellation advances
+   generation. Rearm does not reset a matured request's original deadline.
+2. After maturity, permissionless apply requires owner arm, no active guard or
+   execution/open signature and >=280TGas. Arm consumed, queue removed,
+   never-reused ID allocated, Preparing persisted before any external call.
+3. One Intents receipt mints exactly one canonical withdrawal-N source voucher
+   through mt_on_transfer, then reads source unit/victim balance. Private first
+   callback requires source1 and victim>=amount, then schedules four proofs.
+4. Private prepared callback requires current ID+Preparing and exact tuple
+   (supply1,source1,sent0,cancelled0), with sufficient recorded victim balance.
+   It sets Dispatched before scheduling one marker-FIRST/ft_withdraw-LAST
+   Intents receipt. Last action preserves actual terminal U128 return.
+5. Full returned amount -> Delivered/guard clear. Explicit0 -> trusted refund,
+   generation-matched request requeued unarmed. Error/malformed/oversized/
+   positive partial -> unknown/guard retained, no automatic retry.
+6. After300s, Preparing can be invalidated before delayed callback dispatch.
+   Dispatched recovery requires>=140TGas and races source unit to c.<vault>.
+   Cancellation response alone never releases state. Four positive proof reads
+   require supply1/source0 and either sent1/cancelled0 or sent0/cancelled1.
+7. Sent proof -> DebitObserved, consume old authorization, clear guard. It proves
+   initial debit, NOT final receiver delivery or absence of a later refund.
+   Those old resolver/refund receipts may overlap later operations. Cancelled
+   proof -> safe matching unarmed requeue; owner must rearm, next apply new ID.
+8. Failed/null/both-zero/both-positive/inconsistent proof -> guard retained.
+   Late old ID/stage callbacks cannot overwrite a new attempt. Named sinks must
+   remain uncreated and without implicit/registered/proxy/current/future signing
+   authority. Fresh issuer/lifetime issuance premise remains mandatory (F28).
+
+The token_account helper strips nep141: only from an already grammar-validated
+mandate asset. Arbitrary outside callers cannot alter the active request or its
+token suffix. Receiver=vault or Intents is refused twice. Other real-token
+receiver registration/failure semantics still need production evidence.
+
+B4. SR-1 RECOVERY AND TIME EDGES
+
+StartingT: unsigned build authority requires time<T+300. Outer trade guard lasts
+untilT+300+120. New signing also requires intent expiry>now and approved price
+deadline>=now. No deadline is renewed without new gates. AtT+420 old callback
+authority expires even if a new run has not replaced its ID. Post-request errors
+retain timed lock/accounting; pre-sign failure may release. Owner pause or new
+revision cannot revoke already dispatched signatures. A second execution may
+start only after prior local guard/signature deadline; trusted Intents expiry
+must prevent old authorization from settling past its signed deadline. Actual
+live signer timeout/late-result receipts remain UNVERIFIED.
+
+C. CLAIMS VS CODE TABLE
+
+Claim | Where stated | Backed by | Status
+Sensitive actions check owner predecessor and exact1yocto | SECURITY.md:105; docs/PROJECT.md:191 | assert_owner/assert_one_yocto; owner controls and units | backed by code and a test, sandbox scope
+Pause/propose deliberately work without1yocto | SECURITY.md:55 | explicit owner/agent checks; pause/propose tests | backed by code and a test; real limited-permission owner-key integration still missing
+24h loosening, replacement agent and withdrawal queues | SECURITY.md:48; docs/PROJECT.md:189 | constants/now>=deadline; controlled-time queue replacement/boundary tests | backed by code and a test locally; live elapsed delay UNVERIFIED
+Replacement resets timer, rearm preserves withdrawal maturity | docs/PROJECT.md:203; README.md:316 | queue generation/now+delay; owner rearm and replacement tests | backed by code and a test
+Agent cannot directly sign/withdraw/change owner controls | README.md:82; THREAT_MODEL.md:68 | agent predecessor-only proposal path, exact payload builder; authorization tests | backed by code and a test, correct deployment premises required
+Compromised agent can still cause permitted loss | README.md:10; THREAT_MODEL.md:58 | gates restrict authorization, do not optimize returns | backed by code and a test for accepted/rejected proposals; no profitability claim
+Nine gates/exact math/conservative rounding | README.md:213; docs/PROJECT.md:142 | engine.rs/math.rs; boundary/property/attack tests | backed by code and a test, not exhaustive proof
+All held/traded prices fresh at signing request | README.md:229; SECURITY.md:58 | coverage checks, stored oldest-price deadline;60/61-second tests | backed by code and a test; settlement-time freshness not guaranteed
+Pyth input shape/exponent/confidence checks | docs/OPERATIONAL-READINESS.md:43 | pyth.rs; unit/provider + four pyth_path sandbox tests | backed by code and a test against documented-shape stand-in
+Provider-specific mandate preview matches setter | contracts/vault/src/lib.rs:554–556, documented API | shared oracle_mandate_validation; pyth_preview_rejects_generic_feed_ids_without_changing_the_vault and pyth_preview_matches_applied_and_queued_setter_outcomes_for_valid_feeds | backed by code and a test; previous mismatch fixed
+Explicit64KiB typed callback result bounds | contracts/vault/src/lib.rs:472/497/1004/1099/1178/1328 | six explicit SDK callback max_bytes attributes; compiled source | backed by code only; generated Wasm wrapper oversized-result runtime UNVERIFIED
+Usable live provider/updater/feed units/admin identity | docs/OPERATIONAL-READINESS.md:53 | queried NEAR caches null; no operating updater evidence | backed by nothing as a readiness claim; UNVERIFIED
+One current execution/signed intent, stale callbacks inert | SECURITY.md:48; THREAT_MODEL.md:216 | ID/proposal/revision/time guards; late/expiry regressions | backed by code and a test locally
+Failed/lost signatures cannot restore turnover quota | README.md:237; THREAT_MODEL.md:147 | lib.rs:1297 reservation before dispatch; escaped-signature regression | backed by code and a test
+Daily cap is strict settlement-day volume cap | expressly disclaimed README.md:227 | accounting uses approval snapshot; prior-day intent may settle next day | contradicted by code if stated
+Drawdown stops all losses or guarantees stable peg | expressly disclaimed THREAT_MODEL.md:191 | oracle-priced snapshot/stable classification; no independent peg source | backed by nothing for stronger claim
+Every position always<=cap | corrected docs/PROJECT.md:134 | non-worsening overweight de-risk exception | contradicted by code if stated literally
+Three strikes halt, owner resumes | SECURITY.md:51 | rejection counter/halt/owner resume tests | backed by code and a test; timing grief accepted
+Exact payload_v2.Eddsa/domain1 convention | docs/ARCHITECTURE.md:83 | lib.rs:1305–1306; enforcing mock and historical separate spike | backed by code and a test locally; actual current vault live signing UNVERIFIED
+Signature or relay SETTLED means independently verified settlement | expressly disclaimed README.md:204 | relay status retains settlement_verified:false; no receipt/ledger verifier | contradicted by code if stated
+Atomic matched settlement/minout/replay | README.md:110; THREAT_MODEL.md:139 | matched_funded_settlement_is_atomic_and_replay_is_refused on supplied Intents fixture | backed by code and a test locally; current live verifier identity UNVERIFIED
+20-asset supported limit | SECURITY.md:10; docs/PROJECT.md:131 | MAX_ASSETS=20; PriceOracle gas and Pyth20-feed tests | backed by code and a test on measured fixture revision; final candidate rerun pending
+Unique voucher rejects static preseed held anywhere | SECURITY.md:82 | global mt_supply/source/sink exact tuple; native duplicate fixture and new preparation regressions | backed by code and a test for static case; current supply is not lifetime issuance
+Unknown balance-masked withdrawal has operation proof | THREAT_MODEL.md:238 | current recovery bypasses victim-balance inference; sent/cancelled fixture/production tests | backed by code and a test on prior protocol snapshot; final four-read production run pending
+Universal unknown-withdrawal recovery with any deployment history | not claimed/F26/F28 | inconsistent proof retains guard; hidden old burn/refund may violate uniqueness | contradicted by code if stated
+Safe retry requires owner rearm/new ID | README.md:316; docs/PROJECT.md:206 | arm spent before issuance, private generation requeue, exact1yocto rearm | backed by code and a test locally
+Sent proof proves terminal delivery/no later refund | expressly disclaimed README.md:329 | native marker-first fixture shows committed marker with FT failure/refund | contradicted by code if stated
+Fresh atomic deployment without any account access permission works | docs/OPERATIONAL-READINESS.md:68 | sealed_deployment actual four-action batch; zero permission counts and external owner controls | backed by code and a test in sandbox; actual intended deployment UNVERIFIED
+Current permission/sink/supply counts prove no prior voucher mint | docs/OPERATIONAL-READINESS.md:103 | current-only public observations; no lifetime issuance/history authority | backed by nothing for stronger claim
+Four known migrations are safe for all historical deployments | docs/PROJECT.md:243 | four strict schemas/quiescence/golden inputs; old external history absent | backed by code and a test for known layouts only; universal deployment safety not established
+Deterministic two-asset autonomous strategy/final-block preview | README.md:179; docs/PROJECT.md:285 | autonomous.rs:227, transport pinning, refresh before proposal; client/unit/sandbox protocol tests | backed by code and a test; final suite and live operation pending
+Dry-run submits no proposal or publication and loads no signing/auth settings | README.md:191 | main.rs returns before signed_agent, no relay auth in dry branch; client tests | backed by code and a test; public quote may fail without required partner authentication
+Keeper publication explicit/current-state/quote bound | README.md:199; docs/PROJECT.md:304 | no publisher by default, current signed equality, exact binding checks; mock HTTP protocol tests | backed by code and a test; live relay interoperability UNVERIFIED
+Continuous relay monitoring/final receipt reconciliation | README.md:205 | one initial status query; settlement_verified:false; no continuous tracker | backed by nothing as an implemented claim; correctly disclosed absent
+Current agent uses TEE/model/private inference | expressly planned README.md:7 | deterministic Rust/manual plans; no supplied attestation or inference run | backed by nothing as implemented claim
+Connected read-only dashboard at pinned final block | docs/OPERATIONAL-READINESS.md:22; README.md:302 | public reader/schema/block pinning/hostile text tests; local browser fixture | backed by code and a test locally; final rewritten frontend and publication pending
+Dashboard sample computes live gates | expressly sample-labelled | fixed ASSETS/scenarios in dashboard HTML | contradicted by code if stated
+All eight attacks pass on current final release | README.md:162 | dedicated eight-class fixture target exists; historical runs scoped | backed by a test on earlier reviewed revision; final frozen full run pending
+verify.sh runs everything in default mode | README.md:125 | defaultfmt/clippy/references/Node/Python/units/client tests; sandbox only --integration | contradicted by script if unqualified
+Current published website/deployed vault matches current local source | docs/TESTNET.md:5; OPERATIONAL-READINESS.md:24 | historical vault hash/unsafe owner persists; local website edits unpublished | backed by nothing; UNVERIFIED
+Official eligibility/track/deadline | docs/OPERATIONAL-READINESS.md:6 | author deadline only; organizer rules absent | backed by nothing independently; UNVERIFIED
+
+D. TESTS THAT ARE WEAK OR MISSING
+
+Test / missing scenario | What it actually proves | What it should prove before stronger claim
+vault_withdrawal_reads_sends_and_confirms_the_actual_transfer | actual vault/Intents/mock-FT receipts and exact delivery state; harness may patch only matured STATE | A genuinely elapsed86400-second intended-chain queue/application, final receiver/ledger deltas; maturity injection is not elapsed-delay evidence.
+a_new_agent_waits_24_hours_on_a_real_chain | first-agent/replacement queue/early refusal/cancel in sandbox | Exact matured replacement on intended live chain; present name overstates elapsed-time experiment but docs disclose narrower scope.
+production_recovery_reads_sent_proof_despite_masking_credit_and_consumes_only_the_old_authorization | manually installed current guard and actual fixture batch/proof after100-20+25=105 | Final frozen four-read production callback run plus real callback-loss/late-result experiment; fixture STATE setup is not naturally lost live callback.
+production_cancellation_proof_blocks_two_late_originals_and_requires_owner_rearm_before_new_id | cancellation positive proof, two old original batch refusals and owner/new-ID retry | Intended-chain receipt ordering/failure recovery on actual deployed dependencies.
+historical_voucher_in_an_uncreated_cancelled_sink_is_refused_before_any_withdrawal | new static production preseed refusal, no victim debit, unarmed matching request | Final run pending at report draft; also test temporary hidden burn/refund adversary before claiming arbitrary historical deployment safety.
+global_supply_exposes_future_voucher_preseeded_outside_both_sinks | actual Intents mt_supply0/1/2, duplicate outside empty sinks, false cancellation pair retaining source1, direct original20 debit; transfer preserves supply | It proves the static guard is necessary. It does not prove lifetime issuance or the production dynamic refund race safe.
+fresh_atomic_deployment_has_no_vault_permission_and_retains_external_owner_controls | actual CreateAccount/Transfer/DeployContract/init withoutAddKey, zero permission counts, attempted issuer send refused/supply0, distinct owner pause/unpause/queue/cancel | Actual intended deployment artifact/transaction; descendant sink absence and external registered signer/roles also need inspection. Refused issuer send is paired with unchanged supply/zero permissions; no credential values emitted.
+pyth_documented_response_signs_exact_intent_and_fixture_verifies_it | documented-shape mock, exact payload/diff/signature accepted by fixture | Live Pyth feed/updater/quote currency/admin correctness and real MPC output remain absent.
+pyth_confidence_one_unit_over_limit_rejects_without_quota_or_signature | exact MissingPrice code and whole quota state/signature/proposal/guard/strike assertions | Good boundary regression; no independent correctness guarantee follows from confidence.
+pyth_twenty_asset_callback_chain_fits_gas_and_checks_every_held_feed | all20 requested feeds, missing held feed refusal, confidence-equality pass and successful returned signature within300TGas | Final frozen run and intended-chain/actual updater load; successful mock gas is not a mainnet signing budget.
+pyth_preview_rejects_generic_feed_ids_without_changing_the_vault | exact invalid preview error, empty loosened fields/outcome, unchanged original mandate/revision and no pending change | Good regression for provider-specific refusal; it does not prove live feed correctness.
+pyth_preview_matches_applied_and_queued_setter_outcomes_for_valid_feeds | valid unchanged preview equals immediate setter; valid feed-change preview equals exact NOW+86400 queued setter, original remains active | Good parity regression at one chain time; provider choice remains immutable.
+SDK generated typed callback oversized response | explicit max_bytes code and direct Rust handler unit tests; actual generated deserialization wrapper not exercised | Actual Wasm receipt returning >65536 bytes to each affected callback must fail closed without clearing later work or enabling an unsafe retry.
+matched_funded_settlement_is_atomic_and_replay_is_refused | actual funded fixture ledger bundle, unmatched under-delivery atomic refusal, exact deltas and replay refusal | Correct local settlement evidence; real vault MPC + live matching solver/final receipts still needed.
+Unit PromiseResult failures/stale callbacks | injected Failed/malformed/oversized/exact ID/stage tests retain safe state | Runtime receipt-loss, gas-starvation, very late external resolver/signature behavior on chosen deployment.
+Migration self-serialized structs | declared Borsh shape only | Original compiled historical golden inputs and Wasm wrapper supplement this; every funded legacy account's complete history remains unverified.
+outside_accounts_cannot_invoke_callbacks_or_migration | exported wrappers refuse outside calls, including new on_withdrawal_prepared | Compromised privileged-vault authority is a different deployment threat; fresh noAddKey test covers runtime premise only.
+Real function-call owner permissions / DAO governance | predecessor/deposit units and full-access sandbox owner | Actual restricted permission pause/propose and DAO vote/execute/cancel/recovery with1yocto behavior.
+Real supported-token storage/fees/failure rules | deliberately minimal MockFt with failure hook | Standards-conforming receiver registration, insufficient storage, fees/rebasing restrictions, real FT/refund paths for selected assets.
+Agent protocol HTTP tests | bounded schemas, redirects/body limits, exact quote binding, block pinning and dry-run/publication control using local server | Partner authentication, live quotes long enough, actual autonomous cycles, restart/outbox/monitoring behavior on chosen chain.
+All tests pass / all attacks pass | individual scoped observed runs listed below | Final complete frozen command must exit0. Historical and mixed-revision results must not be added into an invented final unique count.
+
+Inherited review found no ignored or commented-out security assertions in the
+reviewed Rust files. The final complete enumeration is pending. check-claims
+checks reference/name existence, not assertion correctness or execution.
+math.rs:12 permits clippy::all/pedantic/nursery only around generated U256
+construct_uint code. Common helpers allow dead_code. Strict clippy does not
+mean the generated block was linted or every runtime property was tested.
+
+E. DOCUMENTATION AND NUMBER MISMATCHES
+
+Current source constants: MAX_ASSETS20; MAX_DECIMALS30; proposalTTL60s;
+execution window300s; intentTTL120s; outer trade guard420s; mandate/agent/
+withdrawal delay86400s; withdrawal recovery threshold300s; max slippage500bps;
+max price age300s; future price skew5s; feed ID maximum128bytes; NEP141 ID
+maximum71bytes; vault account maximum62bytes; payload maximum1232bytes;
+manual checked and six SDK-typed callback answer bounds64KiB.
+
+Current withdrawal apply minimum280TGas and recovery minimum140TGas.
+Static allocation totals before local work: entry30+8+230=268TGas;
+source callback4*8+180=212 of230; prepared callback30+100+30=160 of180;
+recovery entry30+90=120 of140; cancel callback4*8+30=62 of90.
+These sums prove reservation headroom only; runtime gas must be measured.
+Attached/reserved gas and gas actually burned are different numbers.
+
+170/40TGas belongs to older pre-voucher code.240/110TGas belongs to the prior
+two-proof voucher snapshot.280/140 is the current four-read guard path.
+Historic4November22-feed pass/24-and32 failures are preserved evidence, not
+the current supported limit. MAX_ASSETS20 is a policy limit below old measured
+failure points; new provider/callback paths require final current-size runs.
+
+Observed Pyth focused run before latest voucher patch: two assets24.90624749848
+TGas, twenty assets32.354481435856TGas. Four tests passed178.77s. They are
+stand-in oracle/signer and supplied verifier fixture measurements; do not
+advertise them as live MPC costs or final whole-release verification.
+
+Old75/126/130/133 counts refer to prior pages/revisions/runs. The task owner
+recorded226 vault unit tests passing after the two Pyth preview regressions;
+that observed scoped result is not the final whole-release count. Final current
+unique test count is PENDING and must come from actual final outputs. Generated
+property cases, reruns, partial commands and Node/Python cases must be reported
+separately. No fixed current126-test claim is supportable.
+
+Current locally recorded scope is more accurate: deterministic two-asset/manual
+agent, immutable implemented PriceOracle/Pyth adapters, explicit publication,
+no LLM/TEE today, acknowledgement/status not verified settlement, historical
+simulation not funded live vault trade, sample maturity not elapsed24hours,
+four migrations not all historical custody states. Final local/site text and
+published deployment must be reconciled. Historical evidence files must retain
+their dates rather than be relabelled as fresh results.
+
+Docs need exact lifetime-issuance qualification wherever they say preseeded
+duplicates are rejected or pre-seal receipts complete. Current supply is not a
+lifetime counter; a previously issued holder can initiate burn/refund later.
+OPERATIONAL-READINESS.md:109–111 states this explicitly. Mere historical
+quiescence or empty current keys is not an equivalent deployment prerequisite.
+
+F. WEB AND UI ISSUES
+
+The final paper-site HTML, site.mjs, utility tests and shared read-only reader
+were fully read. The user's published cream/serif site was the visual baseline;
+the explicit layout rewrite retains the paper/card palette and serif/Inter/mono
+typography. Local changes are not published-site evidence. The observed
+published site still contained older75-test/TEE/M3 claims; publication remains
+separate and UNVERIFIED. Local browser visual/interaction QA is still unverified.
+
+The rewritten headline no longer claims the agent cannot cause money movement.
+Its FAQ explicitly admits harmful permitted trades and sealed/external trust.
+Balances/prices and signature/settlement are distinguished. Node22 appears in
+verification prerequisites. Fixed stale test counts and absolute competition
+claims were removed. Responsive grids, native disclosures, skip link, labels,
+reduced-motion style, error/empty/loading/snapshot states and clipboard feedback
+are implemented in source; they still require actual browser interaction checks.
+
+The reader's rule-cap U64 parser matches max_trade_usd and
+max_daily_turnover_usd in mandate.rs:47–48. Token amounts and recorded trading
+amounts use their separate appropriate decimal-string bounds.
+
+Small green text initially used accent#00875f at contrast4.20 on card#f8f6f1 and
+3.81 on paper#efebe2, below4.5 for small normal text. Final owner changed small
+text to darker ink while retaining the original accent palette. This is a
+source/color-math correction; visual browser QA remains open.
+
+Current sample dashboard innerHTML is fed fixed repository scenarios/assets,
+not observed RPC/user fields. Fully read external reader uses bounded schemas,
+safe decimal/base-unit formatting, matching final block hash/height and
+textContent rendering. No external-data XSS path was found by reading. Public
+RPC calls omit credentials/referrer and refuse redirects, executable URLs,
+query/hash/userinfo RPC endpoints and non-loopback fixture HTTP. Safe shared
+links contain only network/account/optional code hash; prefill never auto-fetches,
+copies no customRPC/receipt/unrelated parameters and validates duplicates.
+Utility tests do not establish mounted-browser interaction/layout correctness.
+No wallet mutation is implemented; clipboard failure is handled explicitly.
+
+Read-only state is not a settlement monitor. Show network, final block/time,
+vault, expected/observed artifact identity, proposal/outcome, owner/queues,
+withdrawal stage/arm/proof limitations and observed listed balances. Keep sample
+and fixture labels visible. Explorer reference alone is not authenticated final
+receipt evidence. RPC is itself trusted for what it reports.
+
+Links to remote GitHub main are context links, not proof current uncommitted
+changes exist there. Current remote source/artifact correspondence is UNVERIFIED.
+No superior-security/exclusive-novelty claim follows from old competitor notes.
+Verify navigation/assets under actual hosted base path, mobile keyboard/focus/
+error states, clipboard and external links before calling the frontend complete.
+
+G. MAINNET GO / NO-GO AND ORDERED BLOCKERS
+
+NO-GO. Complete these in order before real funds:
+
+1. Freeze current source/WASM and independently review voucher protocol,
+   owner/signer authority and trusted dependencies. Run final complete fast,
+   client, Node/Python and all thirteen sandbox targets; retain actual outputs,
+   revision/allowed-file manifest and distinct gas/storage measurements.
+2. Establish lifetime voucher uniqueness: fresh account atomically created,
+   funded/deployed/initialized without EVER adding vault access authority; or
+   authenticated absence of every prior canonical voucher issuance. Prove both
+   sinks absent/inert, no proxy/implicit/registered authority and no later
+   creation path. Current counts/quiescence alone cannot satisfy this gate.
+3. Choose distinct recoverable owner model and exercise actual permission/DAO
+   pause/resume/queue/cancel/rearm. Select functioning oracle feeds/updater,
+   quote currency/decimals/confidence behavior and accepted source/admin trust.
+4. Bind intended external binaries, roles/upgrade/custody authority and signer
+   derivation to reviewed evidence. Inspect actual vault/artifact/control state
+   at one final block. Migrate only known quiescent states with complete old-send
+   and issuer history; otherwise fresh deployment.
+5. Demonstrate actual vault registration and payload_v2.Eddsa/domain1 signing,
+   exact quote/proposal/nonce/deadline binding, then small controlled funded
+   matched settlement. Retain final receipts and input/output ledger deltas,
+   atomic under-delivery refusal and replay refusal. Ack/status is insufficient.
+6. Demonstrate actually elapsed86400-second owner withdrawal on intended chain,
+   real token/receiver storage and delivery/refund, callback failure/loss/late
+   results, cancellation winner and owner-rearmed new-ID retry. Verify no old
+   authorization can debit twice; record terminal vs initial-debit distinction.
+7. Measure supported20-asset gas, external voucher storage growth and oracle/
+   quote/signature latency; alert on stale feeds, prolonged guard and unpublished
+   signatures. Complete independent release/deployment review before increasing
+   exposure. Do not make TEE integration a substitute for these custody proofs.
+
+G1. HACKATHON JUDGE VIEW — WHAT TO DO TO COMPETE SERIOUSLY
+
+First question: show the actual vault signing and settling a funded trade,
+with working live prices, a malicious proposal rejected and exact receipts.
+Next: prove no developer/vault account permission bypass exists; explain the
+fresh issuer and inaccessible-sink assumptions; recover an ambiguous withdrawal
+without a second debit; distinguish current code, fixture and historical demo.
+An attractive paper site will not answer those questions by itself.
+
+Strong: a narrow, checkable on-chain authorization boundary; exact signed bytes;
+owner delay/cancel/kill switch; conservative integer gates; quota reservation
+before MPC; original historical Borsh fixtures; actual funded sandbox atomic
+settlement/replay; native receipt-batch/voucher mechanics; fresh noAddKey runtime
+deployment and explicit residual trust. These are concrete evidence, not a
+professional security certification.
+
+Weak: live custody path and price updater unproven; owner model unresolved;
+partner quote/publication access unverified; no terminal receipt monitor,
+restart/persistence guarantee, event history, measured adoption/integration time
+or working TEE/model. Broad four-track positioning can make an implemented
+deterministic strategy look overclaimed if presented as private autonomous AI.
+
+Highest-value actions before14November:
+1. Finish one coherent core demonstration and frozen evidence bundle, rather
+   than add another integration: malicious20-vs10 gate refusal -> permitted
+   exact quote -> real vault signature -> matched funded fill -> owner pause ->
+   delayed withdrawal/refund/rearm. Label every environment and receipt.
+2. Use one real two-asset treasury use case and explain the policy trade-offs:
+   permitted losses, oracle trust, approval-day quota and delayed owner rescue.
+   Record actual quote/signing/settlement latency and costs.
+3. Make the paper site the single evidence interface: current revision/hash,
+   live inspector, all relevant status/queues, reproducible commands and concise
+   open blockers. Preserve the user's visual baseline. Mobile/keyboard/error
+   states and honest empty/live-failure states matter more than fake charts.
+4. Produce a90-second judge walkthrough with working receipts and refusal,
+   clear threat model, reproducible fresh setup and an explicit experimental
+   disclosure. Independently verify official build window/tracks/rules.
+5. Freeze and reduce claims that lack evidence. A separate SDK/TEE/SHIELD or
+   more assets is optional; it should not delay the verified core flow. No
+   source review can promise a first-place rank.
+
+H. THINGS CHECKED AND FOUND CORRECT
+
+- Owner/agent predecessor and deliberate yocto exceptions match stated roles.
+- Changed/expired unsigned authority is fenced before new signing dispatch.
+- Quota reservation survives escaped/lost signatures and late callbacks.
+- Wide valuations and Pyth range/confidence conversions fail closed.
+- Pyth mandate preview and setter now share provider-specific validation.
+- Marker-FIRST/withdrawal-LAST retains terminal result; cancellation race fences unique old originals.
+- Safe withdrawal requeue is generation-matched, unarmed and requires new ID after owner rearm.
+- Native sandbox fresh four-action noAddKey deployment preserves external owner controls.
+- Sample, signature, relay acknowledgement and actual settlement are distinguished in current docs.
+
+I. COULD NOT VERIFY — EXACT EVIDENCE/COMMAND THAT WOULD SETTLE IT
+
+Final combined candidate: UNVERIFIED/PENDING. Run bash scripts/verify.sh and
+bash scripts/verify.sh --integration against the frozen tree and record the
+complete exit code/output. scripts/check-claims.sh alone cannot settle it.
+
+Actual deployment/owner/signer/binary identity: UNVERIFIED. Use the public
+read-only inspector command documented in docs/OPERATIONAL-READINESS.md:12
+with actual public account and reviewed WASM SHA256, then authenticate the RPC,
+deployment action batch, owner governance, external roles and artifact mapping.
+Inspector's zero exit code remains observation, not readiness. Emit permission
+counts/booleans only; no secret/credential values or environment dumps.
+
+Lifetime prior voucher namespace history (F28): UNVERIFIED for any old issuer.
+Current mt_supply, mt_balance_of, account/public signing lists and known receipt
+completion cannot prove it. Actual fresh create/fund/deploy/init WITHOUT any
+AddKey/access authority is a constructive route, locally verified by:
+  cargo test --offline --test sealed_deployment -- --nocapture
+from contracts/vault. For existing issuer, authenticate absence of every prior
+canonical voucher issuance and all possible replenishing histories. Add actual
+temporary burn/refund race test before any stronger historical-state claim.
+
+Native supply/source correspondence: public mt_supply API/return shape and
+fixture transitions verified; deployed source identity UNVERIFIED. Read-only
+mainnet mt_supply returned"0" for the unused review ID at block223349701.
+The pinned public source export is mt_supply, NOT mt_total_supply. Actual
+fixture0/1/2/transfers/victim100->80 evidence:
+  cargo test --offline --test recovery_protocol global_supply_exposes_future_voucher_preseeded_outside_both_sinks -- --nocapture
+from contracts/vault. This does not prove lifetime uniqueness.
+
+Usable live PriceOracle/Pyth feed/updater/units/admin policy: UNVERIFIED.
+docs/OPERATIONAL-READINESS.md records null NEAR caches at blocks223333740 and
+223333992. Capture every selected feed's current response under actual load,
+quote currency/asset units, source/admin provenance, confidence and updater.
+Local wiring command:
+  cargo test --offline --test pyth_path -- --nocapture
+from contracts/vault. A labelled mock is not live market evidence.
+
+SDK generated typed callback response limit (F30): UNVERIFIED at runtime.
+Add a sandbox external-response fixture returning >65536 bytes for the six
+typed callbacks, invoke the actual vault Wasm wrappers and assert exact refusal
+and execution/withdrawal state invariants. Run the new regression target via
+cargo test --offline --test <actual-added-target> -- --nocapture from
+contracts/vault; the placeholder is not an existing test or a reported pass.
+Direct unit callback calls and successful Clippy cannot settle wrapper behavior.
+
+Actual current vault MPC signing/funded settlement: UNVERIFIED. Need actual
+vault register_intents_key/execute/signed payload, chosen real signer domain,
+matching solver bundle, final receipts and exact ledger deltas. R1 separate
+spike/free simulate_intents and matched local fixture test do not settle this.
+
+Intended-chain SR1/SR6 recovery/24h withdrawal: UNVERIFIED. Need complete
+controlled live queue/application/refund/late/callback-loss/cancellation races
+and exact receiver/ledger/outcome evidence under actual deployed source.
+Local narrowed behavior commands:
+  cargo test --offline --test withdrawal_lifecycle --test recovery_protocol -- --nocapture
+from contracts/vault. Review printed maturity mode; STATE patch is not elapsed
+24h. Initial DebitObserved is not terminal delivery/no-refund proof.
+
+Actual DAO/restricted function-call authority/real token storage: UNVERIFIED.
+Add actual DAO vote/execute/cancel/recovery and restricted permission tests;
+exercise selected standards-conforming token storage/receiver/refund behavior.
+Current MockFt and generic AccountId owner prove narrower behavior only.
+
+Actual autonomous/live relay operation: UNVERIFIED. Run reviewed public config
+against working feeds/partner protocol and actual deployed vault; record final
+proposals/quotes/authorizations/receipts without credential output. Local client
+command cargo test --offline -p mandate-agent -p mandate-keeper --lib --tests
+proves local protocol. One initial status query/SETTLED does not authenticate
+final settlement; continuous monitor/restart persistence is unimplemented.
+
+Final frontend/published site/remote CI/official rules: UNVERIFIED until final
+site build and hostile-text/mobile/keyboard/browser checks, actual published
+asset correspondence, current CI results and organizer rules are checked.
+Local node --test web/dashboard/live.test.mjs and python3 -B scripts/build-web.py
+--check test reader/build correspondence; they do not publish or authenticate
+the historical public site. Final frontend owner must update this draft.
+
+OBSERVED FOCUSED VERIFICATION, NOT A FINAL RELEASE COUNT
+
+1. Pyth path: cargo test --offline --test pyth_path -- --nocapture --test-threads=4
+   from contracts/vault:4passed,0failed/ignored,178.77s. Before latest voucher
+   supply patch.2feeds24.90624749848TGas;20feeds32.354481435856TGas.
+2. New actual Intents duplicate-mint/supply case:
+   cargo test --offline --test recovery_protocol global_supply_exposes_future_voucher_preseeded_outside_both_sinks -- --nocapture
+   from contracts/vault:1passed,0failed/ignored,7filtered,30.00s.
+3. Fresh atomic noAddKey deployment:
+   cargo test --offline --test sealed_deployment -- --nocapture
+   from contracts/vault:1passed,0failed/ignored,43.57s. WASM consumed384454bytes;
+   this is a local build observation, not deployed identity or reproducible-hash proof.
+   Earlier harness mistakes were corrected: forwarding all10NEAR left parent
+   insufficient fee balance; funding6NEAR fixed creation. get_chain_time_sec
+   returns numericu64, not stringU64; test expectation corrected before finalpass.
+4. Scoped strict lint:
+   cargo clippy --offline -p mandate-vault --test sealed_deployment --test recovery_protocol -- -D warnings
+   exit0,3.54s; cargo fmt --all --check exit0.
+5. Client reviewer recorded:
+   cargo test --offline -p mandate-agent -p mandate-keeper --lib --tests
+   22passed,0failed/ignored (7+6+7+2), with bin checks/strict Clippy/packagefmt.
+   A historical five-case agent sandbox target passed170.54s. This is not a
+   final complete thirteen-target run or a current live strategy result.
+
+6. Task owner recorded current vault unit suite:226passed,0failed after shared
+   provider preview validation and its two regressions. Typed callback bound
+   attributes compiled and strict Clippy passed; generated-wrapper oversized
+   runtime path remains UNVERIFIED. Final fast/integration outputs remain separate.
+
+FINAL FAST VERIFICATION: PENDING — final owner to insert actual results.
+FINAL THIRTEEN-TARGET SANDBOX VERIFICATION: PENDING — actual outputs required.
+FINAL FRONTEND REVIEW/BUILD/BROWSER VERIFICATION: PENDING.
+LIVE FUNDED VAULT SIGNING/SETTLEMENT/RECOVERY: UNVERIFIED.

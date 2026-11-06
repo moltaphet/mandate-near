@@ -1,6 +1,29 @@
 # Testnet run, 4 Nov 2026
 
-What ran on NEAR testnet, what the chain said, and what did not run. Every line below is an observed result, not a target.
+## Read-only refresh, 6 Nov 2026
+
+At final block 276508606, the historical account `mandate-vault2.testnet`
+still returned itself as owner and had one full-access account permission.
+The returned WASM was 293,825 bytes, SHA256
+`ea6960b601f44a52723320253b3a330140b5d9714a2b1ef06cc74f59dbb7db10`.
+The inspector reported custody blockers and incomplete control/external views;
+it made no readiness claim. This confirms the historical binary and unsafe
+owner/permission model remain, not that the current source is deployed.
+No permission values, signing, deployment or funds were used. Current source
+readiness requirements are in [OPERATIONAL-READINESS.md](OPERATIONAL-READINESS.md).
+
+## Historical transaction record
+
+Historical observations from 4 November 2026, not a statement about the current
+source or deployed accounts. They have not been independently re-fetched by
+this review. No gate evaluation, MPC signature, funded settlement or delayed
+vault withdrawal was demonstrated in this run.
+
+The self-owned vault below is a historical control experiment, not the intended
+custody deployment. Use a distinct recoverable owner before removing vault
+full-access keys. Current source changes its stored layout; an old deployment
+requires a reviewed migration for that layout or a fresh deployment, not only
+a WASM replacement.
 
 ## Accounts and contracts
 

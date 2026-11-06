@@ -1,0 +1,25 @@
+FINAL POST-HARDENING FROZEN-REVISION SANDBOX GROUP A
+Command: cargo test --offline -p mandate-vault --test attacks --test recovery_protocol --test gas --test keeper --test sandbox --test settlement -- --test-threads=1
+Scope: local sandbox; supplied Intents fixture; oracle/MPC stand-ins. No live signing/funds/relay publication.
+Reference source fingerprint: docs/evidence/operational-sandbox-sources.json
+Started UTC: 2026-11-06T18:36:01.055012+00:00
+
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.40s
+     Running tests/attacks.rs (target/debug/deps/attacks-d93a750217cfacc5)
+
+running 8 tests
+test attack_1_a_stranger_proposes_a_trade ... ok
+test attack_2_the_agent_trades_an_asset_outside_the_mandate ... ok
+test attack_3_an_oversized_trade_passes_the_agent_and_fails_the_gate ... ok
+test attack_4_the_agent_accepts_a_quote_far_below_the_oracle_value ... ok
+test attack_5_the_trade_is_priced_on_an_old_quote ... ok
+test attack_6_the_trade_is_priced_on_a_quote_from_the_future ... ok
+test attack_7_a_signed_trade_is_altered_before_settlement ... ok
+test attack_8_a_stolen_owner_key_cannot_loosen_the_cap_before_the_delay ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 331.60s
+
+     Running tests/gas.rs (target/debug/deps/gas-5013040329367e6d)
+
+running 2 tests
+test gas_by_feed_count ... 

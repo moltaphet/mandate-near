@@ -20,13 +20,21 @@ const GAS_RESOLVE: Gas = Gas::from_tgas(10);
 #[derive(PanicOnDefault)]
 pub struct MockFt {
     balances: BTreeMap<AccountId, u128>,
+    /// Controlled failure hook for sandbox withdrawal/refund tests only.
+    blocked_receiver: Option<AccountId>,
 }
 
 #[near]
 impl MockFt {
     #[init]
     pub fn new() -> Self {
-        Self { balances: BTreeMap::new() }
+        Self { balances: BTreeMap::new(), blocked_receiver: None }
+    }
+
+    /// Sandbox only: makes ft_transfer refuse this receiver before changing balances.
+    /// This open test control is not a production token permission or storage model.
+    pub fn set_blocked_receiver(&mut self, receiver_id: Option<AccountId>) {
+        self.blocked_receiver = receiver_id;
     }
 
     /// Sandbox only: credits `amount` to `account_id`.
@@ -77,6 +85,10 @@ impl MockFt {
     #[payable]
     pub fn ft_transfer(&mut self, receiver_id: AccountId, amount: U128, memo: Option<String>) {
         assert_one_yocto();
+        require!(
+            self.blocked_receiver.as_ref() != Some(&receiver_id),
+            "sandbox receiver is blocked"
+        );
         let _ = memo;
         let sender = env::predecessor_account_id();
         let balance = self.balances.entry(sender).or_default();

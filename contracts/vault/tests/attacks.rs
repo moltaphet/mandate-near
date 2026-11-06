@@ -131,6 +131,10 @@ async fn attack_3_an_oversized_trade_passes_the_agent_and_fails_the_gate()
     let outcome = execute(&w).await.map_err(|e| e.to_string())?;
     let strikes = view(&w.vault, &w.network, "get_strikes", json!({})).await;
     assert_eq!(rejection_code(&outcome), "TradeTooLarge", "{outcome}");
+    assert_eq!(strikes, json!(1), "exactly one gate rejection must count one strike");
+    assert_eq!(view(&w.vault, &w.network, "get_pending_proposal", json!({})).await, Value::Null);
+    assert_eq!(view(&w.vault, &w.network, "get_signed_intent", json!({})).await, Value::Null);
+    assert_eq!(view(&w.vault, &w.network, "is_in_flight", json!({})).await, json!(false));
     report(
         3,
         "the agent proposes $60 against a $50 per-trade cap",
@@ -191,11 +195,11 @@ async fn attack_6_the_trade_is_priced_on_a_quote_from_the_future() -> testresult
 
     propose(&w, USDC, AMOUNT_IN, MIN_OUT).await.map_err(|e| e.to_string())?;
     let outcome = execute(&w).await.map_err(|e| e.to_string())?;
-    assert_eq!(rejection_code(&outcome), "FuturePrice", "{outcome}");
+    assert_eq!(rejection_code(&outcome), "MissingPrice", "{outcome}");
     report(
         6,
         "the trade is priced on a quote dated one hour ahead",
-        "rejected: FuturePrice",
+        "rejected: MissingPrice (no coherent current report)",
         &format!("rejected: {}", rejection_code(&outcome)),
     );
     Ok(())
@@ -223,7 +227,20 @@ async fn attack_7_a_signed_trade_is_altered_before_settlement() -> testresult::T
 
     // A solver or relay tries to take $3 instead of the signed $2.
     let signed = view(&w.vault, &w.network, "get_signed_intent", json!({})).await;
-    let altered = signed["payload"].as_str().expect("payload").replace("-2000000", "-3000000");
+    let payload = signed["payload"].as_str().expect("payload");
+    let control = w
+        .intents
+        .call_function("simulate_intents", json!({ "signed": [signed_entry(&signed, payload)] }))
+        .read_only::<Value>()
+        .fetch_from(&w.network)
+        .await?
+        .data;
+    assert!(
+        control["intents_executed"].to_string().contains(w.vault.account_id().as_str()),
+        "{control}"
+    );
+    let altered = payload.replace("-2000000", "-3000000");
+    assert_ne!(altered, payload, "the attack must actually alter the signed bytes");
     let err = w
         .intents
         .call_function("simulate_intents", json!({ "signed": [signed_entry(&signed, &altered)] }))
@@ -231,17 +248,20 @@ async fn attack_7_a_signed_trade_is_altered_before_settlement() -> testresult::T
         .fetch_from(&w.network)
         .await
         .expect_err("a changed amount must not verify");
+    let refusal = panic_text(&err.to_string());
+    assert!(refusal.to_lowercase().contains("invalid signature"), "wrong refusal: {refusal}");
     report(
         7,
         "a relay changes the signed amount from $2 to $3",
         "rejected by intents.near: signature check",
-        &format!("rejected: {}", panic_text(&err.to_string())),
+        &format!("rejected: {refusal}"),
     );
     Ok(())
 }
 
 #[tokio::test]
-async fn attack_8_a_stolen_owner_key_loosens_the_cap_at_once() -> testresult::TestResult<()> {
+async fn attack_8_a_stolen_owner_key_cannot_loosen_the_cap_before_the_delay()
+-> testresult::TestResult<()> {
     let w = world().await?;
     register_key(&w).await?;
     fund_vault(&w, 100_000_000).await?;

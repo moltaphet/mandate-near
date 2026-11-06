@@ -3,7 +3,7 @@
 
 mod common;
 
-use common::{fund_vault, now_sec, propose, register_key, set_prices, world};
+use common::{fund_vault, now_sec, propose, register_key, set_prices, view, world};
 use mandate_keeper::{Keeper, Tick};
 use near_sdk::serde_json::json;
 
@@ -49,5 +49,40 @@ async fn keeper_does_nothing_without_a_proposal() -> testresult::TestResult<()> 
     let w = world().await?;
     register_key(&w).await?;
     assert_eq!(keeper(&w).tick(None).await.map_err(|e| e.to_string())?, Tick::Idle);
+    Ok(())
+}
+
+#[tokio::test]
+async fn keeper_waits_for_registration_without_executing() -> testresult::TestResult<()> {
+    let w = world().await?;
+    propose(&w).await?;
+    assert_eq!(
+        keeper(&w).tick(None).await.map_err(|e| e.to_string())?,
+        Tick::NotReady { reason: "the intents key is not registered" }
+    );
+    assert_eq!(view(&w.vault, &w.network, "get_strikes", json!({})).await, json!(0));
+    assert!(view(&w.vault, &w.network, "get_pending_proposal", json!({})).await.is_object());
+    Ok(())
+}
+
+#[tokio::test]
+async fn keeper_waits_while_paused_without_executing() -> testresult::TestResult<()> {
+    let w = world().await?;
+    register_key(&w).await?;
+    propose(&w).await?;
+    w.vault
+        .call_function("pause", json!({}))
+        .transaction()
+        .gas(near_api::NearGas::from_tgas(30))
+        .with_signer(w.owner.clone(), w.signer.clone())
+        .send_to(&w.network)
+        .await?
+        .assert_success();
+    assert_eq!(
+        keeper(&w).tick(None).await.map_err(|e| e.to_string())?,
+        Tick::NotReady { reason: "the vault is paused" }
+    );
+    assert_eq!(view(&w.vault, &w.network, "get_strikes", json!({})).await, json!(0));
+    assert!(view(&w.vault, &w.network, "get_pending_proposal", json!({})).await.is_object());
     Ok(())
 }

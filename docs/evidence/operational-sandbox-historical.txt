@@ -1,0 +1,231 @@
+FINAL SERIAL SANDBOX VERIFICATION
+Started UTC: 2026-11-06T17:34:52.551682+00:00
+Command: cargo test --offline -p mandate-vault --test sandbox --test intents_registration --test execute_path --test keeper --test agent --test attacks --test withdraw --test gas --test settlement --test withdrawal_lifecycle --test recovery_protocol --test pyth_path -- --test-threads=1
+Scope: local NEAR sandbox; supplied Intents fixture; oracle/MPC stand-ins. No live-chain signing or publication.
+Redaction: long curve-prefixed values and long hexadecimal values are conservatively redacted; test names/results remain exact.
+
+   Compiling mandate-vault v0.1.0 (/Users/ehs4n/mandate-near/contracts/vault)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 8.99s
+     Running tests/agent.rs (target/debug/deps/agent-d545893fe6b52146)
+
+running 5 tests
+test a_gate_that_closes_is_reported_as_rejected ... FAILED
+test an_unretained_proposal_outcome_is_unknown ... FAILED
+test quote_driven_rebalance_reaches_a_signed_intent_and_mock_relay_acknowledgement ... FAILED
+test the_agent_proposes_and_the_keeper_executes_it ... FAILED
+test the_agent_refuses_a_second_proposal_before_spending_gas ... FAILED
+
+failures:
+
+---- a_gate_that_closes_is_reported_as_rejected stdout ----
+
+thread 'a_gate_that_closes_is_reported_as_rejected' (22028328) panicked at contracts/vault/tests/common/mod.rs:164:19:
+error: near_sandbox::error_kind::SandboxError - Error while binding socket to a port 0: Operation not permitted (os error 1)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- an_unretained_proposal_outcome_is_unknown stdout ----
+
+thread 'an_unretained_proposal_outcome_is_unknown' (22031108) panicked at contracts/vault/tests/common/mod.rs:164:19:
+error: near_sandbox::error_kind::SandboxError - Error while binding socket to a port 0: Operation not permitted (os error 1)
+
+---- quote_driven_rebalance_reaches_a_signed_intent_and_mock_relay_acknowledgement stdout ----
+
+thread 'quote_driven_rebalance_reaches_a_signed_intent_and_mock_relay_acknowledgement' (22033783) panicked at contracts/vault/tests/common/mod.rs:164:19:
+error: near_sandbox::error_kind::SandboxError - Error while binding socket to a port 0: Operation not permitted (os error 1)
+
+---- the_agent_proposes_and_the_keeper_executes_it stdout ----
+
+thread 'the_agent_proposes_and_the_keeper_executes_it' (22036237) panicked at contracts/vault/tests/common/mod.rs:164:19:
+error: near_sandbox::error_kind::SandboxError - Error while binding socket to a port 0: Operation not permitted (os error 1)
+
+---- the_agent_refuses_a_second_proposal_before_spending_gas stdout ----
+
+thread 'the_agent_refuses_a_second_proposal_before_spending_gas' (22039206) panicked at contracts/vault/tests/common/mod.rs:164:19:
+error: near_sandbox::error_kind::SandboxError - Error while binding socket to a port 0: Operation not permitted (os error 1)
+
+
+failures:
+    a_gate_that_closes_is_reported_as_rejected
+    an_unretained_proposal_outcome_is_unknown
+    quote_driven_rebalance_reaches_a_signed_intent_and_mock_relay_acknowledgement
+    the_agent_proposes_and_the_keeper_executes_it
+    the_agent_refuses_a_second_proposal_before_spending_gas
+
+test result: FAILED. 0 passed; 5 failed; 0 ignored; 0 measured; 0 filtered out; finished in 99.85s
+
+error: test failed, to rerun pass `-p mandate-vault --test agent`
+
+RESTRICTED_ATTEMPT_EXIT_CODE: 101
+RESTRICTED_ATTEMPT_ELAPSED_SEC: 110.79
+Finished UTC: 2026-11-06T17:36:43.337083+00:00
+
+ESCALATED RETRY: identical Cargo command, local socket binding permitted.
+Retry dispatch UTC: 2026-11-06T17:37:36.598Z
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.85s
+     Running tests/agent.rs (target/debug/deps/agent-d545893fe6b52146)
+
+running 5 tests
+test a_gate_that_closes_is_reported_as_rejected ... ok
+test an_unretained_proposal_outcome_is_unknown ... ok
+test quote_driven_rebalance_reaches_a_signed_intent_and_mock_relay_acknowledgement ... ok
+test the_agent_proposes_and_the_keeper_executes_it ... ok
+test the_agent_refuses_a_second_proposal_before_spending_gas ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 170.54s
+
+     Running tests/attacks.rs (target/debug/deps/attacks-d93a750217cfacc5)
+
+running 8 tests
+test attack_1_a_stranger_proposes_a_trade ... ok
+test attack_2_the_agent_trades_an_asset_outside_the_mandate ... ok
+test attack_3_an_oversized_trade_passes_the_agent_and_fails_the_gate ... ok
+test attack_4_the_agent_accepts_a_quote_far_below_the_oracle_value ... ok
+test attack_5_the_trade_is_priced_on_an_old_quote ... ok
+test attack_6_the_trade_is_priced_on_a_quote_from_the_future ... ok
+test attack_7_a_signed_trade_is_altered_before_settlement ... ok
+test attack_8_a_stolen_owner_key_cannot_loosen_the_cap_before_the_delay ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 295.32s
+
+     Running tests/execute_path.rs (target/debug/deps/execute_path-2fe618f602e21540)
+
+running 8 tests
+test a_funded_trade_is_signed_and_intents_accepts_it ... ok
+test a_missing_oracle_price_rejects_and_counts_a_strike ... ok
+test a_paused_vault_does_not_execute ... ok
+test a_signed_intent_blocks_the_next_proposal ... ok
+test a_tampered_payload_is_rejected_by_the_real_verifier ... ok
+test an_old_price_is_refused_by_the_mandate_age_limit ... ok
+test an_unfunded_vault_is_rejected_and_three_strikes_halt_the_vault ... ok
+test execute_without_a_proposal_is_refused ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 289.59s
+
+     Running tests/gas.rs (target/debug/deps/gas-5013040329367e6d)
+
+running 2 tests
+test gas_by_feed_count ... ok
+test gas_per_call ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 229.07s
+
+     Running tests/intents_registration.rs (target/debug/deps/intents_registration-b6f1e2bb0b45f49b)
+
+running 2 tests
+test signer_stand_in_rejects_a_key_request_for_another_account ... ok
+test vault_registers_its_mpc_key_on_the_real_intents_contract ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 62.95s
+
+     Running tests/keeper.rs (target/debug/deps/keeper-351d9891c7191981)
+
+running 4 tests
+test keeper_does_nothing_without_a_proposal ... ok
+test keeper_runs_a_proposal_then_reports_the_signed_intent_once ... ok
+test keeper_waits_for_registration_without_executing ... ok
+test keeper_waits_while_paused_without_executing ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 131.35s
+
+     Running tests/pyth_path.rs (target/debug/deps/pyth_path-6c121aea7e1a0a66)
+
+running 4 tests
+test pyth_confidence_one_unit_over_limit_rejects_without_quota_or_signature ... ok
+test pyth_documented_response_signs_exact_intent_and_fixture_verifies_it ... ok
+test pyth_null_traded_price_rejects_without_quota_or_signature ... ok
+test pyth_twenty_asset_callback_chain_fits_gas_and_checks_every_held_feed ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 199.50s
+
+     Running tests/recovery_protocol.rs (target/debug/deps/recovery_protocol-c6be37f918cb64d0)
+
+running 8 tests
+test committed_marker_is_not_proof_of_terminal_delivery_or_absence_of_refund ... ok
+test failed_second_action_rolls_back_the_first_debit_and_scheduled_transfer ... ok
+test global_supply_exposes_future_voucher_preseeded_outside_both_sinks ... ok
+test native_voucher_retains_confirmed_refund_and_each_retry_requires_a_new_unit ... ok
+test preexisting_named_sentinel_can_erase_the_proof_and_enable_duplicate_debit ... ok
+test same_receipt_marker_commits_with_the_debit_and_survives_a_masking_credit ... ok
+test unique_voucher_cancellation_wins_and_blocks_two_delayed_originals ... ok
+test unique_voucher_original_wins_preserves_the_withdrawal_return_and_cannot_be_forged ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 290.71s
+
+     Running tests/sandbox.rs (target/debug/deps/sandbox-6c011d517d904b1e)
+
+running 4 tests
+test a_new_agent_waits_24_hours_on_a_real_chain ... ok
+test outside_accounts_cannot_invoke_callbacks_or_migration ... ok
+test owner_controls_on_a_real_chain ... ok
+test wasm_migration_consumes_historical_state_and_writes_current_state ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 59.49s
+
+     Running tests/settlement.rs (target/debug/deps/settlement-1bea04fc6219cbe3)
+
+running 1 test
+test matched_funded_settlement_is_atomic_and_replay_is_refused ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 43.67s
+
+     Running tests/withdraw.rs (target/debug/deps/withdraw-4e4567b56b63a0ca)
+
+running 2 tests
+test intents_moves_tokens_out_for_the_account_that_holds_them ... ok
+test owner_queues_and_cancels_a_withdrawal_on_a_real_chain ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 56.50s
+
+     Running tests/withdrawal_lifecycle.rs (target/debug/deps/withdrawal_lifecycle-b3a3de1a8e7f449a)
+
+running 4 tests
+test a_refunded_vault_withdrawal_requeues_and_retries_the_same_authorized_request ... FAILED
+test production_cancellation_proof_blocks_two_late_originals_and_requires_owner_rearm_before_new_id ... FAILED
+test production_recovery_reads_sent_proof_despite_masking_credit_and_consumes_only_the_old_authorization ... FAILED
+test vault_withdrawal_reads_sends_and_confirms_the_actual_transfer ... FAILED
+
+failures:
+
+---- a_refunded_vault_withdrawal_requeues_and_retries_the_same_authorized_request stdout ----
+CLOCK | sandbox_fast_forward 1000 blocks | 298 chain seconds
+
+thread 'a_refunded_vault_withdrawal_requeues_and_retries_the_same_authorized_request' (22633827) panicked at contracts/vault/tests/withdrawal_lifecycle.rs:250:34:
+error: alloc::string::String - Failure(ExecutionResult { total_gas_burnt: NearGas { inner: 1965991209016 }, transaction: SignedTransaction { transaction: V0(TransactionV0 { signer_id: AccountId("owner.sandbox"), public_key: [secret-like value, redacted], nonce: 4, receiver_id: AccountId("vault.sandbox"), block_hash: 29Jn4ZvZFNgcotfqe8EqSAFfYxj823jLWZwmtQdSxUd2, actions: [FunctionCall(FunctionCallAction { method_name: "apply_pending_withdrawal", args: [123, 125], gas: NearGas { inner: 240000000000000 }, deposit: NearToken { inner: 0 } })] }), signature: [secret-like value, redacted], hash: OnceLock(<uninit>) }, receipts: [ExecutionOutcome { transaction_hash: 3kytS5hCahoCY2PgfFSoFnfzyAWPKP4mh3dvQ2CvAnMc, block_hash: 8bdP2Qv46niqtBxSWREmM3TRgpuiYX5tJSJzjy7gB1m7, logs: [], receipt_ids: [EU7nboNv6iXEf9CCCBJFhFscUi59VeHJNXZogM4Ccs1y], gas_burnt: NearGas { inner: 1433509369926 }, tokens_burnt: NearToken { inner: 143350936992600000000 }, executor_id: AccountId("vault.sandbox"), status: Failure(ActionError(ActionError { index: Some(0), kind: FunctionCallError(ExecutionError("Smart contract panicked: withdrawal requires at least 280 TGas")) })) }, ExecutionOutcome { transaction_hash: EU7nboNv6iXEf9CCCBJFhFscUi59VeHJNXZogM4Ccs1y, block_hash: Ec1KzWg5n5NEzvWJtEUQxbJ1oCAjtxpzCJNU6zjP69ia, logs: [], receipt_ids: [], gas_burnt: NearGas { inner: 223182562500 }, tokens_burnt: NearToken { inner: 0 }, executor_id: AccountId("owner.sandbox"), status: SuccessValue("") }], value: ActionError(ActionError { index: Some(0), kind: FunctionCallError(ExecutionError("Smart contract panicked: withdrawal requires at least 280 TGas")) }) })
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- production_cancellation_proof_blocks_two_late_originals_and_requires_owner_rearm_before_new_id stdout ----
+
+thread 'production_cancellation_proof_blocks_two_late_originals_and_requires_owner_rearm_before_new_id' (22668946) panicked at contracts/vault/tests/withdrawal_lifecycle.rs:475:25:
+error: alloc::string::String - Failure(ExecutionResult { total_gas_burnt: NearGas { inner: 1966974837798 }, transaction: SignedTransaction { transaction: V0(TransactionV0 { signer_id: AccountId("owner.sandbox"), public_key: [secret-like value, redacted], nonce: 2, receiver_id: AccountId("vault.sandbox"), block_hash: HZ4RxoX3Be49s2iRUPo3GmUue17AC5aJf3LzmTeEdYJG, actions: [FunctionCall(FunctionCallAction { method_name: "recover_withdrawal", args: [123, 125], gas: NearGas { inner: 110000000000000 }, deposit: NearToken { inner: 0 } })] }), signature: [secret-like value, redacted], hash: OnceLock(<uninit>) }, receipts: [ExecutionOutcome { transaction_hash: 8ZCrfbQGvpXnc6knJDrG6ExoMEmpcqk3xGTuxFTJkzUn, block_hash: Go8uw9x2NkyLehcdsJDq3VyHPGKT8ZhVEhRRZWVtMm4K, logs: [], receipt_ids: [HGvJVAg89T8npikWc7cC5Kcz38KaBaxUrdTijig4Bp6y], gas_burnt: NearGas { inner: 1434779100998 }, tokens_burnt: NearToken { inner: 143477910099800000000 }, executor_id: AccountId("vault.sandbox"), status: Failure(ActionError(ActionError { index: Some(0), kind: FunctionCallError(ExecutionError("Smart contract panicked: recovery requires at least 140 TGas")) })) }, ExecutionOutcome { transaction_hash: HGvJVAg89T8npikWc7cC5Kcz38KaBaxUrdTijig4Bp6y, block_hash: DDS94QA3R1gnEPJwxZviQ1XvSy6eGV653t5Qn2WxRAre, logs: [], receipt_ids: [], gas_burnt: NearGas { inner: 223182562500 }, tokens_burnt: NearToken { inner: 0 }, executor_id: AccountId("owner.sandbox"), status: SuccessValue("") }], value: ActionError(ActionError { index: Some(0), kind: FunctionCallError(ExecutionError("Smart contract panicked: recovery requires at least 140 TGas")) }) })
+
+---- production_recovery_reads_sent_proof_despite_masking_credit_and_consumes_only_the_old_authorization stdout ----
+
+thread 'production_recovery_reads_sent_proof_despite_masking_credit_and_consumes_only_the_old_authorization' (22688630) panicked at contracts/vault/tests/withdrawal_lifecycle.rs:451:25:
+error: alloc::string::String - Failure(ExecutionResult { total_gas_burnt: NearGas { inner: 1966974837798 }, transaction: SignedTransaction { transaction: V0(TransactionV0 { signer_id: AccountId("owner.sandbox"), public_key: [secret-like value, redacted], nonce: 2, receiver_id: AccountId("vault.sandbox"), block_hash: 3NGFj6fudH65woi18cRPqKYjXm5p39nduGNNwquDuoFB, actions: [FunctionCall(FunctionCallAction { method_name: "recover_withdrawal", args: [123, 125], gas: NearGas { inner: 110000000000000 }, deposit: NearToken { inner: 0 } })] }), signature: [secret-like value, redacted], hash: OnceLock(<uninit>) }, receipts: [ExecutionOutcome { transaction_hash: JD7w4NPJfrWaE26mhutBQTPQwUFDZP5hmgNqsaZuwVTX, block_hash: 8w7guHt4dU7NNVsux1hydDknrGAwGywqJKp6T8LohQk7, logs: [], receipt_ids: [HKFBgdg2w49zU1FujSdYN14Kn5oQQVTaM89tnFPC1ic1], gas_burnt: NearGas { inner: 1434779100998 }, tokens_burnt: NearToken { inner: 143477910099800000000 }, executor_id: AccountId("vault.sandbox"), status: Failure(ActionError(ActionError { index: Some(0), kind: FunctionCallError(ExecutionError("Smart contract panicked: recovery requires at least 140 TGas")) })) }, ExecutionOutcome { transaction_hash: HKFBgdg2w49zU1FujSdYN14Kn5oQQVTaM89tnFPC1ic1, block_hash: 59h7fcxQrBe1A8Ac3iZ7nrsoUH1wTuzsahFBQYHo6Rbp, logs: [], receipt_ids: [], gas_burnt: NearGas { inner: 223182562500 }, tokens_burnt: NearToken { inner: 0 }, executor_id: AccountId("owner.sandbox"), status: SuccessValue("") }], value: ActionError(ActionError { index: Some(0), kind: FunctionCallError(ExecutionError("Smart contract panicked: recovery requires at least 140 TGas")) }) })
+
+---- vault_withdrawal_reads_sends_and_confirms_the_actual_transfer stdout ----
+CLOCK | sandbox_fast_forward 1000 blocks | 298 chain seconds
+
+thread 'vault_withdrawal_reads_sends_and_confirms_the_actual_transfer' (22700666) panicked at contracts/vault/tests/withdrawal_lifecycle.rs:186:31:
+error: alloc::string::String - Failure(ExecutionResult { total_gas_burnt: NearGas { inner: 1965991209016 }, transaction: SignedTransaction { transaction: V0(TransactionV0 { signer_id: AccountId("owner.sandbox"), public_key: [secret-like value, redacted], nonce: 4, receiver_id: AccountId("vault.sandbox"), block_hash: BvCA7RCUtCVifCUZPj5BZPaFPLfexaYAjzAjdqXJuG7P, actions: [FunctionCall(FunctionCallAction { method_name: "apply_pending_withdrawal", args: [123, 125], gas: NearGas { inner: 240000000000000 }, deposit: NearToken { inner: 0 } })] }), signature: [secret-like value, redacted], hash: OnceLock(<uninit>) }, receipts: [ExecutionOutcome { transaction_hash: iuSSj2s9qoSEbnc7z5QsAFeTN35Jk1z7bRkbuXiMjnU, block_hash: 6Gg26DRvRHznWhHqk2wHfHDKZr336oxYQrixrZZ3tSD9, logs: [], receipt_ids: [H2KX9GWhwT6jd7MomgeyaZviyTLJcpGn6kxUyb1Rgjhh], gas_burnt: NearGas { inner: 1433509369926 }, tokens_burnt: NearToken { inner: 143350936992600000000 }, executor_id: AccountId("vault.sandbox"), status: Failure(ActionError(ActionError { index: Some(0), kind: FunctionCallError(ExecutionError("Smart contract panicked: withdrawal requires at least 280 TGas")) })) }, ExecutionOutcome { transaction_hash: H2KX9GWhwT6jd7MomgeyaZviyTLJcpGn6kxUyb1Rgjhh, block_hash: 6BJXKKcy8JrvHwZFNEXAPM6tcb2fiYBv3ecQdw7gG7pR, logs: [], receipt_ids: [], gas_burnt: NearGas { inner: 223182562500 }, tokens_burnt: NearToken { inner: 0 }, executor_id: AccountId("owner.sandbox"), status: SuccessValue("") }], value: ActionError(ActionError { index: Some(0), kind: FunctionCallError(ExecutionError("Smart contract panicked: withdrawal requires at least 280 TGas")) }) })
+
+
+failures:
+    a_refunded_vault_withdrawal_requeues_and_retries_the_same_authorized_request
+    production_cancellation_proof_blocks_two_late_originals_and_requires_owner_rearm_before_new_id
+    production_recovery_reads_sent_proof_despite_masking_credit_and_consumes_only_the_old_authorization
+    vault_withdrawal_reads_sends_and_confirms_the_actual_transfer
+
+test result: FAILED. 0 passed; 4 failed; 0 ignored; 0 measured; 0 filtered out; finished in 150.08s
+
+error: test failed, to rerun pass `-p mandate-vault --test withdrawal_lifecycle`
+
+HISTORICAL RUN SUMMARY — NOT FINAL FROZEN-REVISION VERIFICATION
+Escalated command exit code: 101
+Targets: 12
+Passed: 48; failed: 4; ignored: 0
+Sum of exact Cargo-reported target durations: 1978.77 seconds
+Observed dispatch-to-completion-confirmation elapsed: 2082.57 seconds (includes polling gaps)
+Production sources changed during the run: contracts/vault/src/lib.rs; contracts/vault/src/withdrawal.rs; contracts/vault/src/remediation_tests.rs.
+Four lifecycle entry failures: old callers attached240/110TGas; patched guards require280/140TGas. No final lifecycle success claim.
+A complete frozen-revision rerun including sealed_deployment is required.

@@ -10,8 +10,10 @@ publish = false
 
 [dependencies]
 near-api.workspace = true
-near-sdk.workspace = true
+near-sdk = { workspace = true, features = ["non-contract-usage"] }
 tokio.workspace = true
+mandate-agent = { path = "../agent" }
+serde = { version = "1", features = ["derive"] }
 
 [lints]
 workspace = true

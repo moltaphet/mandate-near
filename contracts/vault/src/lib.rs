@@ -23,7 +23,11 @@ pub mod engine;
 pub mod intent;
 pub mod mandate;
 pub mod math;
+mod migration;
 pub mod oracle;
+pub mod pyth;
+mod withdrawal;
+pub use withdrawal::{MIN_WITHDRAWAL_GAS_TGAS, MIN_WITHDRAWAL_RECOVERY_GAS_TGAS, WithdrawalStage};
 
 use std::collections::BTreeMap;
 
@@ -40,6 +44,15 @@ pub use crate::engine::{TradingState, TradingStateView};
 use crate::intent::{TokenDiff, token_diff_payload, v1_nonce};
 pub use crate::mandate::{AssetConfig, Mandate, MandateError, loosened_fields};
 use crate::oracle::{AssetView, PriceData, prices_for};
+
+/// Fixed at initialization. Switching providers requires a separately reviewed deployment.
+#[near(serializers = [json, borsh])]
+#[serde(rename_all = "snake_case")]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum OracleKind {
+    PriceOracle,
+    Pyth,
+}
 
 /// How long a pending proposal stays executable. Matches the 60 s target in docs/PROJECT.md.
 pub const PROPOSAL_TTL_SEC: u64 = 60;
@@ -100,6 +113,18 @@ pub struct InFlight {
     pub started_sec: u64,
 }
 
+/// Immutable interpretation of reads made by one execution.
+#[near(serializers = [borsh])]
+#[derive(Clone)]
+struct ExecutionContext {
+    id: U64,
+    revision: u64,
+    assets: Vec<AssetConfig>,
+    proposal_id: U64,
+    /// Last second at which every approved oracle price still satisfies the age guard.
+    price_valid_until_sec: Option<u64>,
+}
+
 /// An intent the MPC signer has signed. A keeper publishes it off chain; the
 /// verifier (`intents.near`) settles it only if the signature and nonce check out.
 #[near(serializers = [json, borsh])]
@@ -117,16 +142,24 @@ pub struct SignedIntent {
 }
 
 /// Result of one `execute` call.
-#[near(serializers = [json])]
+#[near(serializers = [json, borsh])]
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ExecutionOutcome {
     /// Every gate passed and the intent is signed and stored.
     Executed { proposal_id: U64, expires_sec: U64 },
     /// A gate closed. The proposal is consumed and a strike is counted.
     Rejected { code: String, reason: String },
-    /// A read or the signature failed. The proposal stays pending until it
-    /// expires, and no strike is counted.
+    /// A read or signing failed. No strike is counted; a failure after requesting
+    /// a signature retains the timed lock because signature absence is unproved.
     Failed { reason: String },
+}
+
+/// Only the most recent confirmed outcome is retained; this is not historical storage.
+#[near(serializers = [json, borsh])]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ProposalOutcome {
+    pub proposal_id: U64,
+    pub outcome: ExecutionOutcome,
 }
 
 /// How long a loosening of the mandate waits before it applies. Tightening applies at once.
@@ -169,6 +202,37 @@ pub struct PendingWithdrawal {
     /// Unix seconds from which `apply_pending_withdrawal` may send it.
     pub effective_sec: u64,
 }
+
+/// A withdrawal owns the guard until its identified callback or reconciliation resolves it.
+#[near(serializers = [json, borsh])]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ActiveWithdrawal {
+    pub id: U64,
+    pub request_seq: U64,
+    pub request: PendingWithdrawal,
+    pub started_sec: u64,
+    /// Set before sending; `None` means the balance read has not sent anything.
+    pub balance_before: Option<U128>,
+}
+
+#[near(serializers = [json, borsh])]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum WithdrawalOutcome {
+    Delivered {
+        withdrawal_id: U64,
+        amount: U128,
+    },
+    Failed {
+        withdrawal_id: U64,
+        reason: String,
+    },
+    /// Ledger debit confirmed; receiver delivery is not proved by this observation.
+    DebitObserved {
+        withdrawal_id: U64,
+    },
+}
+
+pub const WITHDRAW_RECOVERY_SEC: u64 = 300;
 
 /// What `set_mandate` did with the new mandate.
 #[near(serializers = [json])]
@@ -237,10 +301,26 @@ pub struct Vault {
     /// Moves on with every withdrawal request and cancel. A send that fails returns its
     /// request to the queue only while this number is still the one it was sent under.
     withdrawal_seq: u64,
+    config_revision: u64,
+    execution_context: Option<ExecutionContext>,
+    last_proposal_outcome: Option<ProposalOutcome>,
+    active_withdrawal: Option<ActiveWithdrawal>,
+    next_withdrawal_id: u64,
+    last_withdrawal_outcome: Option<WithdrawalOutcome>,
+    oracle_kind: OracleKind,
+    withdrawal_stage: Option<WithdrawalStage>,
+    withdrawal_retry_armed: Option<U64>,
 }
 
 #[near]
 impl Vault {
+    /// Upgrade only known, quiescent legacy layouts. Deployment authority is required.
+    #[init(ignore_state)]
+    #[private]
+    pub fn migrate() -> Self {
+        migration::migrate()
+    }
+
     /// For mainnet: talks to `v1.signer`, `intents.near` and `price-oracle.near`.
     #[init]
     pub fn new(owner: AccountId, mandate: Mandate) -> Self {
@@ -250,6 +330,7 @@ impl Vault {
             MAINNET_SIGNER.parse().unwrap_or_else(|_| env::panic_str("bad signer id")),
             MAINNET_INTENTS.parse().unwrap_or_else(|_| env::panic_str("bad intents id")),
             MAINNET_ORACLE.parse().unwrap_or_else(|_| env::panic_str("bad oracle id")),
+            OracleKind::PriceOracle,
         )
     }
 
@@ -262,7 +343,24 @@ impl Vault {
         intents: AccountId,
         oracle: AccountId,
     ) -> Self {
-        Self::init(owner, mandate, signer, intents, oracle)
+        Self::init(owner, mandate, signer, intents, oracle, OracleKind::PriceOracle)
+    }
+
+    /// Selects an immutable provider and explicit external accounts at deployment.
+    #[init]
+    pub fn new_with_oracle(
+        owner: AccountId,
+        mandate: Mandate,
+        signer: AccountId,
+        intents: AccountId,
+        oracle: AccountId,
+        oracle_kind: OracleKind,
+    ) -> Self {
+        Self::init(owner, mandate, signer, intents, oracle, oracle_kind)
+    }
+
+    pub fn get_oracle_kind(&self) -> OracleKind {
+        self.oracle_kind
     }
 
     /// Cooldown, daily turnover, high-water mark and signed-intent expiry.
@@ -319,7 +417,23 @@ impl Vault {
     }
 
     pub fn is_in_flight(&self) -> bool {
-        self.execution_locked(now_sec())
+        self.execution_locked(now_sec()) || self.active_withdrawal.is_some()
+    }
+
+    pub fn get_chain_time_sec(&self) -> u64 {
+        now_sec()
+    }
+
+    pub fn get_last_proposal_outcome(&self) -> Option<ProposalOutcome> {
+        self.last_proposal_outcome.clone()
+    }
+
+    pub fn get_withdrawal_status(&self) -> Option<ActiveWithdrawal> {
+        self.active_withdrawal.clone()
+    }
+
+    pub fn get_last_withdrawal_outcome(&self) -> Option<WithdrawalOutcome> {
+        self.last_withdrawal_outcome.clone()
     }
 
     /// Registers the vault's MPC-derived key on `intents.near`, so that
@@ -355,7 +469,7 @@ impl Vault {
     #[private]
     pub fn on_derived_key(
         &mut self,
-        #[callback_result] key: Result<String, PromiseError>,
+        #[callback_result(max_bytes = MAX_ANSWER_BYTES)] key: Result<String, PromiseError>,
     ) -> Promise {
         let key = match key {
             Ok(key) => key,
@@ -380,7 +494,7 @@ impl Vault {
     #[private]
     pub fn on_key_registered(
         &mut self,
-        #[callback_result] result: Result<(), PromiseError>,
+        #[callback_result(max_bytes = MAX_ANSWER_BYTES)] result: Result<(), PromiseError>,
     ) -> bool {
         // A failure never downgrades an earlier success.
         if result.is_ok() {
@@ -398,8 +512,9 @@ impl Vault {
     pub fn set_mandate(&mut self, mandate: Mandate) -> MandateChangeOutcome {
         assert_one_yocto();
         self.assert_owner();
-        validate_or_panic(&mandate);
+        validate_oracle_mandate(&mandate, self.oracle_kind);
         if loosened_fields(&self.mandate, &mandate).is_empty() {
+            self.advance_revision();
             self.mandate = mandate;
             self.pending_mandate = None;
             return MandateChangeOutcome::Applied;
@@ -416,6 +531,8 @@ impl Vault {
             env::panic_str("no mandate change is queued");
         };
         require!(now_sec() >= pending.effective_sec, "the mandate change is still in its delay");
+        validate_oracle_mandate(&pending.mandate, self.oracle_kind);
+        self.advance_revision();
         self.mandate = pending.mandate;
         self.pending_mandate = None;
     }
@@ -436,10 +553,10 @@ impl Vault {
 
     /// What `set_mandate` would do with this mandate, without doing it.
     pub fn simulate_mandate_change(&self, mandate: Mandate) -> MandateSimulation {
-        if let Err(err) = mandate.validate() {
+        if let Err(error) = oracle_mandate_validation(&mandate, self.oracle_kind) {
             return MandateSimulation {
                 valid: false,
-                error: Some(err.to_string()),
+                error: Some(error),
                 loosened_fields: vec![],
                 outcome: None,
             };
@@ -469,6 +586,7 @@ impl Vault {
         assert_one_yocto();
         self.assert_owner();
         if self.agent.is_none() {
+            self.advance_revision();
             self.agent = Some(agent);
             return;
         }
@@ -483,6 +601,7 @@ impl Vault {
             env::panic_str("no agent change is queued");
         };
         require!(now_sec() >= pending.effective_sec, "the agent change is still in its delay");
+        self.advance_revision();
         self.agent = Some(pending.agent);
         self.pending_agent = None;
     }
@@ -531,7 +650,9 @@ impl Vault {
             amount,
             effective_sec: now + WITHDRAW_DELAY_SEC,
         });
-        self.withdrawal_seq += 1;
+        self.withdrawal_seq =
+            self.withdrawal_seq.checked_add(1).expect("withdrawal sequence exhausted");
+        self.withdrawal_retry_armed = Some(U64(self.withdrawal_seq));
     }
 
     /// Drops a queued withdrawal before it is sent. Requires 1 yoctoNEAR.
@@ -541,7 +662,9 @@ impl Vault {
         self.assert_owner();
         require!(self.pending_withdrawal.is_some(), "no withdrawal is queued");
         self.pending_withdrawal = None;
-        self.withdrawal_seq += 1;
+        self.withdrawal_seq =
+            self.withdrawal_seq.checked_add(1).expect("withdrawal sequence exhausted");
+        self.withdrawal_retry_armed = None;
     }
 
     /// The queued withdrawal, if any.
@@ -549,9 +672,35 @@ impl Vault {
         self.pending_withdrawal.clone()
     }
 
-    /// Sends a queued withdrawal once its delay has passed. Anyone may call it: the owner fixed
-    /// the content when it was queued, and only the time and the vault's state are checked.
-    /// The withdrawal is taken before the call and queued again if the call fails.
+    /// Re-arms one safe retry without changing the owner-authorized request or maturity.
+    #[payable]
+    pub fn rearm_pending_withdrawal(&mut self) {
+        assert_one_yocto();
+        self.assert_owner();
+        require!(self.active_withdrawal.is_none(), "a withdrawal is unresolved");
+        require!(self.pending_withdrawal.is_some(), "no withdrawal is queued");
+        require!(!self.is_withdrawal_retry_armed(), "the withdrawal attempt is already armed");
+        self.withdrawal_retry_armed = Some(U64(self.withdrawal_seq));
+    }
+
+    pub fn is_withdrawal_retry_armed(&self) -> bool {
+        self.pending_withdrawal.is_some()
+            && self.withdrawal_retry_armed == Some(U64(self.withdrawal_seq))
+    }
+
+    pub fn get_withdrawal_stage(&self) -> Option<WithdrawalStage> {
+        self.withdrawal_stage
+    }
+
+    pub fn get_withdrawal_protocol(&self) -> String {
+        "unique_voucher_v1".into()
+    }
+
+    pub fn get_withdrawal_recovery_accounts(&self) -> (AccountId, AccountId) {
+        withdrawal::sinks()
+    }
+
+    /// Persists a unique id and spends the single owner-armed attempt before issuing its voucher.
     pub fn apply_pending_withdrawal(&mut self) -> Promise {
         let pending = self
             .pending_withdrawal
@@ -559,48 +708,164 @@ impl Vault {
             .unwrap_or_else(|| env::panic_str("no withdrawal is queued"));
         let now = now_sec();
         require!(now >= pending.effective_sec, "the withdrawal is still in its delay");
+        require!(self.active_withdrawal.is_none(), "a withdrawal is unresolved");
         require!(!self.execution_locked(now), "an execution is in progress");
         require!(
             self.trading.signed_intent_expires_at_sec <= now,
             "a signed intent is still outstanding"
         );
-        let token = token_account(&pending.asset_id)
-            .unwrap_or_else(|| env::panic_str("only nep141 assets can be withdrawn"));
+        require!(self.is_withdrawal_retry_armed(), "the owner must re-arm the withdrawal attempt");
+        require!(
+            env::prepaid_gas() >= Gas::from_tgas(MIN_WITHDRAWAL_GAS_TGAS),
+            "withdrawal requires at least 280 TGas"
+        );
+        require!(token_account(&pending.asset_id).is_some(), "only nep141 assets can be withdrawn");
+        require!(
+            pending.receiver != env::current_account_id() && pending.receiver != self.intents,
+            "the receiver cannot be the vault or intents.near"
+        );
+        let id = U64(self.next_withdrawal_id);
+        self.next_withdrawal_id =
+            self.next_withdrawal_id.checked_add(1).expect("withdrawal id exhausted");
+        self.withdrawal_retry_armed = None;
         self.pending_withdrawal = None;
-        let seq = U64(self.withdrawal_seq);
-        Promise::new(self.intents.clone())
-            .function_call(
-                "ft_withdraw".to_string(),
-                json!({
-                    "token": token,
-                    "receiver_id": pending.receiver,
-                    "amount": pending.amount,
-                })
-                .to_string()
-                .into_bytes(),
-                NearToken::from_yoctonear(1),
-                GAS_WITHDRAW,
-            )
-            .then(
-                Self::ext(env::current_account_id())
-                    .with_static_gas(GAS_CALLBACK)
-                    .on_withdrawn(pending, seq),
-            )
+        self.active_withdrawal = Some(ActiveWithdrawal {
+            id,
+            request_seq: U64(self.withdrawal_seq),
+            request: pending.clone(),
+            started_sec: now,
+            balance_before: None,
+        });
+        self.withdrawal_stage = Some(WithdrawalStage::Preparing);
+        self.prepare_withdrawal(id, &pending.asset_id)
     }
 
-    /// Puts a withdrawal back in the queue when it did not reach the receiver: the call
-    /// failed, or `intents.near` refunded it (a zero transfer). A failure returns only while
-    /// no newer request or cancel has happened since it was sent and nothing is queued.
     #[private]
-    pub fn on_withdrawn(
+    pub fn on_withdrawal_balance(&mut self, withdrawal_id: U64) -> PromiseOrValue<bool> {
+        let Some(active) = self.current_withdrawal(withdrawal_id, WithdrawalStage::Preparing)
+        else {
+            return PromiseOrValue::Value(false);
+        };
+        let before = match read_promise::<Vec<U128>>(0) {
+            Ok(b) if b.len() == 2 && b[0].0 == 1 && b[1].0 >= active.request.amount.0 => b[1],
+            _ => {
+                self.withdrawal_failed(
+                    active,
+                    "could not read a unique voucher and sufficient withdrawal balance",
+                );
+                return PromiseOrValue::Value(false);
+            }
+        };
+        // No original is scheduled until the unique CURRENT supply, source unit
+        // and both empty destinations are independently read for this same id.
+        PromiseOrValue::Promise(self.check_withdrawal_preparation(withdrawal_id, before))
+    }
+
+    #[private]
+    pub fn on_withdrawal_prepared(
         &mut self,
-        #[callback_result] result: Result<U128, PromiseError>,
-        pending: PendingWithdrawal,
-        seq: U64,
-    ) {
-        let delivered = matches!(result, Ok(sent) if sent.0 > 0);
-        if !delivered && seq.0 == self.withdrawal_seq && self.pending_withdrawal.is_none() {
-            self.pending_withdrawal = Some(pending);
+        withdrawal_id: U64,
+        balance_before: U128,
+    ) -> PromiseOrValue<bool> {
+        let Some(active) = self.current_withdrawal(withdrawal_id, WithdrawalStage::Preparing)
+        else {
+            return PromiseOrValue::Value(false);
+        };
+        if balance_before.0 < active.request.amount.0
+            || Self::voucher_snapshot_result() != Some((1, 1, 0, 0))
+        {
+            self.withdrawal_failed(
+                active,
+                "withdrawal voucher supply, source or destinations are not unique and empty",
+            );
+            return PromiseOrValue::Value(false);
+        }
+        self.active_withdrawal.as_mut().expect("active withdrawal").balance_before =
+            Some(balance_before);
+        self.withdrawal_stage = Some(WithdrawalStage::Dispatched);
+        PromiseOrValue::Promise(self.send_marked_withdrawal(&active))
+    }
+
+    #[private]
+    pub fn on_withdrawn(&mut self, withdrawal_id: U64) -> bool {
+        self.finish_withdrawal(withdrawal_id, read_promise::<U128>(0))
+    }
+
+    /// Before dispatch, invalidate the preparing id. Afterwards race its unique
+    /// voucher to cancellation; only authenticated positive destination proof releases the guard.
+    pub fn recover_withdrawal(&mut self) -> PromiseOrValue<bool> {
+        let active = self
+            .active_withdrawal
+            .clone()
+            .unwrap_or_else(|| env::panic_str("no withdrawal is unresolved"));
+        require!(
+            now_sec() >= active.started_sec.saturating_add(WITHDRAW_RECOVERY_SEC),
+            "the withdrawal recovery window has not passed"
+        );
+        if self.withdrawal_stage == Some(WithdrawalStage::Preparing) {
+            self.withdrawal_failed(active, "withdrawal preparation timed out before sending");
+            return PromiseOrValue::Value(true);
+        }
+        require!(
+            self.withdrawal_stage == Some(WithdrawalStage::Dispatched),
+            "invalid withdrawal phase"
+        );
+        require!(
+            env::prepaid_gas() >= Gas::from_tgas(MIN_WITHDRAWAL_RECOVERY_GAS_TGAS),
+            "recovery requires at least 140 TGas"
+        );
+        PromiseOrValue::Promise(self.cancel_withdrawal_voucher(active.id))
+    }
+
+    #[private]
+    pub fn on_withdrawal_cancelled(&mut self, withdrawal_id: U64) -> PromiseOrValue<bool> {
+        if self.current_withdrawal(withdrawal_id, WithdrawalStage::Dispatched).is_none() {
+            return PromiseOrValue::Value(false);
+        }
+        // Both successful and failed cancellation results require durable proof.
+        // A failed transfer may mean the original or a previous cancellation won.
+        if env::promise_results_count() == 1 {
+            match env::promise_result_checked(0, MAX_ANSWER_BYTES) {
+                Ok(_) => {
+                    env::log_str("withdrawal cancellation acknowledged; reading destination proof")
+                }
+                Err(_) => env::log_str(
+                    "withdrawal cancellation failed or unknown; reading destination proof",
+                ),
+            }
+        } else {
+            env::log_str("withdrawal cancellation result missing; reading destination proof");
+        }
+        PromiseOrValue::Promise(self.withdrawal_proof(withdrawal_id))
+    }
+
+    #[private]
+    pub fn on_withdrawal_reconciled(&mut self, withdrawal_id: U64) -> bool {
+        let Some(active) = self.current_withdrawal(withdrawal_id, WithdrawalStage::Dispatched)
+        else {
+            return false;
+        };
+        let Some((supply, source, sent, cancelled)) = Self::voucher_snapshot_result() else {
+            return false;
+        };
+        // Current-supply checks do not prove absence of historical outstanding
+        // burn/refund receipts. That is an explicit sealed-deployment premise.
+        if supply != 1 || source != 0 {
+            return false;
+        }
+        match (sent, cancelled) {
+            (1, 0) => {
+                self.active_withdrawal = None;
+                self.withdrawal_stage = None;
+                self.last_withdrawal_outcome =
+                    Some(WithdrawalOutcome::DebitObserved { withdrawal_id });
+                true
+            }
+            (0, 1) => {
+                self.withdrawal_failed(active, "withdrawal cancelled before debit");
+                true
+            }
+            _ => false,
         }
     }
     /// The agent submits a trade. Only high-level parameters are accepted;
@@ -614,6 +879,7 @@ impl Vault {
         reason_hash: String,
     ) -> U64 {
         self.assert_not_paused();
+        require!(self.active_withdrawal.is_none(), "a withdrawal is unresolved");
         require!(!self.halted, "proposals are halted by the circuit breaker");
         // An execution in flight still owns the pending proposal: its callbacks clear it.
         require!(
@@ -640,7 +906,8 @@ impl Vault {
         require!(is_hex_digest(&reason_hash), "reason_hash must be 64 hex characters");
 
         let id = self.next_proposal_id;
-        self.next_proposal_id += 1;
+        self.next_proposal_id =
+            self.next_proposal_id.checked_add(1).expect("proposal id exhausted");
         self.pending = Some(Proposal {
             id: U64(id),
             asset_in,
@@ -667,6 +934,7 @@ impl Vault {
     /// deposit) so the owner can stop trading as fast as possible.
     pub fn pause(&mut self) {
         self.assert_owner();
+        self.advance_revision();
         self.paused = true;
     }
 
@@ -688,6 +956,7 @@ impl Vault {
     /// signature leaves the proposal pending until it expires, with no strike.
     pub fn execute(&mut self) -> Promise {
         self.assert_not_paused();
+        require!(self.active_withdrawal.is_none(), "a withdrawal is unresolved");
         require!(!self.halted, "proposals are halted by the circuit breaker");
         let proposal =
             self.pending.clone().unwrap_or_else(|| env::panic_str("no pending proposal"));
@@ -700,8 +969,16 @@ impl Vault {
             "a signed intent is still outstanding"
         );
         let execution = U64(self.next_execution_id);
-        self.next_execution_id += 1;
+        self.next_execution_id =
+            self.next_execution_id.checked_add(1).expect("execution id exhausted");
         self.in_flight = Some(InFlight { id: execution, started_sec: now });
+        self.execution_context = Some(ExecutionContext {
+            id: execution,
+            revision: self.config_revision,
+            assets: self.mandate.assets.clone(),
+            proposal_id: proposal.id,
+            price_valid_until_sec: None,
+        });
 
         let token_ids: Vec<String> =
             self.mandate.assets.iter().map(|a| a.asset_id.clone()).collect();
@@ -724,31 +1001,50 @@ impl Vault {
     #[private]
     pub fn on_balances(
         &mut self,
-        #[callback_result] balances: Result<Vec<U128>, PromiseError>,
+        #[callback_result(max_bytes = MAX_ANSWER_BYTES)] balances: Result<Vec<U128>, PromiseError>,
         proposal: Proposal,
         execution: U64,
     ) -> PromiseOrValue<ExecutionOutcome> {
         if !self.is_current(execution) {
             return PromiseOrValue::Value(superseded());
         }
+        if !self.configuration_current(execution) {
+            return PromiseOrValue::Value(self.failed("the execution configuration changed"));
+        }
+        let requested = self.execution_context.as_ref().expect("execution snapshot").assets.clone();
         let balances = match balances {
-            Ok(b) if b.len() == self.mandate.assets.len() => b,
+            Ok(b) if b.len() == requested.len() => b,
             _ => return PromiseOrValue::Value(self.failed("could not read vault balances")),
         };
-        let held: Vec<(String, U128)> = self
-            .mandate
-            .assets
-            .iter()
-            .zip(balances)
-            .map(|(a, b)| (a.asset_id.clone(), b))
-            .collect();
+        let held: Vec<(String, U128)> =
+            requested.iter().zip(balances).map(|(a, b)| (a.asset_id.clone(), b)).collect();
 
         // Price every asset the trade touches or the vault holds, as the engine checks.
         let mut feeds = Vec::new();
-        for (asset, (id, balance)) in self.mandate.assets.iter().zip(&held) {
+        for (asset, (id, balance)) in requested.iter().zip(&held) {
             if balance.0 > 0 || *id == proposal.asset_in || *id == proposal.asset_out {
                 feeds.push(asset.price_feed_id.clone());
             }
+        }
+        if self.oracle_kind == OracleKind::Pyth {
+            feeds.sort_unstable();
+            feeds.dedup();
+            return PromiseOrValue::Promise(
+                Promise::new(self.oracle.clone())
+                    .function_call(
+                        "list_prices_no_older_than".to_string(),
+                        json!({ "price_ids": feeds, "age": self.mandate.max_price_age_sec })
+                            .to_string()
+                            .into_bytes(),
+                        NearToken::from_yoctonear(0),
+                        GAS_READ_PRICES,
+                    )
+                    .then(
+                        Self::ext(env::current_account_id())
+                            .with_static_gas(GAS_CALLBACK)
+                            .on_pyth_prices(proposal, held, execution),
+                    ),
+            );
         }
         PromiseOrValue::Promise(
             Promise::new(self.oracle.clone())
@@ -767,9 +1063,40 @@ impl Vault {
     }
 
     #[private]
+    pub fn on_pyth_prices(
+        &mut self,
+        proposal: Proposal,
+        held: Vec<(String, U128)>,
+        execution: U64,
+    ) -> PromiseOrValue<ExecutionOutcome> {
+        if !self.is_current(execution) {
+            return PromiseOrValue::Value(superseded());
+        }
+        if !self.configuration_current(execution) {
+            return PromiseOrValue::Value(self.failed("the execution configuration changed"));
+        }
+        if self.oracle_kind != OracleKind::Pyth {
+            return PromiseOrValue::Value(self.failed("the oracle provider does not match"));
+        }
+        if !self.window_open() {
+            return PromiseOrValue::Value(self.failed("the execution signing window expired"));
+        }
+        let prices = match read_promise::<pyth::PythPrices>(0) {
+            Ok(prices) => prices,
+            Err(reason) => return PromiseOrValue::Value(self.failed(&reason)),
+        };
+        let market = Market {
+            now_sec: now_sec(),
+            prices: pyth::prices_for(&self.mandate, &prices),
+            balances: held.into_iter().map(|(id, balance)| (id, balance.0)).collect(),
+        };
+        self.approve_market(proposal, market, execution)
+    }
+
+    #[private]
     pub fn on_price_data(
         &mut self,
-        #[callback_result] data: Result<PriceData, PromiseError>,
+        #[callback_result(max_bytes = MAX_ANSWER_BYTES)] data: Result<PriceData, PromiseError>,
         proposal: Proposal,
         held: Vec<(String, U128)>,
         feeds: Vec<String>,
@@ -777,6 +1104,9 @@ impl Vault {
     ) -> PromiseOrValue<ExecutionOutcome> {
         if !self.is_current(execution) {
             return PromiseOrValue::Value(superseded());
+        }
+        if !self.configuration_current(execution) {
+            return PromiseOrValue::Value(self.failed("the execution configuration changed"));
         }
         let data = match data {
             Ok(d) => d,
@@ -818,6 +1148,12 @@ impl Vault {
         if !self.is_current(execution) {
             return PromiseOrValue::Value(superseded());
         }
+        if !self.configuration_current(execution) {
+            return PromiseOrValue::Value(self.failed("the execution configuration changed"));
+        }
+        if data.timestamp.0 > env::block_timestamp().saturating_add(5_000_000_000) {
+            return PromiseOrValue::Value(self.failed("the oracle snapshot is in the future"));
+        }
         let mut assets = BTreeMap::new();
         for (i, feed) in feeds.into_iter().enumerate() {
             match read_promise::<Option<AssetView>>(i as u64) {
@@ -833,6 +1169,28 @@ impl Vault {
             prices: prices_for(&self.mandate, &data, &assets),
             balances: held.into_iter().map(|(id, b)| (id, b.0)).collect(),
         };
+        self.approve_market(proposal, market, execution)
+    }
+
+    #[private]
+    pub fn on_salt(
+        &mut self,
+        #[callback_result(max_bytes = MAX_ANSWER_BYTES)] salt: Result<String, PromiseError>,
+        proposal: Proposal,
+        next_state: TradingState,
+        execution: U64,
+    ) -> PromiseOrValue<ExecutionOutcome> {
+        self.sign_approved(salt, proposal, next_state, execution)
+    }
+}
+
+impl Vault {
+    fn approve_market(
+        &mut self,
+        proposal: Proposal,
+        market: Market,
+        execution: U64,
+    ) -> PromiseOrValue<ExecutionOutcome> {
         let trade = Trade {
             asset_in: proposal.asset_in.clone(),
             asset_out: proposal.asset_out.clone(),
@@ -842,6 +1200,18 @@ impl Vault {
         match check_trade(&self.mandate, &self.trading, &trade, &market) {
             Err(err) => PromiseOrValue::Value(self.reject(&err)),
             Ok(approval) => {
+                self.execution_context
+                    .as_mut()
+                    .expect("execution snapshot")
+                    .price_valid_until_sec = market
+                    .prices
+                    .values()
+                    .map(|price| {
+                        price
+                            .publish_time_sec
+                            .saturating_add(u64::from(self.mandate.max_price_age_sec))
+                    })
+                    .min();
                 PromiseOrValue::Promise(
                     Promise::new(self.intents.clone())
                         .function_call(
@@ -860,10 +1230,9 @@ impl Vault {
         }
     }
 
-    #[private]
-    pub fn on_salt(
+    fn sign_approved(
         &mut self,
-        #[callback_result] salt: Result<String, PromiseError>,
+        salt: Result<String, PromiseError>,
         proposal: Proposal,
         next_state: TradingState,
         execution: U64,
@@ -878,6 +1247,20 @@ impl Vault {
         // The owner's pause also stops an execution that is already under way.
         if self.paused {
             return PromiseOrValue::Value(self.failed("the vault is paused"));
+        }
+        if !self.configuration_current(execution) {
+            return PromiseOrValue::Value(self.failed("the execution configuration changed"));
+        }
+        if next_state.signed_intent_expires_at_sec <= now_sec() {
+            return PromiseOrValue::Value(self.failed("the approved intent deadline has passed"));
+        }
+        let Some(price_deadline) =
+            self.execution_context.as_ref().and_then(|ctx| ctx.price_valid_until_sec)
+        else {
+            return PromiseOrValue::Value(self.failed("the price approval is not recorded"));
+        };
+        if now_sec() > price_deadline {
+            return PromiseOrValue::Value(self.failed("the approved prices have become stale"));
         }
         let salt = salt
             .ok()
@@ -909,6 +1292,9 @@ impl Vault {
             Err(err) => return PromiseOrValue::Value(self.failed(&err.to_string())),
         };
 
+        // A signature may escape even when its callback fails or arrives too late.
+        // Reserve the approved quota before dispatch; never refund it from a callback.
+        self.trading = next_state.clone();
         PromiseOrValue::Promise(
             Promise::new(self.signer.clone())
                 .function_call(
@@ -932,11 +1318,17 @@ impl Vault {
                 ),
         )
     }
+}
 
+#[near]
+impl Vault {
     #[private]
     pub fn on_signed(
         &mut self,
-        #[callback_result] response: Result<SignatureResponse, PromiseError>,
+        #[callback_result(max_bytes = MAX_ANSWER_BYTES)] response: Result<
+            SignatureResponse,
+            PromiseError,
+        >,
         proposal: Proposal,
         payload: String,
         next_state: TradingState,
@@ -947,8 +1339,11 @@ impl Vault {
         }
         let signature = match response {
             Ok(r) if r.scheme == "Ed25519" && r.signature.len() == 64 => r.signature,
-            // The call itself failed: no signature exists, so the lock can go.
-            Err(_) => return self.failed("the MPC signer call failed"),
+            // Post-request failure cannot prove that no valid signature became visible.
+            Err(PromiseError::Failed) => {
+                return self.failed_holding_lock("the MPC signer call failed");
+            }
+            Err(_) => return self.failed_holding_lock("the MPC signer answer was not readable"),
             // An answer that is not an Ed25519 signature may still carry one: keep the lock.
             Ok(_) => {
                 return self
@@ -966,11 +1361,16 @@ impl Vault {
             signature: format!("ed25519:{}", bs58::encode(&signature).into_string()),
             expires_sec,
         });
-        self.trading = next_state;
-        self.pending = None;
+        if self.pending.as_ref().is_some_and(|p| p.id == proposal.id) {
+            self.pending = None;
+        }
         self.record_approval();
         self.in_flight = None;
-        ExecutionOutcome::Executed { proposal_id: proposal.id, expires_sec: U64(expires_sec) }
+        let outcome =
+            ExecutionOutcome::Executed { proposal_id: proposal.id, expires_sec: U64(expires_sec) };
+        self.last_proposal_outcome =
+            Some(ProposalOutcome { proposal_id: proposal.id, outcome: outcome.clone() });
+        outcome
     }
 }
 
@@ -981,6 +1381,7 @@ impl Vault {
         signer: AccountId,
         intents: AccountId,
         oracle: AccountId,
+        oracle_kind: OracleKind,
     ) -> Self {
         // The owner must be an account that can act on its own. The vault cannot sign as
         // itself once its full-access keys are removed, so an owner equal to the vault
@@ -989,7 +1390,8 @@ impl Vault {
             owner != env::current_account_id(),
             "the owner cannot be the vault account itself"
         );
-        validate_or_panic(&mandate);
+        withdrawal::sinks();
+        validate_oracle_mandate(&mandate, oracle_kind);
         Self {
             owner,
             mandate,
@@ -1012,19 +1414,34 @@ impl Vault {
             pending_agent: None,
             pending_withdrawal: None,
             withdrawal_seq: 0,
+            config_revision: 0,
+            execution_context: None,
+            last_proposal_outcome: None,
+            active_withdrawal: None,
+            next_withdrawal_id: 1,
+            last_withdrawal_outcome: None,
+            oracle_kind,
+            withdrawal_stage: None,
+            withdrawal_retry_armed: None,
         }
     }
 
     /// A closed gate: counts a strike, consumes the proposal. No signature was requested.
     fn reject(&mut self, err: &TradeError) -> ExecutionOutcome {
+        let proposal_id = self.pending.as_ref().map(|p| p.id);
         self.record_rejection();
         self.pending = None;
         self.in_flight = None;
-        ExecutionOutcome::Rejected { code: err.code().to_string(), reason: err.to_string() }
+        let outcome =
+            ExecutionOutcome::Rejected { code: err.code().to_string(), reason: err.to_string() };
+        if let Some(proposal_id) = proposal_id {
+            self.last_proposal_outcome =
+                Some(ProposalOutcome { proposal_id, outcome: outcome.clone() });
+        }
+        outcome
     }
 
-    /// A failed read or signature call: keeps the proposal, counts nothing. The lock is
-    /// released, because no signature was obtained.
+    /// A failure before requesting signing: keeps the proposal, counts nothing.
     fn failed(&mut self, reason: &str) -> ExecutionOutcome {
         self.in_flight = None;
         ExecutionOutcome::Failed { reason: reason.to_string() }
@@ -1054,7 +1471,21 @@ impl Vault {
     /// Callbacks act only for the execution that holds the lock. A late callback from an
     /// earlier execution changes nothing.
     fn is_current(&self, execution: U64) -> bool {
-        self.in_flight.as_ref().is_some_and(|run| run.id == execution)
+        self.execution_locked(now_sec())
+            && self.in_flight.as_ref().is_some_and(|run| run.id == execution)
+    }
+
+    fn configuration_current(&self, execution: U64) -> bool {
+        self.execution_context.as_ref().is_some_and(|ctx| {
+            ctx.id == execution
+                && ctx.revision == self.config_revision
+                && self.pending.as_ref().is_some_and(|p| p.id == ctx.proposal_id)
+        })
+    }
+
+    fn advance_revision(&mut self) {
+        self.config_revision =
+            self.config_revision.checked_add(1).expect("configuration revision exhausted");
     }
 
     fn assert_owner(&self) {
@@ -1089,9 +1520,15 @@ fn now_sec() -> u64 {
 /// Result of the cross-contract call at `index` in the current callback.
 /// Joined calls (`Promise::and`) arrive as one callback, indexed in order.
 fn read_promise<T: DeserializeOwned>(index: u64) -> Result<T, String> {
+    if index >= env::promise_results_count() {
+        return Err(format!("cross-contract read {index} is missing"));
+    }
     // Bounded, so an oversized answer fails the callback cleanly instead of running out of gas.
-    let bytes = env::promise_result_checked(index, MAX_ANSWER_BYTES)
-        .map_err(|_| format!("cross-contract read {index} failed"))?;
+    let bytes =
+        env::promise_result_checked(index, MAX_ANSWER_BYTES).map_err(|error| match error {
+            PromiseError::Failed => format!("cross-contract read {index} failed"),
+            _ => format!("cross-contract read {index} exceeded the answer limit"),
+        })?;
     serde_json::from_slice(&bytes).map_err(|e| format!("bad answer {index}: {e}"))
 }
 
@@ -1100,10 +1537,17 @@ fn to_hex(bytes: &[u8]) -> String {
 }
 
 fn from_hex(s: &str) -> Option<Vec<u8>> {
-    if !s.len().is_multiple_of(2) {
+    if !s.len().is_multiple_of(2) || !s.is_ascii() {
         return None;
     }
-    (0..s.len()).step_by(2).map(|i| u8::from_str_radix(&s[i..i + 2], 16).ok()).collect()
+    s.as_bytes()
+        .chunks_exact(2)
+        .map(|pair| {
+            let high = (pair[0] as char).to_digit(16)?;
+            let low = (pair[1] as char).to_digit(16)?;
+            Some(((high << 4) | low) as u8)
+        })
+        .collect()
 }
 
 fn is_hex_digest(s: &str) -> bool {
@@ -1117,14 +1561,34 @@ fn superseded() -> ExecutionOutcome {
 
 /// The token account of a `nep141:` asset id, or `None` for any other kind of asset.
 fn token_account(asset_id: &str) -> Option<&str> {
-    asset_id.strip_prefix("nep141:").filter(|token| !token.is_empty())
+    asset_id.strip_prefix("nep141:").filter(|account| account.parse::<AccountId>().is_ok())
+}
+
+fn oracle_mandate_validation(mandate: &Mandate, kind: OracleKind) -> Result<(), String> {
+    mandate.validate().map_err(|error| error.to_string())?;
+    if kind == OracleKind::Pyth
+        && !mandate.assets.iter().all(|asset| pyth::valid_feed_id(&asset.price_feed_id))
+    {
+        return Err("Pyth price feed ids must be 64 lowercase hexadecimal characters".to_string());
+    }
+    Ok(())
 }
 
 fn validate_or_panic(mandate: &Mandate) {
-    if let Err(err) = mandate.validate() {
-        env::panic_str(&err.to_string());
+    validate_oracle_mandate(mandate, OracleKind::PriceOracle);
+}
+
+fn validate_oracle_mandate(mandate: &Mandate, kind: OracleKind) {
+    if let Err(error) = oracle_mandate_validation(mandate, kind) {
+        env::panic_str(&error);
     }
 }
+
+#[cfg(test)]
+mod provider_tests;
+
+#[cfg(test)]
+mod remediation_tests;
 
 #[cfg(test)]
 mod tests {
@@ -1364,6 +1828,13 @@ mod tests {
         v.request_withdrawal(USDC.into(), accounts(4), U128(1_000_000));
     }
 
+    fn sent_phase(v: &mut Vault) -> U64 {
+        let active = v.active_withdrawal.as_mut().expect("active");
+        active.balance_before = Some(active.request.amount);
+        v.withdrawal_stage = Some(WithdrawalStage::Dispatched);
+        active.id
+    }
+
     #[test]
     fn a_withdrawal_waits_for_the_delay() {
         let mut v = vault();
@@ -1466,16 +1937,16 @@ mod tests {
     }
 
     #[test]
-    fn a_failed_withdrawal_is_queued_again() {
+    fn a_failed_dispatched_withdrawal_stays_locked_without_retry() {
         let mut v = vault();
         queue_withdrawal(&mut v);
-        let pending = v.get_pending_withdrawal().expect("queued");
         context_at(accounts(2), 0, T0 + WITHDRAW_DELAY_SEC);
         let _ = v.apply_pending_withdrawal();
-        let seq = U64(v.withdrawal_seq);
+        let id = sent_phase(&mut v);
         context(accounts(0), 0);
-        v.on_withdrawn(Err(PromiseError::Failed), pending.clone(), seq);
-        assert_eq!(v.get_pending_withdrawal(), Some(pending));
+        v.finish_withdrawal(id, Err("cross-contract read 0 failed".into()));
+        assert_eq!(v.get_pending_withdrawal(), None);
+        assert!(v.active_withdrawal.is_some());
     }
 
     #[test]
@@ -1486,9 +1957,9 @@ mod tests {
         let pending = v.get_pending_withdrawal().expect("queued");
         context_at(accounts(2), 0, T0 + WITHDRAW_DELAY_SEC);
         let _ = v.apply_pending_withdrawal();
-        let seq = U64(v.withdrawal_seq);
+        let id = sent_phase(&mut v);
         context(accounts(0), 0);
-        v.on_withdrawn(Ok(U128(0)), pending.clone(), seq);
+        v.finish_withdrawal(id, Ok(U128(0)));
         assert_eq!(v.get_pending_withdrawal(), Some(pending));
     }
 
@@ -1496,12 +1967,11 @@ mod tests {
     fn a_delivered_withdrawal_is_not_queued_again() {
         let mut v = vault();
         queue_withdrawal(&mut v);
-        let pending = v.get_pending_withdrawal().expect("queued");
         context_at(accounts(2), 0, T0 + WITHDRAW_DELAY_SEC);
         let _ = v.apply_pending_withdrawal();
-        let seq = U64(v.withdrawal_seq);
+        let id = sent_phase(&mut v);
         context(accounts(0), 0);
-        v.on_withdrawn(Ok(U128(1_000_000)), pending, seq);
+        v.finish_withdrawal(id, Ok(U128(1_000_000)));
         assert_eq!(v.get_pending_withdrawal(), None);
     }
 
@@ -1509,15 +1979,14 @@ mod tests {
     fn a_failed_withdrawal_does_not_replace_a_newer_request() {
         let mut v = vault();
         queue_withdrawal(&mut v);
-        let first = v.get_pending_withdrawal().expect("queued");
         context_at(accounts(2), 0, T0 + WITHDRAW_DELAY_SEC);
         let _ = v.apply_pending_withdrawal();
-        let seq = U64(v.withdrawal_seq);
+        let id = sent_phase(&mut v);
         context_at(accounts(1), 1, T0 + WITHDRAW_DELAY_SEC);
         v.request_withdrawal(USDC.into(), accounts(5), U128(2_000_000));
         let newer = v.get_pending_withdrawal();
         context(accounts(0), 0);
-        v.on_withdrawn(Err(PromiseError::Failed), first, seq);
+        v.finish_withdrawal(id, Err("cross-contract read 0 failed".into()));
         assert_eq!(v.get_pending_withdrawal(), newer);
     }
 
@@ -1526,15 +1995,14 @@ mod tests {
         // Sent A; queued B; cancelled B; then A fails. A must not come back.
         let mut v = vault();
         queue_withdrawal(&mut v);
-        let first = v.get_pending_withdrawal().expect("queued");
         context_at(accounts(2), 0, T0 + WITHDRAW_DELAY_SEC);
         let _ = v.apply_pending_withdrawal();
-        let seq = U64(v.withdrawal_seq);
+        let id = sent_phase(&mut v);
         context_at(accounts(1), 1, T0 + WITHDRAW_DELAY_SEC);
         v.request_withdrawal(USDC.into(), accounts(5), U128(2_000_000));
         v.cancel_pending_withdrawal();
         context(accounts(0), 0);
-        v.on_withdrawn(Err(PromiseError::Failed), first, seq);
+        v.finish_withdrawal(id, Err("cross-contract read 0 failed".into()));
         assert_eq!(v.get_pending_withdrawal(), None);
     }
 
@@ -1788,7 +2256,7 @@ mod tests {
     }
 
     #[test]
-    fn a_failed_signer_call_frees_the_lock() {
+    fn a_failed_signer_call_keeps_the_timed_lock() {
         let mut v = vault_with_agent();
         context(accounts(3), 0);
         propose(&mut v);
@@ -1802,7 +2270,7 @@ mod tests {
             TradingState::default(),
             U64(1),
         );
-        assert_eq!(v.in_flight, None);
+        assert_eq!(v.in_flight, running(1, T0));
     }
 
     #[test]

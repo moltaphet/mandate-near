@@ -84,7 +84,7 @@ pub struct Approval {
     pub notional_usd: u128,
     /// Portfolio value before the trade, rounded down.
     pub nav_before_usd: u128,
-    /// State to persist once the trade's intent is signed.
+    /// State to reserve before requesting the trade's signature.
     pub next_state: TradingState,
 }
 
@@ -528,6 +528,53 @@ mod tests {
             code(check_trade(&mandate, &TradingState::default(), &buy_near(20, 0), &m)),
             "Approved"
         );
+    }
+
+    #[test]
+    fn stable_destination_cannot_increase_an_untouched_over_cap_share() {
+        let mut mandate = sample();
+        let a = "nep141:asset-a.near";
+        let b = "nep141:asset-b.near";
+        mandate.assets = vec![asset(a, 6), asset(b, 6), asset(USDC, 6)];
+        let price =
+            Price { mantissa: near_sdk::json_types::U64(1), expo: 0, publish_time_sec: NOW };
+        let market = Market {
+            now_sec: NOW,
+            prices: [(a.into(), price), (b.into(), price), (USDC.into(), price)].into(),
+            balances: [(a.into(), 60 * USD), (b.into(), 20 * USD), (USDC.into(), 20 * USD)].into(),
+        };
+        // A starts exactly at60%;1% loss on the unrelated B->cash trade raises its share.
+        let trade = Trade {
+            asset_in: b.into(),
+            asset_out: USDC.into(),
+            amount_in: 10 * USD,
+            min_amount_out: 9_900_000,
+        };
+        assert_eq!(
+            check_trade(&mandate, &TradingState::default(), &trade, &market).unwrap_err(),
+            TradeError::PositionTooLarge
+        );
+    }
+
+    #[test]
+    fn reducing_an_overweight_asset_can_leave_it_above_cap() {
+        let mut mandate = sample();
+        let a = "nep141:asset-a.near";
+        mandate.assets = vec![asset(a, 6), asset(USDC, 6)];
+        let price =
+            Price { mantissa: near_sdk::json_types::U64(1), expo: 0, publish_time_sec: NOW };
+        let market = Market {
+            now_sec: NOW,
+            prices: [(a.into(), price), (USDC.into(), price)].into(),
+            balances: [(a.into(), 80 * USD), (USDC.into(), 20 * USD)].into(),
+        };
+        let trade = Trade {
+            asset_in: a.into(),
+            asset_out: USDC.into(),
+            amount_in: 10 * USD,
+            min_amount_out: 10 * USD,
+        };
+        assert!(check_trade(&mandate, &TradingState::default(), &trade, &market).is_ok());
     }
 
     #[test]

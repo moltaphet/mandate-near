@@ -1,0 +1,12 @@
+{
+  "rpc_url": "https://rpc.mainnet.near.org",
+  "expected_chain_id": "mainnet",
+  "vault_id": "mandate-demo.near",
+  "relay_url": "https://solver-relay-v2.chaindefuser.com/rpc",
+  "asset_a": "nep141:usdc.near",
+  "asset_b": "nep141:wrap.near",
+  "target_a_bps": 5000,
+  "band_bps": 200,
+  "minimum_quote_validity_sec": 450,
+  "legacy_price_oracle": false
+}

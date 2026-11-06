@@ -8,7 +8,7 @@ use std::collections::BTreeSet;
 use std::fmt;
 
 use near_sdk::json_types::U64;
-use near_sdk::near;
+use near_sdk::{AccountId, near};
 
 /// Basis points in 100%.
 pub const BPS_DENOMINATOR: u16 = 10_000;
@@ -177,24 +177,12 @@ fn check_bps(value: u16, field: &'static str) -> Result<(), MandateError> {
     Ok(())
 }
 
-/// Accepts `nep141:<account>` and `nep245:<account>:<token>` ids as used by
-/// the NEAR Intents verifier. Account part: lowercase `[a-z0-9._-]`.
+/// Only the bounded NEP141 surface has a supported owner withdrawal path.
 pub(crate) fn is_valid_asset_id(id: &str) -> bool {
-    let Some((standard, rest)) = id.split_once(':') else {
+    let Some(account) = id.strip_prefix("nep141:") else {
         return false;
     };
-    let account = match standard {
-        "nep141" => rest,
-        "nep245" => match rest.split_once(':') {
-            Some((account, token)) if !token.is_empty() => account,
-            _ => return false,
-        },
-        _ => return false,
-    };
-    (2..=64).contains(&account.len())
-        && account
-            .bytes()
-            .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b"._-".contains(&b))
+    id.len() <= 71 && account.parse::<AccountId>().is_ok()
 }
 
 /// Opaque oracle feed id: 1..=128 chars of `[A-Za-z0-9._:-]`.
@@ -356,13 +344,13 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn accepts_nep245_ids() {
+    fn rejects_nep245_without_a_supported_withdrawal_path() {
         let mut m = sample();
         m.assets.push(AssetConfig {
             price_feed_id: "bnb-usd".into(),
             ..asset("nep245:v2_1.omni.hot.tg:56_11111111111111111111", 18)
         });
-        assert_eq!(m.validate(), Ok(()));
+        assert!(matches!(m.validate(), Err(MandateError::InvalidAssetId(_))));
     }
 
     #[test]

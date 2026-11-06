@@ -6,6 +6,10 @@ node_modules/
 .next/
 dist/
 
+# Python test caches
+__pycache__/
+*.pyc
+
 # Secrets: keys live in environment variables, never in the repo
 .env
 .env.*

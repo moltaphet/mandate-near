@@ -1,0 +1,455 @@
+MANDATE WITHDRAWAL RECOVERY RESEARCH
+Date: 2026-11-06
+Scope: source inspection, actual-fixture mechanics and local production voucher implementation.
+No live deployment, live signing or live receipt-loss/recovery trial was performed.
+
+DECISION
+The current local contract implements unique_voucher_v1: one native NEP245 unit
+per withdrawal attempt, consumed by either the original atomic withdrawal batch
+or a competing cancellation transfer. Targeted mechanics, full lifecycle, minimum
+gas and production recovery tests pass as recorded below. Root's complete serial
+sandbox run and exact artifact freeze remain separate final verification steps.
+
+Positive sent proof consumes the authorization as DebitObserved; it proves the
+initial debit batch, not receiver delivery or absence of a later resolver refund.
+Positive cancelled proof permanently blocks delayed originals and requeues only
+an unarmed request; owner+1yocto re-arm preserves its original maturity and uses a
+NEW id. No timeout, generic balance, nonce-used or operator assertion releases a
+Dispatched guard. Preparing timeout invalidates the old id before safe requeue.
+
+Deployment must establish uncreated s.<vault>/c.<vault>, absent Intents signing
+or proxy authority, a sealed vault account and no future sink-creation path.
+An actual preexisting NEAR sentinel with zero registered Intents keys was shown
+to erase proof and permit two debits: this prerequisite is material. Old unknown
+pre-voucher operations cannot be retroactively fixed or migrated by this protocol.
+Live readiness and universal recovery guarantees remain UNVERIFIED.
+
+1. REPRODUCED INFORMATION GAP
+
+The pre-protocol ActiveWithdrawal records request, id, request_seq, started_sec
+and balance_before. Its former balance-only reconciliation accepted a balance at or
+below balance_before - requested amount. Consequently:
+
+  baseline 100 -> actual withdrawal debit 20 -> incoming credit 25 -> current 105
+  required recovery threshold: current <= 80
+  result: guard remains; trading and sending another withdrawal remain blocked.
+
+This observation is indistinguishable from a different history where the old
+debit never committed and an unrelated credit of 5 brought the balance to 105.
+Blind retry duplicates the old debit in the first history; unconditional release
+cannot establish the original action in the second. Extra balance observations
+and elapsed time do not add the missing operation identity.
+
+The preserved regression still refuses105 or any scalar balance without genuine
+voucher destination proof:
+  contracts/vault/src/remediation_tests.rs
+  same_asset_credit_can_mask_an_unknown_debit_and_must_remain_guarded
+
+2. CURRENT UPSTREAM SOURCE AND PUBLIC API
+
+Public GitHub main read on 2026-11-06:
+  repository: https://github.com/near/intents
+  commit: 32cd1f9788a347908164fbcc56525dc6542f158f
+  request: GET https://api.github.com/repos/near/intents/commits/main
+
+Exact upstream-source to deployed-byte reproducible-build mapping remains
+UNVERIFIED in this research. The root reviewer separately reported the current
+Intents code at block 223333740 matches the pinned supplied fixture; retain the
+independent deployment-inspection evidence as its proof.
+
+Permitted sources inspected from that exact commit (partial reads marked):
+  contracts/defuse/src/contract/tokens/nep141/withdraw.rs (withdrawal/resolver sections)
+  contracts/defuse/src/contract/tokens/nep245/core.rs
+  contracts/defuse/src/contract/tokens/nep245/deposit.rs
+  contracts/defuse/src/contract/tokens/nep245/resolver.rs (downloaded, not read; no conclusion relies on it)
+  contracts/defuse/src/contract/accounts/mod.rs
+  contracts/defuse/src/contract/accounts/account/mod.rs
+  contracts/defuse/src/contract/accounts/account/nonces.rs
+  contracts/defuse/src/contract/accounts/state.rs
+  contracts/defuse/src/contract/mod.rs
+  contracts/defuse/src/contract/state/mod.rs
+  contracts/defuse/src/contract/events.rs
+  contracts/defuse/src/contract/garbage_collector.rs
+  contracts/defuse/src/contract/intents/mod.rs
+  contracts/defuse/src/contract/intents/execute.rs
+  contracts/defuse/src/contract/intents/state.rs
+  contracts/defuse/src/contract/intents/auth_call.rs
+  contracts/defuse/src/contract/abi.rs
+  contracts/defuse/src/accounts.rs (public nonce-view declaration)
+  contracts/defuse/core/src/engine/mod.rs
+  contracts/defuse/core/src/engine/state/mod.rs (relevant state/withdrawal trait declarations)
+  contracts/defuse/core/src/intents/account.rs
+  contracts/defuse/core/src/intents/imt.rs (relevant execution declarations)
+  contracts/defuse/core/src/intents/mod.rs
+  contracts/defuse/core/src/nonce/versioned.rs
+  tests/src/tests/defuse/intents/ft_withdraw.rs (relevant withdrawal construction)
+
+skipped: contracts/defuse/core/src/intents/token_diff.rs
+skipped: contracts/defuse/core/src/intents/tokens.rs
+
+Direct ft_withdraw has no operation-id parameter and no durable result journal
+in the inspected storage. It authenticates the predecessor and debits before
+scheduling the external transfer/resolver. Exact withdraw.rs:35-37:
+
+        assert_one_yocto();
+        self.internal_ft_withdraw(
+            self.ensure_auth_predecessor_id(),
+
+The synchronous debit starts at withdraw.rs:60:
+
+        self.withdraw(
+
+The resolver chain is created only after that debit, withdraw.rs:98-104:
+
+        .then(
+            Self::ext(env::current_account_id())
+                .with_static_gas(Self::FT_RESOLVE_WITHDRAW_GAS)
+                // do not distribute remaining gas here
+                .with_unused_gas_weight(0)
+                .ft_resolve_withdraw(withdraw.token, owner_id, withdraw.amount.into(), is_call),
+        )
+
+For ordinary ft_transfer, the resolver treats a successful void return as full
+use and an error as zero, then restores any refund to the ledger. It returns
+U128(used) but does not persist an operation-keyed used/refunded record.
+
+Direct mt_transfer is a synchronous ledger movement: it uses the same
+ensure_auth_predecessor_id() authentication and subtracts/adds balances before
+emitting its event. It does not schedule a receiver callback.
+
+Logs and a public RPC receipt can help an operator establish what happened, but
+the vault cannot authenticate an arbitrary off-chain receipt assertion by
+reading it through the currently implemented contract API. An actual verified
+NEAR outcome proof/light client or an Intents result-journal view would add a
+new protocol dependency; neither exists in the current vault implementation.
+
+3. WHY NONCE-USED IS NOT A DIRECT WITHDRAWAL RECEIPT
+
+There is an is_nonce_used(account_id, nonce) view. It records nonce consumption,
+not the withdrawal parameters or the terminal external result. Exact upstream
+core/src/intents/mod.rs:31-34:
+
+    /// Sequence of intents to execute in given order. Empty list is also
+    /// a valid sequence, i.e. it doesn't do anything, but still invalidates
+    /// the `nonce` for the signer
+    /// WARNING: Promises created by different intents are executed concurrently and does not rely on the order of the intents in this structure
+
+A signed empty nonce-marker payload could be executed independently before a
+withdrawal-plus-marker batch. A consumed nonce would then say nothing about the
+withdrawal debit. Never interpret a generic consumed nonce as debit evidence.
+
+A unique nonce bound only to one exact signed FtWithdraw payload could prove
+initial debit under additional identity/privilege assumptions. That changes the
+owner withdrawal path to depend on MPC, and the execute_intents implementation
+detaches withdrawal promises rather than returning their U128 result. It still
+cannot prove terminal delivery or refund from nonce consumption alone.
+
+V1 nonce history can also be garbage-collected after expiry/salt invalidation.
+garbage_collector.rs:41:
+
+            }) => deadline < Timestamp::now() || !self.is_valid_salt(salt),
+
+Non-versioned nonces are currently accepted but versioned.rs explicitly states:
+
+// NOTE: Legacy nonces can still be used at this time, but will be prohibited out in the near future.
+
+A permanent legacy nonce dependency is therefore not recommended for a new
+production recovery mechanism.
+
+4. SAME-RECEIPT AND UNIQUE-VOUCHER PROTOTYPE
+
+Research file: contracts/vault/tests/recovery_protocol.rs
+Actual target: pinned supplied Intents Wasm; stand-ins: funding/ordinary marker
+MockFt assets. Later cases issue native private-voucher-shaped NEP245 deposits
+through Intents' actual public receiver API under a sandbox vault predecessor.
+The transaction sends two FunctionCall actions to the SAME Intents receiver,
+with vault-account predecessor authentication and 1 yoctoNEAR on each action.
+These are not two independently scheduled cross-contract calls.
+
+Experiments:
+  (a) ft_withdraw(20) then mt_transfer(marker=1): inspect final return bytes,
+      verify victim ledger=80, receiver=20 and separate marker balance=1;
+      credit victim ledger by 25 and verify victim ledger=105, marker still=1.
+  (b) ft_withdraw(20) then insufficient mt_transfer(marker=2 from balance=1):
+      verify whole initial receipt fails, victim ledger stays100, receiver stays0,
+      marker stays with vault and NO generated underlying FT receipt executes.
+  (c) successful initial batch with a blocked underlying FT receiver: verify
+      marker remains1 even when the debit is later refunded and receiver gets0.
+  (d) unique native NEP245 voucher, marker transfer FIRST and ft_withdraw LAST:
+      verify the actual withdrawal U128 result, sent proof, masking credit105,
+      issuer-namespace spoofing failure and uncreated sentinel takeover refusal.
+  (e) unique voucher: failed second-action withdrawal restores the first marker;
+      cancellation consumes it; two delayed originals fail before any FT debit.
+  (f) hostile preexisting named sentinel with zero registered Intents keys:
+      demonstrate its NEAR account can transfer the voucher back and enable a
+      second debit. This is a deployment-invariant counterexample, not a claim
+      that the current production vault already implements the voucher design.
+  (g) repeated confirmed refunds with new native ids: verify final U128(0),
+      permanently consumed old unit and same-id delayed-original refusal;
+      measure isolated issuance and sent-record storage on each attempt.
+
+Observed first five runtime tests: 5 passed, 0 failed, 0 ignored, 219.37 seconds.
+Compiled original integration source with the isolated manifest:
+  cargo +1.95.0 test --offline --manifest-path /private/tmp/mandate-recovery-check/Cargo.toml --target-dir /Users/ehs4n/mandate-near/target --test recovery_protocol -- --nocapture --test-threads=1
+The final observed run launched its already-built executable from contracts/vault:
+  /Users/ehs4n/mandate-near/target/debug/deps/recovery_protocol-13a802e2e3fe1436 --nocapture --test-threads=1
+Cargo changes an integration test's working directory to its package root; an
+isolated-manifest cargo test run therefore made common build the isolated rlib,
+not the actual vault. Those earlier five setup failures were not protocol results.
+Direct execution with the actual vault cwd built the actual contract manifests.
+The initial missing jiff-static dependency required an approved network retry.
+
+Observed gas is TOTAL burnt for these sandbox transactions, not production entry
+prepaid gas or complete vault preparation/callback/recovery-chain gas:
+  ordinary withdrawal-first/marker-last: 12.79 TGas; final return bytes empty;
+  failed second marker: 7.75 TGas; debit and generated FT receipt rolled back;
+  ordinary committed marker with underlying FT failure/refund: 13.80 TGas;
+  native issuer mt_on_transfer: 4.03 TGas;
+  unique marker-first/withdrawal-last: 13.17 TGas; final JSON U128 "20";
+  unique cancellation: 4.36 TGas; two delayed originals refused before FT debit.
+Standard updated mechanics run: 7 passed, 0 failed, 0 ignored, 301.15 seconds.
+Clean withdrawal-1 issuance growth381 bytes, separate adversary namespace387 bytes,
+sent-record growth377 bytes. Three confirmed-refund attempts using distinct
+refunded-1/2/3 ids each required377 bytes issuance; sent-record growth377 bytes for
+the first and2 bytes for each later attempt with the same existing sink account.
+Their batches burnt13.82/13.83/13.83 TGas, returning U128(0); each consumed old
+unit stayed spent and same-id delayed originals were refused. Id/name lengths
+matter, so these are measurements for the exact sandbox account/id sizes.
+Observed standard command:
+  cargo test -p mandate-vault --test recovery_protocol -- --nocapture --test-threads=1
+The hostile-preexisting-sentinel counterexample also passed in this seven-test run.
+
+The production candidate ordering is the unique voucher transfer FIRST and
+ft_withdraw LAST. The observed marker-first/withdrawal-last return retains the existing
+on_withdrawn callback. The mechanics experiments model issuer calls through a
+sandbox account signer; the separately implemented production methods constrain
+issuance and callback phases without exposing a general mint/transfer method.
+
+5. UNIQUE-VOUCHER CANCELLATION RACE
+
+Each attempt gets its OWN token id, amount exactly1, issued exactly once before
+sending. This is not a replenishable fungible unit shared by multiple attempts.
+The original batch moves it Vault->sent sentinel, then calls ft_withdraw. Recovery
+competes by moving the SAME unique unit Vault->cancelled sentinel.
+
+The possible serialized initial-commit outcomes are:
+  Original first: voucher is sent; cancellation cannot spend source balance0.
+  Cancellation first: voucher is cancelled; every delayed original fails its
+  FIRST action, so the same-receipt withdrawal action/debit cannot commit.
+  Original's withdrawal action fails: whole initial batch rolls back the voucher
+  transfer, leaving cancellation able to consume it.
+
+Both committed destinations must stay inert forever for that id. The issuer
+must NEVER re-mint it. Replenishing the same id would let cancellation and a late
+original both succeed and would destroy the proof. A retry uses a NEW attempt id.
+
+This provides a source-backed candidate for unknown post-send outcomes without
+guessing balances: positive sent proof consumes the old authorization; positive
+cancelled proof permits safe requeue. Neither positive proof claims delivery.
+No-positive-proof observations and protocol errors keep the guard. Retrying the
+cancellation/read can obtain the existing durable destination after its own
+callback is lost. Liveness still assumes a progressing, unpaused trusted Intents.
+The runtime tests cover both serialization orders. Production recovery chains
+also pass against authentic fixture balances, using an explicitly sandbox-only
+unknown-guard prestate. Physical receipt-loss/concurrent live scheduling remains
+UNVERIFIED; state fixtures and unit callback races are disclosed, not live evidence.
+
+6. PRIVATE ISSUER AND SENTINEL REQUIREMENTS
+
+Implemented native issuer: the vault itself. Actual nep245/deposit.rs authenticates
+the token namespace with this exact code:
+
+        let token = env::predecessor_account_id();
+
+Its canonical mapping includes:
+
+            .map(|token_id| Nep245TokenId::new(token.clone(), token_id))
+
+The no-action deposit credits the recipient ledger and returns unused zero:
+
+            return PromiseOrValue::Value(vec![U128(0); token_ids.len()]);
+
+A vault-only issuance step can therefore create a private receipt-shaped asset
+nep245:<vault>:<attempt id> directly. Outsiders claiming the vault as sender_id
+still receive their OWN predecessor namespace. No general NEP245 storage/token
+conformance claim follows; these vouchers are non-financial protocol receipts.
+Actual API compatibility and namespace separation are prototype acceptance tests.
+
+Mandatory invariants (local code enforces issuance/id/phase/asset gates; sealed
+account and fresh-sink provisioning are external deployment prerequisites):
+  - Persist a never-reused id before dispatching its single issuance call.
+    No public method lets a caller choose an id, issue amount, recipient or msg.
+    No retry or late callback can issue a second unit for that same id.
+  - Only the Vault can issue its namespace. Seal account permissions and review
+    all registered Intents signing keys/proxy paths. A full-access account key
+    would defeat private issuance by calling mt_on_transfer as the vault.
+  - Current mandates accept only NEP141 assets. Keep an explicit permanent
+    voucher exclusion across every active/queued mandate, trade, withdrawal and
+    migration so future asset-type support cannot turn vouchers into assets.
+  - Fixed sent/cancelled named uncreated subaccounts under a keyless vault can be
+    shared because each token id is unique, e.g. s.<vault> and c.<vault>. They have
+    no implicit key and no NEAR account or registered Intents signing key.
+    The first prototype proves outside creation/takeover is refused. Setup must
+    also establish NEAR account absence, no existing registration/proxy authority
+    and no future account creation or Intents registration path. An empty current
+    public_keys_of result alone does not establish permanent inertness: a real
+    preexisting NEAR account can call mt_transfer directly without an Intents key.
+    Supported migration/deployment must require verified fresh/uncreated sinks;
+    do not infer that condition merely from names being under the vault.
+  - Validate the resulting AccountIds. Prefix/dot requires two extra characters;
+    vault names of63/64 characters need another reviewed inert namespace or stay
+    unsupported for this recovery setup. Do not silently use a claimable global
+    sentinel or assume arbitrary implicit-account non-ownership.
+  - Neither vault code nor any issuer/namespace authority can move vouchers back
+    out of a destination sentinel. Intents governance/upgrader/privileged roles
+    remain an explicit trusted boundary; malicious governance can break proofs.
+
+7. IMPLEMENTED LOCAL STATE/API
+
+Active withdrawal gains explicit Preparing and Dispatched phases. The existing
+never-reused withdrawal id can identify the voucher; immutable sentinel derivation
+needs no historical list. Callbacks compare both id and phase before any change/send.
+
+Apply: take the authorized pending request, record guard/id/Preparing phase, then
+issue exactly1 native voucher through mt_on_transfer under the vault namespace.
+Implemented preparation is ONE same-Intents receipt: mt_on_transfer first,
+then mt_batch_balance_of(vault,[voucher,victim]) last. Its final callback must
+require the exact two-element result [1,sufficient victim balance] for the active
+Preparing id before dispatch. This combined preparation's return behavior and full-chain gas passed in the actual production lifecycle
+tests below. The local state appends Option<WithdrawalStage> and Option<U64>
+request-sequence retry arm, preserving ActiveWithdrawal JSON/Borsh fields.
+
+Send: persist Dispatched phase before building ONE Intents Promise with voucher
+mt_transfer first and ft_withdraw last. Each action carries1 yocto. The final
+withdrawal Promise keeps the existing identified bounded on_withdrawn handler.
+
+Recover Preparing before any original batch was scheduled: invalidate
+that active id/phase before requeue; a late issuance may create an orphan voucher,
+but stale callbacks can never build an original withdrawal with it. Never reuse
+the abandoned id. This needs a focused late-preparation callback test.
+
+Recover Dispatched: attempt the unique transfer to cancelled sentinel, then query
+the sent/cancelled balances. Failed cancellation may mean the original won,
+prior cancellation won, or protocol error: failure alone releases nothing.
+  sent=1/cancelled=0 -> consume original as DebitObserved, never Delivered/retry;
+  sent=0/cancelled=1 -> old original permanently cannot pass its first action;
+                     requeue only if original request_seq still current and
+                     no replacement/cancelled owner request would be resurrected;
+  neither positive -> retain guard and permit another cancellation/query;
+  both positive/invalid supply -> fail closed on a broken uniqueness invariant.
+
+Explicit identified U128(0): safe confirmed-refund retry retains the original
+authorization but allocates a NEW attempt/voucher id. A late old callback never
+modifies a replacement request/operation. Unknown error never blindly retries.
+
+Existing pre-voucher unresolved operations cannot be retroactively protected.
+They need an authentic external receipt proof/journal or remain blocked. No
+owner assertion or timeout retrofits a voucher into an old committed debit.
+
+8. STORAGE, GAS, BUDGET AND DEPLOYMENT CRITIQUE
+
+Vault storage remains constant-size configuration, counters and one active phase;
+status queries inspect at most sent/cancelled/source balances for one fixed id.
+Intents stores a distinct total-supply/balance entry per voucher. This external
+journal grows over time; each call remains bounded, but its real staking sponsor
+and per-operation bytes must be measured and disclosed.
+
+A hard lifetime voucher cap can lock the withdrawal path: any caller can retry a
+matured, permanently-refunding request or failed preparation and consume ids.
+Implemented guard: a queued owner request arms ONE automatic attempt. Apply
+spends that arm before issuance. Safe failure/cancellation may preserve the matured
+request, but leaves it unarmed. Only an explicit owner call with1 yocto can re-arm
+the same current request without resetting its original 24h maturity. Keep the arm
+associated with request_seq so late callbacks cannot re-arm/change a replacement.
+Every retry still gets a NEW id; never replenish an old sent/cancelled unit.
+Permissionless keepers cannot endlessly mint ids against a permanently-refunding
+request. A budget, if additionally introduced, must remain owner recoverable and
+stop before dispatch; never silently fall back to an unmarked withdrawal.
+
+The native-voucher design avoids a separate token deployment, supply contract,
+FT storage registration and external issuer upgrade authority. It adds issuance,
+proof reads, one extra same-receipt marker action and cancellation gas/yocto cost.
+The implemented240-TGas entry reserves issuer30 + batch read10 + callback180;
+the callback reserves marker30 + withdrawal100 + final callback30. Dispatched
+recovery requires110 TGas, reserving cancellation30 + callback70, which then
+reserves two reads10+10 + proof callback30. The measured target tests below use
+these stated minimums. Exact mainnet staking sponsor, worst-account-length costs
+and live provider/permission setup remain UNVERIFIED.
+
+Local review gates completed: fixture mechanics, targeted phase/id regressions,
+independent source review, implemented protocol/migration and production-shaped
+minimum-gas recovery tests. Remaining release gates: root's complete serial
+sandbox/whole-workspace final verification, exact artifact identity and external
+permission/sink/oracle readiness. Fresh live receipt evidence requires separately
+authorized exact transactions and has not been run.
+
+The cancellation design is not a universally deployed guarantee. Plain
+balance/nonce recovery remains insufficient. For existing unknown
+operations and any configuration where private unique vouchers cannot be proved,
+the exact external blocker is an authenticated durable operation journal or an
+on-chain verified receipt/outcome proof.
+
+9. OBSERVED LOCAL PRODUCTION VERIFICATION
+
+Files:
+  contracts/vault/src/withdrawal.rs
+  contracts/vault/src/lib.rs
+  contracts/vault/src/migration.rs
+  contracts/vault/src/remediation_tests.rs
+  contracts/vault/tests/withdrawal_lifecycle.rs
+
+Public API:
+  get_withdrawal_protocol() -> "unique_voucher_v1"
+  get_withdrawal_stage() -> null / "Preparing" / "Dispatched"
+  is_withdrawal_retry_armed() -> boolean for the current queued request sequence
+  get_withdrawal_recovery_accounts() -> [s.<vault>,c.<vault>]
+  rearm_pending_withdrawal() -> owner predecessor, exactly1yocto, no active guard,
+                               one unarmed current request, unchanged maturity
+
+Observed commands/results before final root integration verification:
+  cargo test -p mandate-vault --lib
+    216 passed,0 failed,0 ignored (before three added provider-migration tests).
+    Covers preparing timeout/late callback, duplicate preparation, exact voucher
+    and sufficient victim balance, both destination proof outcomes, invalid/missing
+    proof, failure cancellation+retry, all old callbacks/newid fences, owner-only
+    re-arm+yocto, spent automatic arm, preserved replacement/cancellation and62/63
+    account lengths. An initial run exposed missing Promise result-index panics;
+    explicit count checks and read_promise's missing-index guard fixed them.
+
+  cargo test -p mandate-vault --lib --quiet
+    Final owned-source run:219 passed,0 failed,0 ignored,1.56 seconds; includes all
+    three added provider-migration cases as well as the14protocol unit cases.
+
+  cargo test -p mandate-vault --lib migration::tests -- --nocapture
+    22 passed,0 failed,0 ignored,197 filtered out.
+    Exact pre-protocol provider layout preserves oracle_kind/trading/config/ids;
+    unresolved active withdrawals and unusable63-byte sink namespaces are refused.
+    Prior historical independent STATE fixture provenance remains unchanged.
+
+  cargo test -p mandate-vault --test withdrawal_lifecycle -- --nocapture --test-threads=1
+    Earlier two lifecycle cases passed,0 failed,0 ignored,175.84 seconds.
+    All calls used240 TGas attached at apply:
+      actual delivery chain:26.35 TGas total burnt;
+      confirmed-zero/refund chain:27.37 TGas;
+      explicit owner-rearmed fresh-id retry:26.38 TGas.
+    Actual24h early call is refused. When fast-forward advanced only298 seconds,
+    a disclosed sandbox-only pending-maturity STATE fixture was used. It changes
+    no production delay and is not evidence that24 real hours elapsed.
+
+  cargo test -p mandate-vault --test withdrawal_lifecycle production_ -- --nocapture --test-threads=1
+    Two newly added production recovery cases passed,0 failed,0 ignored,
+    2 filtered out,214.15 seconds. Both use110 TGas recovery entry:
+      original wins, cancellation fails, sent proof survives masking105:16.37 TGas;
+      cancellation wins, proof requeues unarmed, two late originals refused,
+      explicit owner re-arm/newid2 delivers20 only once:17.33 TGas recovery.
+    The unknown/lost-terminal-callback guard is a disclosed sandbox STATE fixture
+    emitted by actual Vault public methods with mocked preparation results. The
+    recovery/cancellation/proof/next-send run through actual deployed Vault and
+    Intents Wasm. This is not a physically lost live receipt or live MPC trial.
+    Initial-debit proof never claims terminal delivery or excludes later refunds.
+
+  cargo clippy -p mandate-vault --lib --test withdrawal_lifecycle --test recovery_protocol -- -D warnings
+    Passed with no new allow attributes.
+
+Complete serial sandbox suite, all-workspace final checks, final reviewed source
+hash/manifest and live receipt evidence are owned by root and not asserted here.

@@ -1,65 +1,128 @@
-//! Runs the keeper loop.
-//!
-//! Environment:
-//! - `NEAR_RPC_URL`: RPC endpoint (mainnet, testnet or sandbox).
-//! - `VAULT_ID`: the vault contract account.
-//! - `KEEPER_ACCOUNT` and `KEEPER_SECRET_KEY`: the account that pays for `execute`.
-//! - `KEEPER_OUTBOX`: directory where signed intents are written for publication.
-//!   Solver relay publication needs a partner key, so the hand-off is a file for now.
+//! Default: permissionless execution plus public file handoff; no relay publication.
+//! Explicit publication: mandate-keeper --publish <public-relay-config.json>.
+//! Acknowledgement and relay-reported SETTLED remain distinct from verified final receipts.
 
 use std::error::Error;
-use std::path::PathBuf;
-use std::time::Duration;
+use std::path::{Path, PathBuf};
 
-use mandate_keeper::{Keeper, Tick};
+use mandate_agent::transport::{JsonRpc, create_public_dir, read_public_json, write_public};
+use mandate_keeper::publication::{PublicationConfig, Publisher};
+use mandate_keeper::{Keeper, RetryBackoff, Tick};
 use near_api::{NetworkConfig, Signer};
+use near_sdk::serde_json;
 
-fn env(name: &str) -> Result<String, Box<dyn Error>> {
-    std::env::var(name).map_err(|_| format!("{name} is not set").into())
+type MainError = Box<dyn Error + Send + Sync>;
+fn setting(name: &str) -> Result<String, MainError> {
+    std::env::var(name).map_err(|_| format!("required setting {name} is absent").into())
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>> {
-    let keeper = Keeper {
-        network: NetworkConfig::from_rpc_url("keeper", env("NEAR_RPC_URL")?.parse()?),
-        vault: env("VAULT_ID")?.parse()?,
-        account: env("KEEPER_ACCOUNT")?.parse()?,
-        signer: Signer::from_secret_key(env("KEEPER_SECRET_KEY")?.parse()?)?,
+async fn main() -> Result<(), MainError> {
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    if !(args.is_empty() || (args.len() == 2 && args[0] == "--publish")) {
+        return Err("usage: mandate-keeper [--publish <public-relay-config.json>]".into());
+    }
+    let rpc = setting("NEAR_RPC_URL")?;
+    JsonRpc::new(&rpc, None, 1024 * 1024)?;
+    let vault = setting("VAULT_ID")?;
+    let publisher = if args.is_empty() {
+        None
+    } else {
+        let config: PublicationConfig = read_public_json(Path::new(&args[1]))?;
+        let auth = std::env::var("RELAY_AUTH").ok();
+        Some(Publisher::new(config, &rpc, &vault, auth.as_deref())?)
     };
-    let outbox = PathBuf::from(env("KEEPER_OUTBOX")?);
-    std::fs::create_dir_all(&outbox)?;
-
+    let account =
+        setting("KEEPER_ACCOUNT")?.parse().map_err(|_| "invalid keeper account configuration")?;
+    let parsed = setting("KEEPER_SECRET_KEY")?
+        .parse()
+        .map_err(|_| "invalid keeper signing configuration")?;
+    let signer =
+        Signer::from_secret_key(parsed).map_err(|_| "invalid keeper signing configuration")?;
+    let keeper = Keeper {
+        network: NetworkConfig::from_rpc_url(
+            "keeper",
+            rpc.parse().map_err(|_| "invalid RPC configuration")?,
+        ),
+        vault: vault.parse().map_err(|_| "invalid vault configuration")?,
+        account,
+        signer,
+    };
+    let outbox = create_public_dir(&PathBuf::from(setting("KEEPER_OUTBOX")?))?;
     let mut last_reported: Option<String> = None;
-    // Each failed `execute` still costs gas, so failures back off instead of retrying every few seconds.
-    let mut failures: u32 = 0;
+    let mut retry = RetryBackoff::default();
     loop {
-        let mut pause = Duration::from_secs(5);
-        match keeper.tick(last_reported.as_deref()).await {
-            Ok(Tick::Executed(outcome)) => {
-                failures = 0;
-                println!("executed: {outcome}");
+        let result = keeper.tick(last_reported.as_deref()).await;
+        let mut pause = match &result {
+            // Publication has its own success/failure result. Do not reset its
+            // accumulated failures before the relay request completes.
+            Ok(Tick::Publish(_)) => std::time::Duration::from_secs(5),
+            Ok(tick) => retry.after_tick(tick),
+            Err(_) => retry.after_error(),
+        };
+        match result {
+            Ok(Tick::Executed(_)) => {
+                println!("vault recorded a signed intent; settlement unverified")
             }
-            Ok(Tick::Expired) => {
-                failures = 0;
-                println!("pending proposal expired; waiting for a new one");
+            Ok(Tick::Rejected(_)) => println!("vault rejected the proposal"),
+            Ok(Tick::Failed(_)) => {
+                eprintln!("execution step failed; retry in {}s", pause.as_secs())
             }
+            Ok(Tick::NotReady { reason }) => println!("waiting: {reason}"),
+            Ok(Tick::Expired) => println!("proposal expired; waiting for a new proposal"),
             Ok(Tick::Publish(signed)) => {
-                failures = 0;
-                let id = signed["proposal_id"].as_str().unwrap_or("unknown");
-                let path = outbox.join(format!("intent-{id}.json"));
-                std::fs::write(&path, near_sdk::serde_json::to_vec_pretty(&signed)?)?;
-                println!("signed intent for proposal {id} written to {}", path.display());
-                last_reported = signed["payload"].as_str().map(str::to_owned);
+                let id = signed["proposal_id"]
+                    .as_str()
+                    .and_then(|s| s.parse::<u64>().ok())
+                    .ok_or("invalid signed proposal identifier")?;
+                write_public(
+                    &outbox.join(format!("intent-{id}.json")),
+                    &serde_json::to_vec_pretty(&signed)?,
+                )?;
+                if let Some(publisher) = &publisher {
+                    match publisher.publish(&signed).await {
+                        Ok(ack) => {
+                            pause = retry.after_tick(&Tick::Idle);
+                            write_public(
+                                &outbox.join(format!("relay-{id}.json")),
+                                &serde_json::to_vec_pretty(&ack)?,
+                            )?;
+                            println!("relay acknowledged proposal {id}; settlement unverified");
+                            match publisher.status(&ack).await {
+                                Ok(observation) => {
+                                    write_public(
+                                        &outbox.join(format!("relay-observation-{id}.json")),
+                                        &serde_json::to_vec_pretty(&observation)?,
+                                    )?;
+                                    println!(
+                                        "relay reports {}; final receipt not independently verified",
+                                        observation.relay_status
+                                    );
+                                }
+                                Err(_) => {
+                                    eprintln!("relay status unavailable; acknowledgement retained")
+                                }
+                            }
+                            last_reported = signed["payload"].as_str().map(str::to_owned);
+                        }
+                        Err(_) => {
+                            pause = retry.after_error();
+                            eprintln!(
+                                "relay publication failed or unknown; retry in {}s",
+                                pause.as_secs()
+                            );
+                        }
+                    }
+                } else {
+                    pause = retry.after_tick(&Tick::Idle);
+                    println!(
+                        "proposal {id} signed; public handoff written; relay publication disabled"
+                    );
+                    last_reported = signed["payload"].as_str().map(str::to_owned);
+                }
             }
-            Ok(Tick::Idle) => failures = 0,
-            Err(err) => {
-                failures = failures.saturating_add(1);
-                pause = Duration::from_secs((5u64 << failures.min(7)).min(600));
-                eprintln!(
-                    "keeper tick failed ({failures} in a row, next try in {}s): {err}",
-                    pause.as_secs()
-                );
-            }
+            Ok(Tick::Idle) => {}
+            Err(_) => eprintln!("keeper tick failed; retry in {}s", pause.as_secs()),
         }
         tokio::time::sleep(pause).await;
     }

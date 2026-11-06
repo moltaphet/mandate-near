@@ -1,0 +1,30 @@
+FINAL POST-HARDENING FROZEN-REVISION SANDBOX GROUP B
+Command: cargo test --offline -p mandate-vault --test agent --test execute_path --test intents_registration --test pyth_path --test withdraw --test withdrawal_lifecycle --test sealed_deployment -- --test-threads=1
+Scope: local sandbox; supplied Intents fixture; oracle/MPC stand-ins. No live signing/funds/relay publication.
+Reference source fingerprint: docs/evidence/operational-sandbox-sources.json
+Started UTC: 2026-11-06T18:36:01.055012+00:00
+
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.59s
+     Running tests/agent.rs (target/debug/deps/agent-d545893fe6b52146)
+
+running 5 tests
+test a_gate_that_closes_is_reported_as_rejected ... ok
+test an_unretained_proposal_outcome_is_unknown ... ok
+test quote_driven_rebalance_reaches_a_signed_intent_and_mock_relay_acknowledgement ... ok
+test the_agent_proposes_and_the_keeper_executes_it ... ok
+test the_agent_refuses_a_second_proposal_before_spending_gas ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 195.84s
+
+     Running tests/execute_path.rs (target/debug/deps/execute_path-2fe618f602e21540)
+
+running 8 tests
+test a_funded_trade_is_signed_and_intents_accepts_it ... ok
+test a_missing_oracle_price_rejects_and_counts_a_strike ... FAILED
+test a_paused_vault_does_not_execute ... ok
+test a_signed_intent_blocks_the_next_proposal ... ok
+test a_tampered_payload_is_rejected_by_the_real_verifier ... ok
+test an_old_price_is_refused_by_the_mandate_age_limit ... 

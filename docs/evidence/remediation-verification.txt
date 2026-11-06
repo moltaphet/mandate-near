@@ -1,0 +1,107 @@
+MANDATE REMEDIATION VERIFICATION
+Recorded: 2026-11-06 14:39: 53 UTC
+Starting HEAD: 0de5c48888ff495d017f1daadd1c6ba1e8b5039b
+Working branch: fix/audit-round-1. Local changes remain uncommitted.
+No live deployment, signing transaction, push, merge or publication was performed.
+
+UNIQUE TEST COVERAGE
+189 unit/property tests in the latest fast verification:
+  mandate-vault: 180 passed; mandate-agent: 7 passed; mandate-keeper: 2 passed.
+37 sandbox integration/gas tests passed across the remediation runs:
+  agent: 4, attacks: 8, execute_path: 8, gas: 2, intents_registration: 2, keeper: 4,
+  sandbox: 4 (including the later Wasm migration), settlement: 1, withdraw: 2,
+  withdrawal_lifecycle: 2.
+Total unique tests: 226. Property-generated cases and reruns are not extra tests.
+Zero ignored tests in these executed targets. Mock libraries have zero unit tests.
+This is cumulative coverage, not a claim that one final complete integration command passed.
+The final accounting change was verified with all current unit/property tests and fresh
+execute_path/gas/settlement runs. Other targets retain the earlier remediation results.
+A later attack-8 rename changes no assertions; its renamed test was also rerun successfully.
+
+FAST VERIFICATION
+Command: bash scripts/verify.sh
+Result: exit0; cargo fmt --check, strict workspace/all-target Clippy, allowed
+documentation-reference checks, and the 189 unit/property tests passed.
+Latest unit counts: 180 + 7 + 2.
+After the final non-semantic comment/test-name/script edits, fmt, strict Clippy,
+shell syntax and allowed-reference checks passed again.
+The integration option now runs all ten targets serially with --test-threads=1.
+
+INITIAL TEN-TARGET RUN
+Command: cargo test --offline -p mandate-vault --test sandbox --test intents_registration --test execute_path --test keeper --test agent --test attacks --test withdraw --test gas --test settlement --test withdrawal_lifecycle -- --nocapture --test-threads=1
+The first nine targets passed:
+Target | Passed | Duration seconds
+agent | 4 | 130.28
+attacks | 8 | 249.27
+execute_path | 8 | 264.82
+gas | 2 | 221.58
+intents_registration | 2 | 51.84
+keeper | 4 | 125.86
+sandbox | 3 | 46.86
+settlement | 1 | 55.01
+withdraw | 2 | 62.37
+The last withdrawal lifecycle test stalled on a very large sandbox fast-forward request.
+The command was deliberately terminated (exit101 / SIGTERM). It did NOT pass as a whole.
+The lifecycle harness was changed to a bounded 1000-block probe with a 30-second timeout
+and an explicitly labelled sandbox-only STATE maturity fixture when needed.
+Only the pending effective_sec is patched; request contents and Borsh round-trip are checked.
+No production delay bypass was added. The measured probe advanced about 298 chain seconds,
+not 24 elapsed hours.
+
+POST-FIX TARGETED RUNS
+Command: cargo test --offline -p mandate-vault --test withdrawal_lifecycle -- --nocapture --test-threads=1
+Result: 2 passed,0 failed,0 ignored,88.30s.
+Full send18.52 TGas; actual Intents zero-result refund19.54 TGas; authorized retry18.53 TGas.
+170 TGas attached. Exact vault/receiver/ledger changes; unchanged authorized amount/deadline;
+new retry operation ID; no duplicate send. Both maturity modes were explicitly STATE fixtures.
+
+Command: cargo test --offline -p mandate-vault --test sandbox wasm_migration_consumes_historical_state_and_writes_current_state -- --exact --nocapture --test-threads=1
+Result: 1 passed,0 failed,15.12s; both original-source STATE fixtures consumed by the actual Wasm
+storage/migration wrapper. Privacy, preserved controls/deadlines and repeated-migration refusal checked.
+
+Command: cargo test --offline -p mandate-vault --test execute_path a_tampered_payload_is_rejected_by_the_real_verifier -- --exact --nocapture --test-threads=1
+Result: 1 passed,0 failed,32.24s; valid control, changed signed bytes and exact invalid-signature error.
+This test was subsequently included in the fresh eight-case execute_path run below.
+
+F27 REGRESSION
+Command: cargo test --offline -p mandate-vault --lib remediation_tests::signing_dispatch_reserves_quota_even_if_the_result_arrives_after_lock_expiry -- --exact
+Before fix: FAILED; recorded turnover 180000000 instead of 200000000 micro-USD immediately after dispatch.
+After fix: 1 passed,0 failed; next 20 USD authorization returns exact TurnoverCapExceeded.
+Reservation remains unchanged after expired callback. All current unit tests later passed.
+Three later_queue_replacement tests also passed; included in the final180 vault-unit count.
+
+LATEST EXECUTION / GAS / FUNDED SETTLEMENT
+Command: cargo test --offline -p mandate-vault --test execute_path --test gas --test settlement -- --nocapture --test-threads=1
+Result: exit0; execute_path8 passed (265.95s), gas2 passed (225.75s), settlement1 passed (53.40s).
+Fresh measured signing path: 16 feeds60.83 TGas;20 feeds69.80 TGas;2 feeds30.27 TGas.
+Actual paired funded execute_intents:
+  one-unit under-delivery refused atomically (unmatched_deltas);
+  four exact ledger deltas on matching bundle;
+  same signature usable after atomic refusal; nonce replay refused.
+Signer and oracle are local stand-ins; Intents is the supplied pinned Wasm fixture.
+These gas figures and funded settlement do not establish current live MPC or mainnet identity.
+
+ATTACK8 TEST-NAME CORRECTION
+Command: cargo test --offline -p mandate-vault --test attacks attack_8_a_stolen_owner_key_cannot_loosen_the_cap_before_the_delay -- --exact --nocapture --test-threads=1
+Restricted attempt: socket binding denied, Operation not permitted; failed before any contract assertion.
+Identical command rerun with approved sandbox socket access: 1 passed,0 failed,35.18s.
+Observed: owner raises 50 USD cap to 150; queued24 h;60 USD proposal rejected by old TradeTooLarge cap;
+early apply refused; pending change retained.
+
+STATIC / SOURCE CHECKS
+Allowed changed-file whitespace checks passed; excluded files and lock contents were not inspected.
+Both HTML pages passed unique-ID checks; the dashboard inline JavaScript passed node --check.
+Site has no inline JavaScript. Local reference checks and shell syntax checks passed.
+Earlier static checks covered table/local-link structure and sample economics.
+27 finding excerpts and15 engine-condition excerpts were matched to current source/line references.
+Known original migration STATE sizes 457/465 bytes and their generation/hashes are documented
+in contracts/vault/tests/fixtures/legacy-state-fixtures.md.
+
+EXCLUSIONS / LIMITS
+contracts/vault/tests/common/mod.rs:21: secret-like value, redacted.
+That file is omitted from the SHA manifest to avoid rereading the excluded fixture value.
+Secret/credential files, dependency/build output, Git internals and lockfile contents are not audited.
+The source manifest is a digest list of the explicitly allowed files, not a complete checkout digest.
+A full final scripts/verify.sh --integration run, remote CI, live24 h waiting, actual live vault MPC,
+current external source/audit/admin correspondence and universal unknown-withdrawal recovery remain UNVERIFIED.
+F26 remains fail closed; an incoming credit can mask an unknown prior withdrawal debit.
