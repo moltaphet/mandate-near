@@ -1,3 +1,10 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="web/assets/logo-light.svg">
+    <img src="web/assets/logo.svg" alt="Mandate logo" width="360">
+  </picture>
+</p>
+
 # Mandate
 
 **On-chain trade authorization for agents that hold no treasury signing key.**
