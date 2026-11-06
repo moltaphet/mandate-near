@@ -239,10 +239,22 @@ it never repairs model amounts or changes the mandate from rationale text.
 
 Without `--dry-run`, existing agent signing and outbox settings are needed to
 submit. The model never receives those settings or signs a transaction. At this
-implementation stage the model path still uses the existing rationale hash;
-response evidence and model-specific commitments are a separate next step.
-Provider/model labels and response provenance are **UNVERIFIED**. Neither this
-client nor a valid model response proves profitability, privacy or TEE execution.
+the model path commits to the **exact response bytes**: its on-chain reason hash
+is the SHA-256 of the response body as received, and the request hash is the
+SHA-256 of the request body as sent. Each proposal writes `model-<response>.json`
+to the outbox. The verifier checks it offline:
+
+```bash
+cargo run -p mandate-agent -- --verify-model model-<hash>.json --reason-hash <on-chain hash>
+```
+
+With a signature document from NEAR AI Cloud and a pinned signing address, add
+`--signature <file> --signing-address 0x…`. The verifier then checks the ECDSA
+signature over the EIP-191 message, as the provider documents it. Fetching the
+signature and checking the provider's attestation are not implemented, so a
+record written by the agent stays **UNVERIFIED** until someone runs the verifier.
+Neither this client nor a valid model response proves profitability, privacy or
+TEE execution.
 
 ## Mandate rules
 

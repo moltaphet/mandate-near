@@ -2090,8 +2090,10 @@ dependencies = [
  "near-api",
  "near-sdk",
  "reqwest",
+ "secp256k1",
  "serde",
  "sha2 0.10.9",
+ "sha3 0.10.9",
  "tokio",
 ]
 

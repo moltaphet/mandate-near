@@ -3,6 +3,7 @@
 //! Model mode: mandate-agent --model [--dry-run]; provider settings come only from environment.
 //! Autonomous dry-run reads public RPC/quotes only and loads no signing/auth material.
 //! Model dry-run calls its configured provider but sends no NEAR transaction or outbox write.
+//! Model verification: mandate-agent --verify-model <record.json> ... runs offline checks only.
 
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -10,6 +11,7 @@ use std::time::Duration;
 use mandate_agent::autonomous::{AutonomousConfig, Preparation};
 use mandate_agent::decision::{Decision, DecisionSource, ManualDecision, RebalanceDecision};
 use mandate_agent::model::{HttpChatClient, ModelDecision};
+use mandate_agent::provenance::{ModelRecord, SignatureResponse, verify_signature};
 use mandate_agent::relay::Relay;
 use mandate_agent::transport::{
     JsonRpc, PublicReader, create_public_dir, read_public_json, write_public,
@@ -63,6 +65,56 @@ async fn record_outcome(
     write_public(&outbox.join(format!("outcome-{id}.json")), &serde_json::to_vec_pretty(&report)?)
 }
 
+/// Offline check of a model record: `--verify-model <record.json> [--reason-hash H]
+/// [--signature <signature.json> --signing-address 0x…]`. Nothing is fetched or sent.
+/// It exits with an error unless every requested check passes.
+fn verify_model(args: &[String]) -> Result<(), AgentError> {
+    const USAGE: &str = "usage: mandate-agent --verify-model <record.json> [--reason-hash H] [--signature <signature.json> --signing-address 0x…]";
+    let record_path = args.first().ok_or(USAGE)?;
+    let mut reason_hash = None;
+    let mut signature_path = None;
+    let mut signing_address = None;
+    let mut rest = args[1..].iter();
+    while let Some(flag) = rest.next() {
+        let value = rest.next().ok_or(USAGE)?;
+        match flag.as_str() {
+            "--reason-hash" => reason_hash = Some(value.clone()),
+            "--signature" => signature_path = Some(value.clone()),
+            "--signing-address" => signing_address = Some(value.clone()),
+            _ => return Err(USAGE.into()),
+        }
+    }
+    if signature_path.is_some() != signing_address.is_some() {
+        return Err(USAGE.into());
+    }
+    let record: ModelRecord = serde_json::from_slice(&std::fs::read(record_path)?)?;
+    record.check_hashes().map_err(|error| error.to_string())?;
+    if reason_hash.as_ref().is_some_and(|expected| expected != &record.response_sha256) {
+        return Err("the on-chain reason hash does not match the stored response bytes".into());
+    }
+    let signature = match (&signature_path, &signing_address) {
+        (Some(path), Some(address)) => {
+            let signature: SignatureResponse = serde_json::from_slice(&std::fs::read(path)?)?;
+            verify_signature(&record, &signature, address).map_err(|error| error.to_string())?;
+            "VERIFIED"
+        }
+        _ => "NOT_CHECKED",
+    };
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&json!({
+            "record": "hashes_match",
+            "reason_hash": record.response_sha256,
+            "request_sha256": record.request_sha256,
+            "signature": signature,
+            "signing_address": signing_address,
+            "model": record.model,
+            "response_id": record.response_id,
+        }))?
+    );
+    Ok(())
+}
+
 #[tokio::main]
 async fn main() -> Result<(), AgentError> {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -111,6 +163,8 @@ async fn main() -> Result<(), AgentError> {
                         "amount_in": plan.amount_in,
                         "min_amount_out": plan.min_amount_out,
                         "reason_hash": plan.reason_hash(),
+                        "request_sha256": response.request_sha256,
+                        "response_sha256": response.response_sha256,
                         "block_hash": snapshot.block_hash,
                         "dry_run": dry
                     }))?
@@ -150,11 +204,20 @@ async fn main() -> Result<(), AgentError> {
                     return Err("configured account is not this vault's agent".into());
                 }
                 let outbox = create_public_dir(&PathBuf::from(setting("AGENT_OUTBOX")?))?;
+                // Written before submission, so the exact bytes exist even if the send fails.
+                let record = ModelRecord::from_response(&response);
+                write_public(
+                    &outbox.join(format!("model-{}.json", response.response_sha256)),
+                    &serde_json::to_vec_pretty(&record)?,
+                )?;
                 let id = submit(&agent, &plan, &outbox).await?;
                 record_outcome(&agent, id, &plan, &outbox).await?;
             }
         }
         return Ok(());
+    }
+    if args.first().is_some_and(|arg| arg == "--verify-model") {
+        return verify_model(&args[1..]);
     }
     if args.first().is_some_and(|arg| arg == "--auto") {
         let path = args

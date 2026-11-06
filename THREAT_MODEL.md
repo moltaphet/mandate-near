@@ -52,8 +52,9 @@ rationale is untrusted text and is never executed or used to override trade
 fields or owner rules. Paused/halted readiness prevents inference calls. Local
 preview is advisory: a compromised agent can bypass the client, so the unchanged
 on-chain gates remain the final boundary. A provider/model label alone proves
-no model origin, and response or hardware attestation is not verified at this
-first implementation stage.
+no model origin. The offline verifier can check a NEAR AI Cloud signature
+against an address the operator pins, but the pin is only as trustworthy as its
+source; attestation of that key and live signature retrieval are not implemented.
 
 **Mechanism.** Every proposal is checked on-chain at execution against the
 mandate: asset allowlist, per-trade size, UTC-day turnover, slippage against

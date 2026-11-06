@@ -31,6 +31,7 @@ fn binding() -> ProposalBinding {
             amount_in: U128(20_000_000),
             min_amount_out: U128(4 * 10u128.pow(24)),
             rationale: "fixture quote rebalance".into(),
+            response_commitment: None,
         },
         quote: near_sdk::serde_json::from_value(offer()).unwrap(),
     }

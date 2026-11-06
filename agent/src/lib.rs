@@ -21,6 +21,7 @@ use sha2::{Digest, Sha256};
 pub mod autonomous;
 pub mod decision;
 pub mod model;
+pub mod provenance;
 pub mod relay;
 pub mod transport;
 
@@ -35,6 +36,10 @@ pub struct Plan {
     pub min_amount_out: U128,
     /// The agent's reasoning, in plain text. Only its hash is sent on chain.
     pub rationale: String,
+    /// Set only by the model path: the SHA-256 of the exact response bytes received from
+    /// the provider. Skipped in both directions, so a plan file can never choose it.
+    #[serde(skip)]
+    pub response_commitment: Option<String>,
 }
 
 impl Plan {
@@ -54,8 +59,12 @@ impl Plan {
         Ok(())
     }
 
-    /// SHA-256 of the rationale, as 64 hex characters: the value the vault stores.
+    /// The value the vault stores, as 64 hex characters. For a model decision this is the
+    /// SHA-256 of the exact response bytes; otherwise the SHA-256 of the rationale.
     pub fn reason_hash(&self) -> String {
+        if let Some(commitment) = &self.response_commitment {
+            return commitment.clone();
+        }
         Sha256::digest(self.rationale.as_bytes()).iter().map(|b| format!("{b:02x}")).collect()
     }
 }
@@ -266,6 +275,7 @@ mod tests {
             amount_in: U128(2_000_000),
             min_amount_out: U128(450_000_000_000_000_000_000_000),
             rationale: rationale.into(),
+            response_commitment: None,
         }
     }
 

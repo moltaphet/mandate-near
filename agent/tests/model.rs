@@ -85,9 +85,14 @@ fn response(content: &str) -> ChatResponse {
             "attestation":{"status":"fixture-unverified"}
         }))
         .unwrap(),
+        FIXTURE_REQUEST_SHA256.into(),
     )
     .unwrap()
 }
+
+/// A fixed, well-formed request hash for fixtures that do not send a real request.
+const FIXTURE_REQUEST_SHA256: &str =
+    "0000000000000000000000000000000000000000000000000000000000000001";
 
 #[derive(Clone)]
 struct FakeClient {
@@ -467,7 +472,10 @@ fn compact_prompt_preserves_public_integer_prices_balances_and_rules() {
 #[test]
 fn captured_envelope_rejects_oversize_and_non_model_reserved_ids() {
     assert!(matches!(
-        ChatResponse::from_raw("x".repeat(MAX_CHAT_RESPONSE_BYTES + 1)),
+        ChatResponse::from_raw(
+            "x".repeat(MAX_CHAT_RESPONSE_BYTES + 1),
+            FIXTURE_REQUEST_SHA256.into()
+        ),
         Err(ChatFailure::ResponseTooLarge)
     ));
     for id in ["manual-v1", "rebalance-v1", ""] {
@@ -475,7 +483,7 @@ fn captured_envelope_rejects_oversize_and_non_model_reserved_ids() {
             serde_json::from_str(&response(&body().to_string()).raw_body).unwrap();
         envelope["model"] = json!(id);
         assert!(matches!(
-            ChatResponse::from_raw(envelope.to_string()),
+            ChatResponse::from_raw(envelope.to_string(), FIXTURE_REQUEST_SHA256.into()),
             Err(ChatFailure::InvalidResponse)
         ));
     }
@@ -489,6 +497,7 @@ async fn manual_adapter_preserves_plan_hash_and_existing_structural_only_validat
         amount_in: U128(40_000_000),
         min_amount_out: U128(8 * NEAR),
         rationale: "A manual plan retains its previous behavior.".into(),
+        response_commitment: None,
     };
     let adapter = ManualDecision::new(plan.clone());
     assert_eq!(adapter.validated_plan().unwrap(), plan);

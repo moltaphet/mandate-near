@@ -1,5 +1,6 @@
-//! Bounded model decisions. Captured provider responses have no provenance
-//! verification in this step; a declared model name is not origin proof.
+//! Bounded model decisions. Each captured response is committed by the SHA-256 of
+//! its exact bytes, and the request by the SHA-256 of the exact body sent. A
+//! declared model name is not origin proof; signature checks live in `provenance`.
 
 use std::fmt;
 use std::future::Future;
@@ -50,20 +51,27 @@ impl fmt::Display for ChatFailure {
 
 impl std::error::Error for ChatFailure {}
 
-/// Unmodified UTF-8 HTTP response and the provider's declared response/model IDs.
-/// No signature, attestation or model-origin verification is claimed.
+/// Unmodified UTF-8 HTTP response, the provider's declared IDs, and the hashes that
+/// commit to the exact bytes. No signature or attestation is checked here.
 #[derive(Clone)]
 pub struct ChatResponse {
     pub id: String,
     pub model: String,
     pub raw_body: String,
     pub content: String,
+    /// SHA-256 of the exact request body bytes sent, as 64 lowercase hex characters.
+    pub request_sha256: String,
+    /// SHA-256 of the exact response body bytes received, as 64 lowercase hex characters.
+    pub response_sha256: String,
 }
 
 impl ChatResponse {
-    pub fn from_raw(raw_body: String) -> Result<Self, ChatFailure> {
+    pub fn from_raw(raw_body: String, request_sha256: String) -> Result<Self, ChatFailure> {
         if raw_body.len() > MAX_CHAT_RESPONSE_BYTES {
             return Err(ChatFailure::ResponseTooLarge);
+        }
+        if !is_sha256_hex(&request_sha256) {
+            return Err(ChatFailure::InvalidResponse);
         }
         let envelope: ChatEnvelope =
             serde_json::from_str(&raw_body).map_err(|_| ChatFailure::InvalidResponse)?;
@@ -82,13 +90,27 @@ impl ChatResponse {
         {
             return Err(ChatFailure::InvalidResponse);
         }
+        let response_sha256 = sha256_hex(raw_body.as_bytes());
         Ok(Self {
             id: envelope.id,
             model: envelope.model,
             raw_body,
             content: choice.message.content,
+            request_sha256,
+            response_sha256,
         })
     }
+}
+
+/// SHA-256 of `bytes` as 64 lowercase hex characters.
+pub fn sha256_hex(bytes: &[u8]) -> String {
+    use sha2::{Digest, Sha256};
+    Sha256::digest(bytes).iter().map(|byte| format!("{byte:02x}")).collect()
+}
+
+/// True for exactly 64 lowercase hexadecimal characters.
+pub fn is_sha256_hex(value: &str) -> bool {
+    value.len() == 64 && value.bytes().all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f'))
 }
 
 fn bounded_identity(value: &str, max_bytes: usize) -> bool {
@@ -164,7 +186,10 @@ impl<C: ChatClient> DecisionSource for ModelDecision<C> {
         };
         // The fakeable client cannot return content or attribution inconsistent
         // with the captured raw envelope. Reject it; do not repair it silently.
-        let parsed = match ChatResponse::from_raw(response.raw_body.clone()) {
+        let parsed = match ChatResponse::from_raw(
+            response.raw_body.clone(),
+            response.request_sha256.clone(),
+        ) {
             Ok(parsed) => parsed,
             Err(error) => return no_trade(error.to_string()),
         };
@@ -183,7 +208,7 @@ impl<C: ChatClient> DecisionSource for ModelDecision<C> {
                 validated.no_trade_reason.as_deref().unwrap_or("model requested no trade"),
             );
         }
-        let plan = validated.plan;
+        let mut plan = validated.plan;
         let trade = Trade {
             asset_in: plan.asset_in.clone(),
             asset_out: plan.asset_out.clone(),
@@ -195,7 +220,9 @@ impl<C: ChatClient> DecisionSource for ModelDecision<C> {
         {
             return no_trade(format!("local vault preview rejected the trade: {}", error.code()));
         }
-        Decision::Trade { plan, response: Some(response) }
+        // The vault's reason hash for this decision commits to the exact response bytes.
+        plan.response_commitment = Some(response.response_sha256.clone());
+        Decision::Trade { plan, response: Some(Box::new(response)) }
     }
 }
 
@@ -276,6 +303,7 @@ impl ModelOutput {
             amount_in: U128(amount_in),
             min_amount_out: U128(min_amount_out),
             rationale: self.rationale.clone(),
+            response_commitment: None,
         })
     }
 }
@@ -526,17 +554,22 @@ impl ChatClient for HttpChatClient {
         }
         // Zero retries: malformed outputs and failed transport never trigger a
         // repair loop or a second model request.
+        // The exact bytes sent are hashed, so a verifier can match them to the record.
+        let request_body = serde_json::to_vec(&json!({
+            "model":self.model_name,
+            "messages":[
+                {"role":"system","content":MODEL_INSTRUCTIONS},
+                {"role":"user","content":prompt}
+            ]
+        }))
+        .map_err(|_| ChatFailure::InvalidSnapshot)?;
+        let request_sha256 = sha256_hex(&request_body);
         let mut response = self
             .client
             .post(self.endpoint.clone())
             .header(reqwest::header::AUTHORIZATION, self.authorization.clone())
-            .json(&json!({
-                "model":self.model_name,
-                "messages":[
-                    {"role":"system","content":MODEL_INSTRUCTIONS},
-                    {"role":"user","content":prompt}
-                ]
-            }))
+            .header(reqwest::header::CONTENT_TYPE, "application/json")
+            .body(request_body)
             .send()
             .await
             .map_err(|error| {
@@ -562,6 +595,6 @@ impl ChatClient for HttpChatClient {
         if response_contains_marker(&raw_body, &self.api_key)? {
             return Err(ChatFailure::InvalidResponse);
         }
-        ChatResponse::from_raw(raw_body)
+        ChatResponse::from_raw(raw_body, request_sha256)
     }
 }

@@ -387,6 +387,7 @@ pub fn preview(
             trade.amount_in,
             trade.min_amount_out
         ),
+        response_commitment: None,
     };
     plan.validate()?;
     Ok(Preparation::Trade {

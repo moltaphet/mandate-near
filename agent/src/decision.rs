@@ -11,7 +11,7 @@ pub const MANUAL_SOURCE_ID: &str = "manual-v1";
 pub const REBALANCE_SOURCE_ID: &str = "rebalance-v1";
 
 pub enum Decision {
-    Trade { plan: Plan, response: Option<ChatResponse> },
+    Trade { plan: Plan, response: Option<Box<ChatResponse>> },
     NoTrade { reason: String },
 }
 

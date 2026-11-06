@@ -72,8 +72,12 @@ HTTPS transport has a bounded response and deadline, refuses redirects and
 does not retry automatically. Invalid output or failed transport produces no
 trade; paused/halted readiness is checked before inference. Rationale text is
 untrusted and never changes policy, recipients, amounts or execution commands.
-Manual/rebalance rationale hashes remain unchanged. Response verification and
-model-specific canonical commitments are not implemented at this first stage.
+Manual and rebalance rationale hashes remain unchanged. A model proposal's reason
+hash is the SHA-256 of the exact response bytes received (no canonicalisation).
+The request hash is the SHA-256 of the exact request bytes sent. The offline
+verifier (`provenance.rs`) checks those hashes, and a NEAR AI Cloud ECDSA
+signature against a pinned address when one is supplied. Live signature retrieval
+and attestation checks are not implemented.
 
 ## 4. Trade lifecycle (two transactions, by design)
 
