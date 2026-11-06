@@ -1,3 +1,8 @@
+UPDATE, 2026-11-06 (later). This block supersedes the statements below that changes are unpublished or that publication checks are pending.
+- Committed and pushed to main (2d6c1da is the latest main commit). The site was deployed to mandatenear.xyz and HTTP checks pass. A browser visual check is still pending.
+- Final serial sandbox verification is still pending. Partial sandbox runs are in docs/evidence and are not final.
+- Verdict unchanged: NO-GO for real funds. F26 remains open.
+
 MANDATE — OPERATIONAL SECURITY AND HACKATHON REVIEW
 Review date: 6 November 2026
 Workspace: /Users/ehs4n/mandate-near

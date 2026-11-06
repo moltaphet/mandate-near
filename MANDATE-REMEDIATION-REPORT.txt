@@ -1,3 +1,11 @@
+UPDATE, 2026-11-06 (later). This block supersedes the statements below that the fixes are uncommitted or that nothing was committed, pushed or deployed.
+- Committed and pushed to main: 0de5c48 (audit fixes), 166736b (round-two remediation), 9b573d1 (sandbox evidence and site), 63d40ee (merge of main), 2d6c1da (logo restored), 6001298 (operational report), 3bba41d (logo, earlier).
+- Site deployed to mandatenear.xyz from main. HTTP checks only: /, /dashboard/, /site.mjs, /assets/logo.svg return 200. Visual check of the vault section in a browser has not been done.
+- F26 (Critical) remains OPEN. Verdict unchanged: NO-GO for real funds.
+- Integration tests (verify.sh --integration) were last run before the round-two commit. Not re-run on the final tree. The fast verify.sh passed on the merged tree (226 unit tests).
+- The site's local-preview note no longer contains a 127.0.0.1 URL.
+- Evidence files named operational-sandbox-*-continuation / final-incomplete are partial runs. They are not final verification.
+
 MANDATE — REMEDIATION AND ADVERSARIAL VERIFICATION REPORT
 Date: 2026-11-06 14:39:53 UTC
 Workspace: /Users/ehs4n/mandate-near
