@@ -32,7 +32,7 @@ are outside its supported custody path. See T3 and SR-6.
 | Actor | Trusted for | Limits / verification |
 |---|---|---|
 | Owner | writing the mandate, pausing, authorizing delayed withdrawals and safe retry rearming | Trade signatures remain gated; stolen owner authority can withdraw after the delay |
-| Agent (manual plan or deterministic two-asset strategy; TEE planned) | choosing a trade | On-chain gates remain authoritative; local previews do not replace them |
+| Agent (manual, deterministic two-asset or optional model decision; TEE planned) | choosing a trade | On-chain gates remain authoritative; local previews do not replace them |
 | Keeper, any stranger | running `execute` and `register_intents_key` | choosing or changing a trade |
 | Solver / relay | filling a signed intent at or above `min_amount_out` | altering bytes; taking more than the signed diff |
 | Configured immutable PriceOracle or Pyth adapter | market correctness and coherent publication times | Mainnet feed/updater, source and administrative identity UNVERIFIED; a fresh wrong price can pass (T6) |
@@ -45,6 +45,15 @@ are outside its supported custody path. See T3 and SR-6.
 
 The agent is the most exposed component: it reads untrusted market data and,
 in the planned design, runs in a TEE with a pinned code hash.
+
+The optional model client can also receive injected instructions in market
+text or the model response. Its decision is strictly parsed and validated; the
+rationale is untrusted text and is never executed or used to override trade
+fields or owner rules. Paused/halted readiness prevents inference calls. Local
+preview is advisory: a compromised agent can bypass the client, so the unchanged
+on-chain gates remain the final boundary. A provider/model label alone proves
+no model origin, and response or hardware attestation is not verified at this
+first implementation stage.
 
 **Mechanism.** Every proposal is checked on-chain at execution against the
 mandate: asset allowlist, per-trade size, UTC-day turnover, slippage against

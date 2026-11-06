@@ -9,9 +9,11 @@
 
 **On-chain trade authorization for agents that hold no treasury signing key.**
 
-The Rust reference agent accepts a manual plan or runs a deterministic two-asset
-rebalancer using final-block holdings, oracle values and solver quotes. It uses
-no model inference or TEE today; OutLayer integration is planned. The treasury
+The Rust reference agent accepts a manual plan, runs a deterministic two-asset
+rebalancer, or requests a strictly validated model decision using a public
+final-block snapshot. Model output has no treasury authority. Response
+provenance and live provider operation are unverified; OutLayer integration is
+planned. The treasury
 sits on NEAR Intents under the vault account. The vault requests a Chain
 Signatures signature only after checking a proposed trade against the owner's
 mandate. The owner also has a separate, delayed withdrawal path. A compromised
@@ -47,7 +49,7 @@ Mandate splits the two concerns:
 
 | | Who controls it | Where it lives |
 |---|---|---|
-| **Intelligence** (what to trade) | the agent | manual plan or deterministic two-asset strategy; OutLayer and private inference planned |
+| **Intelligence** (what to trade) | the agent | manual plan, deterministic two-asset strategy, or validated model output; OutLayer and private inference planned |
 | **Authority** (what *may* be traded) | the owner's mandate | public and deterministic: NEAR smart contract |
 
 ## How a trade works
@@ -217,6 +219,31 @@ and the [official Message Bus protocol](https://docs.near-intents.org/integratio
 No live quote, publication, strategy or funded settlement result is claimed by
 these implementations.
 
+### Optional model decision source
+
+`cargo run -p mandate-agent -- --model --dry-run` reads the existing final-block
+snapshot and asks a configured OpenAI-compatible chat-completions endpoint for
+one decision. Runtime settings are `NEAR_RPC_URL`, `VAULT_ID`, optional
+`NEAR_CHAIN_ID`, and the required provider settings `MODEL_ENDPOINT_URL`,
+`MODEL_NAME`, `MODEL_API_KEY`. The endpoint is the complete HTTPS completion
+URL. No provider, endpoint or model is selected by a fallback. Tests inject a
+fake client and never call a model endpoint.
+
+The response must contain the exact seven-field decision schema. Unknown or
+missing fields, malformed JSON, unsupported assets, invalid positive u128
+amounts, rationale outside 1..800 characters, HTTP errors and timeouts produce
+no trade. Closed vault controls prevent the model call. The agent previews the
+unchanged vault engine, then refreshes public state before paid submission;
+it never repairs model amounts or changes the mandate from rationale text.
+`no_trade` makes no proposal. There is no automatic model retry loop.
+
+Without `--dry-run`, existing agent signing and outbox settings are needed to
+submit. The model never receives those settings or signs a transaction. At this
+implementation stage the model path still uses the existing rationale hash;
+response evidence and model-specific commitments are a separate next step.
+Provider/model labels and response provenance are **UNVERIFIED**. Neither this
+client nor a valid model response proves profitability, privacy or TEE execution.
+
 ## Mandate rules
 
 Enforced per trade by `contracts/vault/src/engine.rs`, a pure function
@@ -373,8 +400,8 @@ combined tests and intended-chain withdrawal/recovery evidence remain required.
 ## Not claimed
 
 - That the strategy is profitable. Mandate bounds risk; it does not create alpha.
-- That TEE attestation or private inference is delivered today. No model/TEE
-  runs in the reference strategy; OutLayer result delivery and attestation are planned.
+- That TEE attestation or private inference is delivered today. The optional
+  model client has no verified hardware attestation; OutLayer delivery is planned.
 - That a proposed inference provider/model is private or available without
   separate verification. The intended private-model policy remains planned.
 

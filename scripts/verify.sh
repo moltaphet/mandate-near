@@ -42,8 +42,8 @@ python3 -B scripts/inspect_deployment_test.py
 step "Unit tests (cargo test --lib)"
 cargo test --workspace --lib
 
-step "Autonomous strategy and relay protocol tests"
-cargo test -p mandate-agent --test autonomous --test protocol
+step "Autonomous strategy, offline model decisions and relay protocol tests"
+cargo test -p mandate-agent --test autonomous --test protocol --test model
 
 if $integration; then
   step "Sandbox integration and supported-size gas regressions (Intents fixture; stand-in signer and oracle)"

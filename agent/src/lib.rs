@@ -19,6 +19,8 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 pub mod autonomous;
+pub mod decision;
+pub mod model;
 pub mod relay;
 pub mod transport;
 

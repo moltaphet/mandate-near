@@ -1,0 +1,39 @@
+$ cargo test --offline -p mandate-agent --test protocol -- --test-threads=1
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.56s
+     Running tests/protocol.rs (target/debug/deps/protocol-8ed452fa26a209f9)
+
+running 7 tests
+test dry_run_binary_prepares_from_public_data_with_empty_account_environment ... ok
+test final_views_are_pinned_and_wrong_height_network_or_hash_is_refused ... ok
+test malformed_expired_and_mismatched_quotes_never_get_selected ... ok
+test oversized_error_and_mismatched_rpc_envelopes_fail_without_echoing_data ... ok
+test prohibited_public_paths_are_refused_before_file_open ... ok
+test publication_association_rejects_wrong_ids_amounts_hashes_curves_and_deadlines ... ok
+test quote_publish_and_status_use_documented_protocol_and_do_not_invent_settlement ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.15s
+
+EXIT STATUS: 0
+
+$ bash scripts/check-claims.sh
+Allowed local references checked. External citations and security claims are not verified; no tests were run.
+EXIT STATUS: 0
+
+$ cargo test --offline -p mandate-vault --test agent -- --test-threads=1
+   Compiling mandate-vault v0.1.0 (/Users/ehs4n/mandate-near/contracts/vault)
+   Compiling mandate-agent v0.1.0 (/Users/ehs4n/mandate-near/agent)
+   Compiling mandate-keeper v0.1.0 (/Users/ehs4n/mandate-near/keeper)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 6.11s
+     Running tests/agent.rs (target/debug/deps/agent-d545893fe6b52146)
+
+running 5 tests
+test a_gate_that_closes_is_reported_as_rejected ... ok
+test an_unretained_proposal_outcome_is_unknown ... ok
+test quote_driven_rebalance_reaches_a_signed_intent_and_mock_relay_acknowledgement ... ok
+test the_agent_proposes_and_the_keeper_executes_it ... ok
+test the_agent_refuses_a_second_proposal_before_spending_gas ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 163.60s
+
+EXIT STATUS: 0
+

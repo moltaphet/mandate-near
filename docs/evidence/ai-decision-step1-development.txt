@@ -1,0 +1,187 @@
+AI DECISION STEP 1 DEVELOPMENT EVIDENCE
+Scope: offline, in-memory model tests. No real provider requests, provider environment reads, account signing, chain deployment, Step 2 proof/hash changes, or Step 3 policy changes were performed by this task.
+This is development evidence; root's independent final verification is recorded separately.
+
+INITIAL SCOPED COMPILE
+Command: cargo test --offline -p mandate-agent --test model -- --test-threads=1
+Observed exit_code: 101
+Output copied from the actual initial exec/wait chunks:
+   Compiling mandate-vault v0.1.0 (/Users/ehs4n/mandate-near/contracts/vault)
+   Compiling mandate-agent v0.1.0 (/Users/ehs4n/mandate-near/agent)
+error[E0433]: cannot find module or crate `serde_json` in this scope
+  --> agent/tests/model.rs:79:9
+   |
+79 |         serde_json::to_string(&json!({
+   |         ^^^^^^^^^^ use of unresolved module or unlinked crate `serde_json`
+   |
+   = help: if you wanted to use a crate named `serde_json`, use `cargo add serde_json` to add it to your `Cargo.toml`
+
+error[E0433]: cannot find module or crate `serde_json` in this scope
+   --> agent/tests/model.rs:450:24
+    |
+450 |     let input: Value = serde_json::from_str(&text).unwrap();
+    |                        ^^^^^^^^^^ use of unresolved module or unlinked crate `serde_json`
+    |
+    = help: if you wanted to use a crate named `serde_json`, use `cargo add serde_json` to add it to your `Cargo.toml`
+
+error[E0433]: cannot find module or crate `serde_json` in this scope
+   --> agent/tests/model.rs:471:13
+    |
+471 |             serde_json::from_str(&response(&body().to_string()).raw_body).unwrap();
+    |             ^^^^^^^^^^ use of unresolved module or unlinked crate `serde_json`
+    |
+    = help: if you wanted to use a crate named `serde_json`, use `cargo add serde_json` to add it to your `Cargo.toml`
+
+For more information about this error, try `rustc --explain E0433`.
+error: could not compile `mandate-agent` (test "model") due to 3 previous errors
+warning: build failed, waiting for other jobs to finish...
+
+Repair: import near_sdk::serde_json::{self, Value, json}; no dependency added.
+
+POST-IMPORT DEVELOPMENT RUN
+Command: cargo test --offline -p mandate-agent --test model -- --test-threads=1
+Observed exit_code: 0
+   Compiling mandate-agent v0.1.0 (/Users/ehs4n/mandate-near/agent)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.55s
+     Running tests/model.rs (target/debug/deps/model-4068dc478e572ef0)
+
+running 21 tests
+test amounts_are_exact_positive_u128_decimal_strings ... ok
+test captured_envelope_rejects_oversize_and_non_model_reserved_ids ... ok
+test compact_prompt_preserves_public_integer_prices_balances_and_rules ... ok
+test every_field_is_required_including_explicit_nullable_reason ... ok
+test explicit_no_trade_stops_after_one_call_with_a_bounded_reason ... ok
+test inconsistent_client_content_is_rejected_without_repairing_the_capture ... ok
+test invalid_public_snapshot_stops_before_the_model_call ... ok
+test malformed_and_fenced_json_fail_without_a_repair_request ... ok
+test manual_adapter_preserves_plan_hash_and_existing_structural_only_validation ... ok
+test no_trade_still_requires_valid_assets_amounts_and_rationale ... ok
+test nullable_and_string_no_trade_reasons_remain_schema_valid ... ok
+test only_distinct_mandate_assets_are_accepted ... ok
+test paused_or_halted_snapshot_makes_zero_model_calls ... ok
+test rationale_bound_counts_unicode_characters_and_preserves_text ... ok
+test rebalance_adapter_uses_the_existing_exact_candidate_without_network_requests ... ok
+test stalled_fake_client_times_out_once_without_network_or_twenty_second_wait ... ok
+test timeout_http_failure_and_missing_configuration_produce_no_trade ... ok
+test unchanged_local_engine_refuses_excess_size_and_bad_minimum_output ... ok
+test unknown_and_duplicate_fields_are_rejected_instead_of_overwritten ... ok
+test valid_model_json_preserves_exact_plan_and_raw_unverified_response ... ok
+test wrong_json_types_do_not_get_coerced ... ok
+
+test result: ok. 21 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.37s
+
+
+POST-ECHO-GUARD AND MANUAL ADAPTER DEVELOPMENT RUN
+Command: cargo test --offline -p mandate-agent --test model -- --test-threads=1
+Observed exit_code: 0
+   Compiling mandate-agent v0.1.0 (/Users/ehs4n/mandate-near/agent)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 5.87s
+     Running tests/model.rs (target/debug/deps/model-4068dc478e572ef0)
+
+running 22 tests
+test amounts_are_exact_positive_u128_decimal_strings ... ok
+test captured_envelope_rejects_oversize_and_non_model_reserved_ids ... ok
+test compact_prompt_preserves_public_integer_prices_balances_and_rules ... ok
+test decoded_scan_detects_escaped_and_nested_public_markers_without_credentials ... ok
+test every_field_is_required_including_explicit_nullable_reason ... ok
+test explicit_no_trade_stops_after_one_call_with_a_bounded_reason ... ok
+test inconsistent_client_content_is_rejected_without_repairing_the_capture ... ok
+test invalid_public_snapshot_stops_before_the_model_call ... ok
+test malformed_and_fenced_json_fail_without_a_repair_request ... ok
+test manual_adapter_preserves_plan_hash_and_existing_structural_only_validation ... ok
+test no_trade_still_requires_valid_assets_amounts_and_rationale ... ok
+test nullable_and_string_no_trade_reasons_remain_schema_valid ... ok
+test only_distinct_mandate_assets_are_accepted ... ok
+test paused_or_halted_snapshot_makes_zero_model_calls ... ok
+test rationale_bound_counts_unicode_characters_and_preserves_text ... ok
+test rebalance_adapter_uses_the_existing_exact_candidate_without_network_requests ... ok
+test stalled_fake_client_times_out_once_without_network_or_twenty_second_wait ... ok
+test timeout_http_failure_and_missing_configuration_produce_no_trade ... ok
+test unchanged_local_engine_refuses_excess_size_and_bad_minimum_output ... ok
+test unknown_and_duplicate_fields_are_rejected_instead_of_overwritten ... ok
+test valid_model_json_preserves_exact_plan_and_raw_unverified_response ... ok
+test wrong_json_types_do_not_get_coerced ... ok
+
+test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.44s
+
+
+POST-DEPTH-BUDGET DEVELOPMENT RUN
+Command: cargo test --offline -p mandate-agent --test model -- --test-threads=1
+Observed exit_code: 0
+   Compiling mandate-agent v0.1.0 (/Users/ehs4n/mandate-near/agent)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 4.87s
+     Running tests/model.rs (target/debug/deps/model-4068dc478e572ef0)
+
+running 23 tests
+test amounts_are_exact_positive_u128_decimal_strings ... ok
+test captured_envelope_rejects_oversize_and_non_model_reserved_ids ... ok
+test compact_prompt_preserves_public_integer_prices_balances_and_rules ... ok
+test decoded_scan_detects_escaped_and_nested_public_markers_without_credentials ... ok
+test decoded_scan_fails_closed_when_embedded_json_exceeds_its_depth_budget ... ok
+test every_field_is_required_including_explicit_nullable_reason ... ok
+test explicit_no_trade_stops_after_one_call_with_a_bounded_reason ... ok
+test inconsistent_client_content_is_rejected_without_repairing_the_capture ... ok
+test invalid_public_snapshot_stops_before_the_model_call ... ok
+test malformed_and_fenced_json_fail_without_a_repair_request ... ok
+test manual_adapter_preserves_plan_hash_and_existing_structural_only_validation ... ok
+test no_trade_still_requires_valid_assets_amounts_and_rationale ... ok
+test nullable_and_string_no_trade_reasons_remain_schema_valid ... ok
+test only_distinct_mandate_assets_are_accepted ... ok
+test paused_or_halted_snapshot_makes_zero_model_calls ... ok
+test rationale_bound_counts_unicode_characters_and_preserves_text ... ok
+test rebalance_adapter_uses_the_existing_exact_candidate_without_network_requests ... ok
+test stalled_fake_client_times_out_once_without_network_or_twenty_second_wait ... ok
+test timeout_http_failure_and_missing_configuration_produce_no_trade ... ok
+test unchanged_local_engine_refuses_excess_size_and_bad_minimum_output ... ok
+test unknown_and_duplicate_fields_are_rejected_instead_of_overwritten ... ok
+test valid_model_json_preserves_exact_plan_and_raw_unverified_response ... ok
+test wrong_json_types_do_not_get_coerced ... ok
+
+test result: ok. 23 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.40s
+
+
+FINAL OWNED-SOURCE SCOPED RUN
+Command: cargo test --offline -p mandate-agent --test model -- --test-threads=1
+Observed exit_code: 0
+   Compiling mandate-agent v0.1.0 (/Users/ehs4n/mandate-near/agent)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 4.42s
+     Running tests/model.rs (target/debug/deps/model-4068dc478e572ef0)
+
+running 23 tests
+test amounts_are_exact_positive_u128_decimal_strings ... ok
+test captured_envelope_rejects_oversize_and_non_model_reserved_ids ... ok
+test compact_prompt_preserves_public_integer_prices_balances_and_rules ... ok
+test decoded_scan_detects_escaped_and_nested_public_markers_without_credentials ... ok
+test decoded_scan_fails_closed_when_embedded_json_exceeds_its_depth_budget ... ok
+test every_field_is_required_including_explicit_nullable_reason ... ok
+test explicit_no_trade_stops_after_one_call_with_a_bounded_reason ... ok
+test inconsistent_client_content_is_rejected_without_repairing_the_capture ... ok
+test invalid_public_snapshot_stops_before_the_model_call ... ok
+test malformed_and_fenced_json_fail_without_a_repair_request ... ok
+test manual_adapter_preserves_plan_hash_and_existing_structural_only_validation ... ok
+test no_trade_still_requires_valid_assets_amounts_and_rationale ... ok
+test nullable_and_string_no_trade_reasons_remain_schema_valid ... ok
+test only_distinct_mandate_assets_are_accepted ... ok
+test paused_or_halted_snapshot_makes_zero_model_calls ... ok
+test rationale_bound_counts_unicode_characters_and_preserves_text ... ok
+test rebalance_adapter_uses_the_existing_exact_candidate_without_network_requests ... ok
+test stalled_fake_client_times_out_once_without_network_or_twenty_second_wait ... ok
+test timeout_http_failure_and_missing_configuration_produce_no_trade ... ok
+test unchanged_local_engine_refuses_excess_size_and_bad_minimum_output ... ok
+test unknown_and_duplicate_fields_are_rejected_instead_of_overwritten ... ok
+test valid_model_json_preserves_exact_plan_and_raw_unverified_response ... ok
+test wrong_json_types_do_not_get_coerced ... ok
+
+test result: ok. 23 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.41s
+
+
+Formatting command: rustfmt --edition 2024 agent/src/decision.rs agent/src/model.rs agent/tests/model.rs
+Observed exit_code: 0; no output.
+
+Reruns are not additive test coverage: the final target contains 23 distinct cases.
+Production HTTP configuration/transport and live provider interoperability were not exercised by these fake-client tests. No signature/attestation/model-origin verification is claimed.
+
+OWNED SOURCE FREEZE SHA256
+10edf2f57d314b0f68c50de2e166f8050fee97105e446fc1da3c87a897ba6908  agent/src/decision.rs
+225dbcd09dd0144fa7145c6ebc531d00976cf72f3db9a9b0b64e904f73e92c94  agent/src/model.rs
+a3048427c9fb0ce7e0bad0eb7fb91efad101f0f6e5e830712cdf72b8149eac3a  agent/tests/model.rs

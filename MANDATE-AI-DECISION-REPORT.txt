@@ -1,0 +1,280 @@
+MANDATE MODEL DECISION IMPLEMENTATION — STEP 1 CHECKPOINT
+
+A. Changes and commit state
+
+Branch: feat/ai-decision
+Current verified HEAD: bb0b30b64bc436eaadfc31e732971778a28f7725
+The four-step feature is NOT complete. No feature commit has been created.
+
+Step 1: implemented and independently reviewed in the working tree.
+- Added injectable asynchronous DecisionSource and ChatClient interfaces.
+- Manual and deterministic rebalance adapters retain previous plan/hash behavior.
+- Added optional --model [--dry-run] CLI using a public final-block snapshot.
+- Strict seven-field schema; no missing/unknown/duplicate/wrong-type fields,
+  unsupported/distinctness failures, invalid positive u128 values, or rationale
+  outside 1..800 Unicode characters become proposals.
+- Explicit no_trade, HTTP failure, missing configuration, malformed response,
+  timeout or closed vault controls produce no trade. No retry/repair loop.
+- HTTPS-only transport; redirects refused; 64 KiB response cap; 20s deadline.
+- Authentication is excluded from public prompts and errors. A fail-closed
+  raw/decoded/nested JSON marker guard refuses detected authentication echoes.
+- No signing authority or owner control is granted to model output. The existing
+  engine is previewed again against refreshed public state before paid submission.
+- README, architecture and threat-model claims updated for this actual scope.
+- scripts/verify.sh includes the new offline model-test target.
+- New module/test files: agent/src/decision.rs, agent/src/model.rs,
+  agent/tests/model.rs. Existing engine.rs and intent.rs have no diff.
+
+Step 1 commit: NOT CREATED. Expected message:
+  feat(agent): add bounded model decisions
+
+Step 2: NOT IMPLEMENTED. Response evidence, canonical commitment and offline
+signature verifier are planned. Current model path still hashes rationale.
+Step 3: NOT IMPLEMENTED. No on-chain allowed_model_ids/model_id or migration
+change has been made yet.
+Step 4: NOT IMPLEMENTED. Final adversarial vault/model integration and complete
+--integration verification have not run for this feature.
+
+B. Real verification output
+
+Full outputs, including errors and individual test lines, are retained in:
+  docs/evidence/ai-decision-step1-development.txt
+  docs/evidence/ai-decision-step1-fast.txt
+  docs/evidence/ai-decision-step1-local.txt
+
+The final independent run used --offline for Cargo dependency resolution.
+No real provider request was made. Existing local HTTP/sandbox tests required
+an approved escalated run to bind loopback ports. No test was ignored or weakened.
+
+Distinct passing tests for this Step 1 snapshot: 276
+  workspace libraries: 235 (vault 226 + agent 7 + keeper 2)
+  autonomous: 6; model: 23; protocol: 7; sandbox agent: 5
+Development reruns and the initial protocol failure are not added to this count.
+Zero-test mock targets below are reported but add nothing to the count.
+
+Independent fast run result lines:
+$ cargo fmt --all -- --check
+EXIT STATUS: 0
+$ cargo clippy --offline --workspace --all-targets -- -D warnings
+EXIT STATUS: 0
+$ cargo test --offline --workspace --lib
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 226 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.41s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+EXIT STATUS: 0
+$ cargo test --offline -p mandate-agent --test autonomous --test protocol --test model
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.38s
+test result: ok. 23 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.34s
+test result: FAILED. 2 passed; 5 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+EXIT STATUS: 101
+
+Authorized local rerun result lines:
+$ cargo test --offline -p mandate-agent --test protocol -- --test-threads=1
+test dry_run_binary_prepares_from_public_data_with_empty_account_environment ... ok
+test final_views_are_pinned_and_wrong_height_network_or_hash_is_refused ... ok
+test malformed_expired_and_mismatched_quotes_never_get_selected ... ok
+test oversized_error_and_mismatched_rpc_envelopes_fail_without_echoing_data ... ok
+test prohibited_public_paths_are_refused_before_file_open ... ok
+test publication_association_rejects_wrong_ids_amounts_hashes_curves_and_deadlines ... ok
+test quote_publish_and_status_use_documented_protocol_and_do_not_invent_settlement ... ok
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.15s
+EXIT STATUS: 0
+$ bash scripts/check-claims.sh
+EXIT STATUS: 0
+$ cargo test --offline -p mandate-vault --test agent -- --test-threads=1
+test a_gate_that_closes_is_reported_as_rejected ... ok
+test an_unretained_proposal_outcome_is_unknown ... ok
+test quote_driven_rebalance_reaches_a_signed_intent_and_mock_relay_acknowledgement ... ok
+test the_agent_proposes_and_the_keeper_executes_it ... ok
+test the_agent_refuses_a_second_proposal_before_spending_gas ... ok
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 163.60s
+EXIT STATUS: 0
+
+Initial development compile failure and actual repair, verbatim:
+INITIAL SCOPED COMPILE
+Command: cargo test --offline -p mandate-agent --test model -- --test-threads=1
+Observed exit_code: 101
+Output copied from the actual initial exec/wait chunks:
+   Compiling mandate-vault v0.1.0 (/Users/ehs4n/mandate-near/contracts/vault)
+   Compiling mandate-agent v0.1.0 (/Users/ehs4n/mandate-near/agent)
+error[E0433]: cannot find module or crate `serde_json` in this scope
+  --> agent/tests/model.rs:79:9
+   |
+79 |         serde_json::to_string(&json!({
+   |         ^^^^^^^^^^ use of unresolved module or unlinked crate `serde_json`
+   |
+   = help: if you wanted to use a crate named `serde_json`, use `cargo add serde_json` to add it to your `Cargo.toml`
+
+error[E0433]: cannot find module or crate `serde_json` in this scope
+   --> agent/tests/model.rs:450:24
+    |
+450 |     let input: Value = serde_json::from_str(&text).unwrap();
+    |                        ^^^^^^^^^^ use of unresolved module or unlinked crate `serde_json`
+    |
+    = help: if you wanted to use a crate named `serde_json`, use `cargo add serde_json` to add it to your `Cargo.toml`
+
+error[E0433]: cannot find module or crate `serde_json` in this scope
+   --> agent/tests/model.rs:471:13
+    |
+471 |             serde_json::from_str(&response(&body().to_string()).raw_body).unwrap();
+    |             ^^^^^^^^^^ use of unresolved module or unlinked crate `serde_json`
+    |
+    = help: if you wanted to use a crate named `serde_json`, use `cargo add serde_json` to add it to your `Cargo.toml`
+
+For more information about this error, try `rustc --explain E0433`.
+error: could not compile `mandate-agent` (test "model") due to 3 previous errors
+warning: build failed, waiting for other jobs to finish...
+
+Repair: import near_sdk::serde_json::{self, Value, json}; no dependency added.
+
+
+Initial restricted protocol run failure, verbatim:
+
+failures:
+
+---- quote_publish_and_status_use_documented_protocol_and_do_not_invent_settlement stdout ----
+
+thread 'quote_publish_and_status_use_documented_protocol_and_do_not_invent_settlement' (24412783) panicked at agent/tests/common_http/mod.rs:18:59:
+loopback HTTP fixture can bind: Os { code: 1, kind: PermissionDenied, message: "Operation not permitted" }
+
+---- malformed_expired_and_mismatched_quotes_never_get_selected stdout ----
+
+thread 'malformed_expired_and_mismatched_quotes_never_get_selected' (24412779) panicked at agent/tests/common_http/mod.rs:18:59:
+loopback HTTP fixture can bind: Os { code: 1, kind: PermissionDenied, message: "Operation not permitted" }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- final_views_are_pinned_and_wrong_height_network_or_hash_is_refused stdout ----
+
+thread 'final_views_are_pinned_and_wrong_height_network_or_hash_is_refused' (24412778) panicked at agent/tests/common_http/mod.rs:18:59:
+loopback HTTP fixture can bind: Os { code: 1, kind: PermissionDenied, message: "Operation not permitted" }
+
+---- oversized_error_and_mismatched_rpc_envelopes_fail_without_echoing_data stdout ----
+
+thread 'oversized_error_and_mismatched_rpc_envelopes_fail_without_echoing_data' (24412780) panicked at agent/tests/common_http/mod.rs:18:59:
+loopback HTTP fixture can bind: Os { code: 1, kind: PermissionDenied, message: "Operation not permitted" }
+
+---- dry_run_binary_prepares_from_public_data_with_empty_account_environment stdout ----
+
+thread 'dry_run_binary_prepares_from_public_data_with_empty_account_environment' (24412777) panicked at agent/tests/common_http/mod.rs:18:59:
+loopback HTTP fixture can bind: Os { code: 1, kind: PermissionDenied, message: "Operation not permitted" }
+
+
+failures:
+    dry_run_binary_prepares_from_public_data_with_empty_account_environment
+    final_views_are_pinned_and_wrong_height_network_or_hash_is_refused
+    malformed_expired_and_mismatched_quotes_never_get_selected
+    oversized_error_and_mismatched_rpc_envelopes_fail_without_echoing_data
+    quote_publish_and_status_use_documented_protocol_and_do_not_invent_settlement
+
+test result: FAILED. 2 passed; 5 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p mandate-agent --test protocol`
+EXIT STATUS: 101
+
+
+The exact original errors above remain in evidence even after the successful
+local rerun. They are not represented as contract failures or hidden.
+
+Additional read-only checks:
+  git diff --exit-code -- contracts/vault/src/engine.rs contracts/vault/src/intent.rs
+  exit status 0
+  git diff --check
+  exit status 0
+  bash scripts/check-claims.sh
+  exit status 0
+The last command validates allowed local references, not security claims or
+external citations.
+
+./scripts/verify.sh --integration: NOT RUN for this new feature.
+Verifier fixture test: NOT IMPLEMENTED/RUN.
+No new gas measurement is claimed for this feature.
+
+C. Decisions requiring review
+
+Already explicitly approved by the user:
+- Source allowlist will enforce declared labels, not authenticated model origin.
+  A compromised authorized agent can spoof an allowed label. Document this.
+- Manual/rebalancer retain SHA256(rationale UTF-8), using reserved source IDs
+  manual-v1 and rebalance-v1. Only model decisions adopt response commitments.
+- Migration starts active and queued mandates with empty deny-all source lists.
+  The first addition, like later additions, must wait 24 hours.
+- Persist source ID in Proposal and recheck current eligibility at execute.
+
+Step 1 choices implemented:
+- No provider selected or hardcoded. Runtime endpoint is a complete HTTPS
+  chat-completions URL; runtime model/auth settings are mandatory.
+- Zero automatic retries, 20-second maximum deadline and 64 KiB response limit.
+- Rationale bound counts Unicode characters. Amounts are canonical positive
+  decimal strings; they are never rounded, coerced or repaired.
+
+Planned, NOT implemented yet:
+- Separate exact request/response wire hashes for documented NEAR EIP191
+  signatures from a canonical reason commitment.
+- Proposed canonical format mandate-response-json-v1: recursively byte-sorted
+  object keys, preserved arrays/strings, compact UTF-8 JSON, no newline;
+  duplicates/floats/exponents/unsupported integer ranges rejected. Not RFC8785.
+- External configured public expected signer; never trust a response's own
+  signing_address as a provider trust root. No hardware attestation claim.
+- Freeze old nested Borsh layouts; add decoder for prior voucher state and
+  immutable old-state fixtures; preserve safety/quiescence/revision fences.
+
+D. Still NOT verified / NOT implemented
+
+UNVERIFIED: actual provider compatibility, model execution and returned identity.
+UNVERIFIED: provider signatures, model-origin authentication, TEE/private inference.
+UNVERIFIED: live vault MPC, funded settlement, elapsed 24-hour withdrawals/recovery.
+NOT IMPLEMENTED: canonical model-response hash, full response outbox and verifier.
+NOT IMPLEMENTED: on-chain source allowlist and Borsh migration.
+NOT RUN: complete integration suite and updated supported-size gas regression.
+No profitability or mainnet-readiness claim is made. Mainnet remains NO-GO.
+
+Protected files were not reopened. contracts/vault/tests/common/mod.rs remains
+excluded from reading/hashing/scans; its known sensitive location is reported
+only as contracts/vault/tests/common/mod.rs:21 — secret-like value, redacted. Historical unrelated untracked sandbox logs
+are not selected for this commit.
+
+Commit operation blocker:
+Normal git add failed:
+  fatal: Unable to create '/Users/ehs4n/mandate-near/.git/index.lock': Operation not permitted
+Escalated git add did not execute because automatic approval review failed with
+content-blocked / agent_router_api_error. The service explicitly described this
+as a review failure, not a determination that the operation is unsafe.
+No hook bypass or alternate Git-index workaround was attempted.
+Per the user's one-commit-per-step ordering, Step 2 is waiting for commit 1.
+
+E. Exact Git commands
+
+Review the working tree first (these paths are explicitly scoped):
+
+cd /Users/ehs4n/mandate-near
+git branch --show-current
+git diff --stat -- README.md THREAT_MODEL.md agent/src/lib.rs agent/src/main.rs docs/ARCHITECTURE.md scripts/verify.sh
+git diff -- README.md THREAT_MODEL.md agent/src/lib.rs agent/src/main.rs docs/ARCHITECTURE.md scripts/verify.sh
+
+New untracked modules/tests/evidence do not appear in unstaged git diff.
+Review their named files above before staging. Do not add unrelated old logs.
+
+To perform the requested Step 1 commit in your terminal:
+
+cd /Users/ehs4n/mandate-near
+test "$(git branch --show-current)" = "feat/ai-decision" || exit 1
+git diff --check || exit 1
+git add -- README.md THREAT_MODEL.md agent/src/lib.rs agent/src/main.rs agent/src/decision.rs agent/src/model.rs agent/tests/model.rs docs/ARCHITECTURE.md scripts/verify.sh docs/superpowers/plans/2026-11-06-ai-decision.md docs/evidence/ai-decision-step1-development.txt docs/evidence/ai-decision-step1-fast.txt docs/evidence/ai-decision-step1-local.txt || exit 1
+git diff --cached --check || exit 1
+git diff --cached --stat
+git commit -m "feat(agent): add bounded model decisions" || exit 1
+git log -1 --oneline
+
+This invokes the existing gitleaks pre-commit hook. Do not use --no-verify.
+No push is requested.
+
+After the actual Step 1 commit, inspect only the allowed task paths:
+
+git log --oneline origin/main..feat/ai-decision
+git diff --stat origin/main..feat/ai-decision
+git status --short
+
+Report the actual commit hash. Never substitute the old base hash for commit 1.

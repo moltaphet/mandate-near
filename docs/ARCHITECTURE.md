@@ -8,9 +8,10 @@
 ## 1. One sentence
 
 A policy vault that checks proposed trades on-chain before requesting their
-signatures. The Rust agent supports manual plans and deterministic two-asset
-rebalancing from holdings/oracle/quotes; model inference and OutLayer TEE
-operation are planned.
+signatures. The Rust agent supports manual plans, deterministic two-asset
+rebalancing, and an optional strictly validated model decision from the public
+final-block snapshot. Live model operation and response provenance are
+unverified; OutLayer TEE operation is planned.
 The owner can separately withdraw supported NEP141 assets after a delay.
 Permitted trades can lose money. Custody also trusts the deployed NEAR Intents
 and MPC contracts and their administrative permissions.
@@ -50,8 +51,8 @@ inputs, asynchronous callback checks and a correctly deployed contract.
 |---|---|---|
 | `vault` contract | Rust, near-sdk 5.30.0 **[V]** | Root of safety |
 | Mandate engine | pure Rust module inside `vault`, no I/O | Boundary and property tests; not exhaustive proof |
-| Strategy agent | Rust manual-plan or deterministic two-asset rebalance client; TEE/inference planned | Final-block preview and quotes; authoritative on-chain gates; permitted trades can lose money |
-| Inference (optional) | Private TEE inference planned | Advisory; no live integration established |
+| Strategy agent | Rust manual, deterministic two-asset or optional model decision source | Final-block preview; authoritative on-chain gates; permitted trades can lose money |
+| Inference (optional) | Environment-configured OpenAI-compatible client; private TEE inference unverified | Strict JSON output is advisory; fake-client tests establish validation, not actual provider execution |
 | Price oracle | immutable PriceOracle aggregate/report or Pyth batch adapter | Trusted for correctness; coherence/freshness and provider-specific input guards checked |
 | Settlement | NEAR Intents verifier `intents.near` + solver relay **[V]** | Atomic, `token_diff` enforces min-out |
 | Keeper | Rust, permissionless; explicit `--publish` option | Executes/outbox by default; quote-bound publication only on opt-in; acknowledgements/status are not final receipts |
@@ -62,6 +63,17 @@ positive signed values and confidence bounds. The provider is chosen at init and
 cannot be changed afterward. Current updater availability, asset units and
 deployed source/admin correspondence remain UNVERIFIED; see
 [OPERATIONAL-READINESS.md](OPERATIONAL-READINESS.md).
+
+The model input is compact JSON containing only final-block identity/time,
+listed assets, exact balances, accepted oracle prices/publication times, mandate
+limits and trading state. It excludes provider authentication and agent signing
+settings. A fakeable `ChatClient` isolates the endpoint from the decision tests.
+HTTPS transport has a bounded response and deadline, refuses redirects and
+does not retry automatically. Invalid output or failed transport produces no
+trade; paused/halted readiness is checked before inference. Rationale text is
+untrusted and never changes policy, recipients, amounts or execution commands.
+Manual/rebalance rationale hashes remain unchanged. Response verification and
+model-specific canonical commitments are not implemented at this first stage.
 
 ## 4. Trade lifecycle (two transactions, by design)
 
