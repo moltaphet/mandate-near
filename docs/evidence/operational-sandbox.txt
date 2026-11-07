@@ -1,7 +1,0 @@
-FINAL FROZEN-REVISION SANDBOX VERIFICATION: IN PROGRESS
-Source/WASM attribution: operational-sandbox-sources.json
-Group A: running alone; attacks8, gas2, keeper4 passed; recovery protocol in progress.
-Initial group B: exit101; agent5 passed, execute_path7 passed, one mock-oracle build failure BEFORE contract assertion; later five targets were not run.
-Initial failure preserved in operational-sandbox-b.txt.
-Next: after A completes, run exact failed case and remaining five B targets serially; evidence operational-sandbox-missing-oracle-rerun.txt and operational-sandbox-b-continuation.txt.
-No claim of a single 54-case successful command. No live-chain signing, relay publication, or real-fund evidence.

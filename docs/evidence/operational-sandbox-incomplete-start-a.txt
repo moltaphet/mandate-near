@@ -1,9 +1,0 @@
-FINAL POST-HARDENING FROZEN-REVISION SANDBOX GROUP A
-Command: cargo test --offline -p mandate-vault --test attacks --test recovery_protocol --test gas --test keeper --test sandbox --test settlement -- --test-threads=1
-Scope: local sandbox; supplied Intents fixture; oracle/MPC stand-ins. No live signing/funds/relay publication.
-Reference source fingerprint: docs/evidence/operational-sandbox-sources.json
-
-    Blocking waiting for file lock on package cache
-    Blocking waiting for file lock on package cache
-    Blocking waiting for file lock on package cache
-    Blocking waiting for file lock on artifact directory
