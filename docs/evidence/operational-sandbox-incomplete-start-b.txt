@@ -1,9 +1,0 @@
-FINAL POST-HARDENING FROZEN-REVISION SANDBOX GROUP B
-Command: cargo test --offline -p mandate-vault --test agent --test execute_path --test intents_registration --test pyth_path --test withdraw --test withdrawal_lifecycle --test sealed_deployment -- --test-threads=1
-Scope: local sandbox; supplied Intents fixture; oracle/MPC stand-ins. No live signing/funds/relay publication.
-Reference source fingerprint: docs/evidence/operational-sandbox-sources.json
-
-    Blocking waiting for file lock on package cache
-    Blocking waiting for file lock on package cache
-    Blocking waiting for file lock on package cache
-   Compiling mandate-vault v0.1.0 (/Users/ehs4n/mandate-near/contracts/vault)
