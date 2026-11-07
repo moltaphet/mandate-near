@@ -1,0 +1,4 @@
+TX | add_proposal on mandate-t1.sputnikv2.testnet by mandate-t1.testnet | hash F5s1ps27bkoXVr8erK6NBVhPQMw1HVm7gkJgLq4AGPrA | receipt failures: 0
+TX | act_proposal on mandate-t1.sputnikv2.testnet by mandate-t1.testnet | hash 2N3GxKHghP1BrxeCrAx6o7nvruMQZ2BKML3edqHz8mjk | receipt failures: 0
+OWNER | request_withdrawal approved through DAO proposal 2
+PENDING | {"asset_id":"nep141:usdc.mandate-t1.testnet","receiver":"mandate-t1.testnet","amount":"1000000","effective_sec":1794159940}
