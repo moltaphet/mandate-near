@@ -1,11 +1,19 @@
-# Gas per call, local NEAR sandbox, 2026-11-04T15:13:16Z
+# Gas per call, local NEAR sandbox, 2026-11-07T14:03:41Z
 # Protocol gas burnt by the receipts of each call. Not a mainnet fee.
-GAS | register_intents_key (derive key, add it on intents.near) | 12.84 TGas
-GAS | propose (agent, one trade, 2 assets in mandate) | 2.03 TGas
-GAS | execute, every gate passes, MPC sign (2 feeds read) | 29.82 TGas
-GAS | set_mandate, tightening (applies at once) | 2.10 TGas
-GAS | set_mandate, loosening (queued for 24 h) | 2.11 TGas
-GAS | cancel_pending_mandate | 2.04 TGas
-GAS | pause | 2.02 TGas
-GAS | unpause | 2.02 TGas
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 38.34s
+# Full command output retained at: /var/folders/l_/yq_br9d17qg_hzr5l5mq9zw40000gn/T/tmp.7aePa9Ag6j
+# Command exit code: 0
+GAS | execute, every gate passes, MPC sign (20 relevant held/traded feeds; 8 source IDs of 64 bytes; last ID matched) | 71.80 TGas
+GAS | execute, every gate passes, MPC sign (16 feeds read) | 62.15 TGas
+GAS | execute, every gate passes, MPC sign (20 feeds read) | 71.33 TGas
+GAS | register_intents_key (derive key, add it on intents.near) | 13.22 TGas
+GAS | propose (agent, one trade, 2 assets in mandate) | 2.16 TGas
+GAS | execute, every gate passes, MPC sign (2 feeds read) | 30.90 TGas
+GAS | set_mandate, tightening (applies at once) | 2.26 TGas
+GAS | set_mandate, loosening (queued for 24 h) | 2.28 TGas
+GAS | cancel_pending_mandate | 2.19 TGas
+GAS | pause | 2.17 TGas
+GAS | unpause | 2.17 TGas
+GAS | 2 assets | 25.110977420783 TGas | sandbox callback chain
+GAS | 20 assets | 32.560301593167 TGas | sandbox callback chain
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 335.53s
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 188.71s

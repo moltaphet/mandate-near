@@ -44,9 +44,9 @@ are outside its supported custody path. See T3 and SR-6.
 | `intents.near` | correct custody ledger, signature verification and atomic settlement | Current deployed code hash, administrator/upgrade controls and applicable audit coverage UNVERIFIED |
 
 The selected owner is a DAO account distinct from the vault. Its governance and
-recovery operations remain to be verified. Pyth is selected conditionally on
-usable fresh feeds, correct units and a reliable updater; those deployment
-conditions remain unverified.
+recovery operations remain to be verified. The oracle is not yet selected: Pyth
+Core is documented as unsupported on NEAR, and a feed source with fresh feeds,
+correct units and a reliable updater remains to be verified.
 
 ## Threats
 

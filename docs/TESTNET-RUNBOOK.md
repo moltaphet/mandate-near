@@ -12,7 +12,7 @@ operation was performed while preparing this document.
 | Network | NEAR testnet only | Approved RPC and exact chain identity |
 | Vault | Fresh reviewed deployment | Approved account, atomic create/deploy/init and exact artifact |
 | Owner | DAO account distinct from vault | DAO implementation, vote/execute/cancel/recovery and permissions |
-| Oracle | Pyth, conditional | Required feeds/units, updater, freshness and confidence behavior |
+| Oracle | Not yet selected (Pyth Core documented as unsupported on NEAR) | Choose and verify feed source, units, updater, freshness and confidence behavior |
 | Signer | Official docs list `v1.signer-prod.testnet` | Deployed account/source/permissions, domain1/config/gas and a successful vault call |
 | Custody | Intended testnet Intents deployment | Actual deployed code, ledger behavior, administrator trust and signer registration |
 
@@ -56,6 +56,11 @@ deployed contract compatibility or a completed chain demonstration:
   guard. Source is pinned at `ec40e5f1705a3f6c7818b0f2f1e96a4ac75a7454`.
 - The current Pyth addresses page and NEAR README did not establish a deployed
   NEAR receiver account. The older NEAR docs links were generic or unavailable.
+- Checked on 7 November 2026: Pyth's "Chains No Longer Supported" page lists NEAR,
+  says its Pyth Core contracts were not upgraded on 26 August 2026, and says the
+  addresses have been removed. Pyth Pro's contract-address page lists no NEAR
+  account. The oracle therefore remains unselected, and `pyth-oracle.testnet` is
+  not treated as a supported receiver even though code exists at that account.
   The example update script is insufficient deployment/updater evidence and
   uses `update_price_feed`, whereas the reviewed receiver method is plural.
   An exact receiver account, authenticated code/configuration, feed mapping,

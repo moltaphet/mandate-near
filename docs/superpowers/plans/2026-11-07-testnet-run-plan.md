@@ -9,8 +9,9 @@ settlement, one genuinely delayed withdrawal, agent/keeper operation and SR-1 re
 
 **Architecture:** Create a fresh vault atomically without adding account access
 authority. Its distinct DAO/multisig owner governs changes and withdrawals; the
-agent proposes trades and the permissionless keeper executes them. Select Pyth
-and explicitly reviewed testnet external contracts at initialization.
+agent proposes trades and the permissionless keeper executes them. The oracle is
+not yet selected: Pyth Core is documented as unsupported on NEAR. Choose a verified
+oracle and explicitly reviewed testnet external contracts at initialization.
 
 **Tech stack:** Existing Rust workspace, near-sdk 5.30, cargo-near 0.22,
 near-api 0.8.7 and near-sandbox 0.4.0. The standalone `near` CLI is not installed

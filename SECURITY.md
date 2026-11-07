@@ -46,8 +46,9 @@ The current adapters are immutable PriceOracle or Pyth choices. Pyth checks
 signed values, feed format, freshness and confidence against the slippage
 allowance; it remains trusted for market correctness. Current live cache/updater
 and deployment readiness are recorded in [docs/OPERATIONAL-READINESS.md](docs/OPERATIONAL-READINESS.md).
-Pyth is selected conditionally for the intended deployment: usable fresh feeds,
-units and updater availability must be demonstrated before deployment or funds.
+The oracle is not yet selected. Pyth Core is documented as no longer supporting
+NEAR, so the choice remains open: a verified feed source, units and updater must be
+demonstrated before deployment or funds.
 
 Each finding has an ID so the threat model and the code can refer to it.
 
@@ -142,7 +143,7 @@ combined verification is recorded separately.
 A short checklist, since the code alone does not enforce these:
 
 1. Freeze and independently review the final source/WASM and voucher protocol; run final combined tests. Prefer fresh deployment. Migration recognizes exactly `77ebc0c` pre-sequence, `0de5c48` sequence-enabled, pre-provider remediation and provider-enabled pre-voucher layouts; all require paused quiescent state, and an existing active withdrawal guard is never discarded.
-2. Demonstrate the selected DAO owner, distinct from the vault, including vote/execute/cancel/recovery. Verify intended signer/Intents/oracle deployments, administrative trust, functioning Pyth feeds/updater and asset units; conditional provider selection is not live readiness.
+2. Demonstrate the selected DAO owner, distinct from the vault, including vote/execute/cancel/recovery. Verify intended signer/Intents/oracle deployments, administrative trust, a verified oracle with feeds, updater and asset units (the oracle choice is still open); an unselected oracle is not live readiness.
 3. Use a vault name of at most 62 bytes; establish both recovery sinks are uncreated and have no signing authority or later creation path. Prepare atomic deployment/initialization and funded storage.
 4. Compare deployed WASM with the reviewed artifact, register the intended Intents authority, demonstrate owner controls, and seal every bypass-capable vault permission. Reinspect final-block state before funds.
 5. Demonstrate actual vault MPC signing and funded matched settlement with final receipts and ledger deltas. A relay acknowledgement or status is insufficient.
