@@ -23,7 +23,9 @@ Mandate limits authorization, rather than guaranteeing profitable decisions.
 
 > **Experimental prototype — not ready for real funds.** Local contract and
 > client tests, sandbox fixtures and historical interoperability experiments
-> exist. Final-artifact integration/gas verification, live vault signing,
+> exist. The full sandbox integration suite passed locally on commit `aa32116`,
+> including the gas tests. That is not CI on that commit, not a final release
+> artifact, and not a record in `docs/evidence/gas-limit.txt`. Live vault signing,
 > funded settlement and live withdrawal/recovery evidence remain open.
 > The project has not received an independent professional audit.
 > Start with [Security](SECURITY.md), [Threat model](THREAT_MODEL.md) and
@@ -512,9 +514,9 @@ Historical results are not a current release certificate.
 | Evidence | What it establishes | Remaining limit |
 |---|---|---|
 | [Captured fast run, 7 November](docs/evidence/phase0-9-2026-11-07/final-fast-outside-sandbox-after-model-name-fix.txt) | Saved output ends `All checks passed.` after the model-name correction | Log lacks an embedded revision/time header; final release verification must be tied to an immutable artifact |
-| [Verification script](scripts/verify.sh) and [CI](.github/workflows/ci.yml) | Defined fast scope plus 14 configured sandbox targets in integration mode | A workflow definition is not a passing CI result; latest final-artifact integration remains unverified |
+| [Verification script](scripts/verify.sh) and [CI](.github/workflows/ci.yml) | Defined fast scope plus 14 configured sandbox targets in integration mode | A workflow definition is not a passing CI result. The integration suite passed locally on `aa32116`; CI on that commit and the final release artifact remain unverified |
 | [Eight attack receipts](docs/evidence/attacks.txt) | Historical sandbox refusals recorded on **6 November 2026** | Not a claim that every attack or the final revision passed |
-| [Gas limit evidence](docs/evidence/gas-limit.txt) | Historical **4 November** size measurements motivated the 20-asset cap | Final-source maximum-assets/source-ID gas measurements remain **UNVERIFIED** |
+| [Gas limit evidence](docs/evidence/gas-limit.txt) | Historical **4 November** size measurements motivated the 20-asset cap | The gas tests (including the maximum-assets and source-ID case) passed locally on `aa32116`, but their numbers are not recorded in this file. Recorded final-source gas measurements remain **UNVERIFIED** |
 | [R1 report](docs/spikes/R1.md) | Historical separate spike → testnet MPC → mainnet simulation interoperability | Not a funded trade from the current vault or verified current deployment identity |
 | [Sandbox settlement test](contracts/vault/tests/settlement.rs) | Test for matched funded settlement, atomic refusal and nonce replay against supplied Intents fixture | Uses a stand-in signer/oracle, not live MPC or authenticated current mainnet binaries |
 
