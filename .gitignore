@@ -18,9 +18,6 @@ __pycache__/
 *.key
 neardev/
 
-# Hackathon submission payload contains personal data
-submission*.json
-
 # OS / editors
 .DS_Store
 .idea/

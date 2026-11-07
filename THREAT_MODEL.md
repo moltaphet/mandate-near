@@ -158,7 +158,7 @@ unverified.
   the original withdrawal may already have moved funds. Availability can be
   lost until authenticated proof resolves it. This receipt-loss fault has not
   been reproduced on a live chain. The project owner accepted this residual
-  for the hackathon scope.
+  for the current testnet scope.
 - The selected DAO owner's vote, execution, cancellation and recovery tests
   remain required before real funds.
 

@@ -3,9 +3,7 @@
 Mandate remains an experimental prototype. Passing local tests establishes the
 tested source behavior; it does not establish live custody, a functioning price
 updater, real MPC signing, solver fill or safe recovery for every historical
-deployment. The submission deadline supplied by the author is 14 November 2026
-23:59 UTC. The official contest URL, eligibility and selected track are
-UNVERIFIED until the organizer's rules are supplied and checked.
+deployment.
 
 ## Read-only review
 
@@ -160,4 +158,4 @@ OutLayer/TEE integration remains planned. The optional model client, canonical
 capture and declared-source admission are implemented locally; live provider
 signature compatibility and authenticated model origin remain UNVERIFIED.
 These features must not replace the on-chain authorization boundary or delay proving the
-funded core flow. No source review guarantees a hackathon rank or zero defects.
+funded core flow. No source review guarantees zero defects.

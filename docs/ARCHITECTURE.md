@@ -339,18 +339,13 @@ the README claims accordingly. We do not hide it.
 - README follows "do X → see Y". `THREAT_MODEL.md` lists what each component
   can and cannot do.
 
-## 9. Demo attacks (each must fail, on camera)
+## 9. Attack scenarios (each must fail)
 
 1. A compromised agent proposes 100% into a non-allowlisted memecoin → `AssetNotAllowed`.
 2. A malicious quote with 8% worse price than the oracle → `SlippageExceeded`.
 3. A keeper alters the amount after signing → signature invalid at `intents.near`.
 4. Rapid-fire small trades to drain via fees → `CooldownActive` / `TurnoverCapExceeded`.
 5. A market crash triggers the drawdown breaker → only de-risk trades are accepted.
-
-## 10. Tracks
-
-Primary `defi`, plus `security`, `agents` and `privacy`. Each claim maps to
-code a screener can run.
 
 ## 11. Repo layout
 
