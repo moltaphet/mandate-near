@@ -12,8 +12,8 @@ For current status, read [README.md](../../README.md),
   this folder.
 - Hackathon, judge, track and submission wording describes an earlier scope.
   It is not a current claim.
-- Some reports cite local scratch paths and a planning file that has since been
-  removed (`MANDATE-HACKATHON-PLAN.md`). The file is still in git history.
+- Some reports cite local scratch paths and a planning document that has since
+  been removed.
 - Checksums in `docs/evidence/remediation-files.sha256` were recorded for these
   files at the repository root.
 
