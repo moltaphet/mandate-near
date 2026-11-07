@@ -125,4 +125,6 @@ not copy repository configuration or authentication files. It generates public
 static-output configuration at the staging root. Verify the intended
 Vercel account/project before execution. Then confirm the `mandatenear.xyz`
 alias, root/site/dashboard paths, logo contrast, mobile and keyboard interaction
-in the browser. Production execution and alias verification are not completed.
+in the browser. The read-only `scripts/check-site-live.sh` checks the published page
+for withdrawn wording and for the assets it needs. The site was published from clean
+`main` on 7 November 2026 and that check passed afterwards.
