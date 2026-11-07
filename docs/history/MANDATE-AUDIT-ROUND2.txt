@@ -430,7 +430,6 @@ I. COULD NOT VERIFY / EXACT NEXT EVIDENCE
 
 Review artifacts:
 /Users/ehs4n/mandate-near/MANDATE-AUDIT-ROUND2.txt
-/Users/ehs4n/mandate-near/MANDATE-HACKATHON-PLAN.md
 /private/tmp/mandate-audit-round2/Cargo.toml
 /private/tmp/mandate-audit-round2/src/lib.rs
 

@@ -1,12 +1,14 @@
 # Mandate remediation allowed-file SHA256 manifest
 # Recorded: 2026-11-06 14:39:53 UTC
+# Re-recorded 2026-11-07 for MANDATE-REMEDIATION-REPORT.txt only. The report now lives at
+# docs/history/ and no longer names a removed planning document. Its hash changed for that reason.
+# The line for the removed planning document was dropped. Other entries keep their 2026-11-06 values.
 # Not a complete checkout digest. Excludes prohibited paths, lock contents and dependencies.
 # Omitted contracts/vault/tests/common/mod.rs:21: secret-like value, redacted.
 # No secret values are printed or included in this text. Binary fixtures are hashed without dumping bytes.
 212bdc782dcd7a54f99877b03ba7272d59d1d4e59b2fe2c35b3bff58fb037094  .github/workflows/ci.yml
 9111aa4b49d835c5f3f7bf9826a840ca6e4f474f900c467b3de1bff49271bf86  Cargo.toml
-120c485848aad14d44dcee9d2326b2926c43d27c281ae76c4fa6b576f4e30b06  MANDATE-HACKATHON-PLAN.md
-0238c24ff57b426083091b97c9f268fcbd120c07c5b42f205ec589d95d5a550a  MANDATE-REMEDIATION-REPORT.txt
+8226dac307d9623a7dd8fcba4ce42d26b2fade22e9d4848265b8773112e81fca  MANDATE-REMEDIATION-REPORT.txt
 615cf8ab1c6843617c6496a6837969fd7de3a895327a09d55c0617c6b5a80717  README.md
 7eff70c3277119b7c45881f7026002d0d6f3bfee7a812ad550d2e3184e6befa8  SECURITY.md
 ac6399306f42ad2ba6836b09c9cb461a6905a15c4966a452d29d49925c61b816  THREAT_MODEL.md

@@ -116,7 +116,7 @@ contracts/vault/tests/fixtures/legacy-state-fixtures.md -> fully read (new)
 contracts/vault/tests/fixtures/legacy-77ebc0c-state.borsh -> partially read: original-source generation, SHA and decoded projections tested
 contracts/vault/tests/fixtures/legacy-0de5c48-state.borsh -> partially read: original-source generation, SHA and decoded projections tested
 MANDATE-AUDIT-ROUND2.txt -> partially read as historical reference
-MANDATE-HACKATHON-PLAN.md -> fully read and updated
+A planning document -> fully read and updated
 docs/superpowers/plans/2026-11-06-audit-remediation.md -> fully read and created
 docs/evidence/remediation-verification.txt -> fully read (created from observed run results)
 docs/evidence/remediation-files.sha256 -> partially read: generated allowed-file digests; excludes the common fixture and all prohibited paths
