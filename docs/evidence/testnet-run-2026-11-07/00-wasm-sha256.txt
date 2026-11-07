@@ -1,0 +1,4 @@
+5266d033e30c6311d10f92d494b1cb456471daace03124342d24ededbff70f6f  target/testnet-wasm/mandate_vault.wasm
+b4d420e9bc0015542dbd26ad447dfaba012ed47c615d0f64434455fe635c5844  target/testnet-wasm/mock_ft.wasm
+9e85ad32f2a8819b3c8590be3dcbc0ff067ae15da52779ed5b218c189d99c92a  target/testnet-wasm/mock_oracle.wasm
+a1afab98916d9f213746544dcf8e4e6bdb22c0be6bc5dfbd8ea8814c9922b547  contracts/vault/tests/fixtures/intents-near-mainnet.wasm

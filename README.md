@@ -25,8 +25,12 @@ Mandate limits authorization, rather than guaranteeing profitable decisions.
 > client tests, sandbox fixtures and historical interoperability experiments
 > exist. The full sandbox integration suite passed locally on commit `aa32116`,
 > including the gas tests. That is not CI on that commit, not a final release
-> artifact. Gas measurements from the 7 November run are in `docs/evidence/gas.txt`. Live vault signing,
-> funded settlement and live withdrawal/recovery evidence remain open.
+> artifact. Gas measurements from the 7 November run are in `docs/evidence/gas.txt`.
+> A testnet run on 7 November 2026 deployed the vault and obtained a real testnet
+> MPC signature ([evidence](docs/evidence/testnet-run-2026-11-07/README.md)). It used a
+> fixture Intents contract and a stand-in oracle, and its delayed withdrawal is queued
+> but not yet applied. Funded matched settlement and withdrawal/recovery evidence
+> remain open.
 > The project has not received an independent professional audit.
 > Start with [Security](SECURITY.md), [Threat model](THREAT_MODEL.md) and
 > [Operational readiness](docs/OPERATIONAL-READINESS.md).
