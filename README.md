@@ -372,6 +372,14 @@ sent=0/cancelled=1 safely requeues; sent=1/cancelled=0 records `DebitObserved`
 and consumes the authorization. Missing, failed or inconsistent proof retains
 the guard. Recovery never blindly repeats an unknown amount.
 
+**Accepted residual (F26).** If a withdrawal's final callback is lost or
+malformed after Intents has debited, the guard stays set. While it is set, new
+withdrawals and trades are refused. Nothing releases it on elapsed time or a
+larger balance, and there is no owner override. This path takes no funds, but
+availability can be lost until authenticated proof resolves it. The fault has
+not been reproduced on a live chain. The project owner accepted this residual for
+the hackathon scope.
+
 `DebitObserved` proves the original initial debit, not terminal FT delivery or
 absence of a later refund. It releases the guard, so subsequent operations can
 overlap the original transfer's unresolved resolver/refund receipts. Setup must

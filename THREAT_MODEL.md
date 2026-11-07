@@ -127,6 +127,15 @@ unverified.
   delay, so the funds leave. This is the main residual risk for real funds.
 - The owner can tighten a mandate to a point that stops all trading. That is a
   liveness loss, not a theft.
+- **Accepted residual (F26): a stuck withdrawal guard.** If the final callback of
+  a withdrawal is lost or malformed after Intents has debited, the guard stays
+  set. Missing, failed or inconsistent proof keeps it set by design, and while it
+  is set, new withdrawals and trades are refused. The vault does not release it
+  on elapsed time or on a larger balance, and no owner override exists. It clears
+  only through the authenticated recovery described in the README. This path
+  takes no funds, but availability can be lost until the proof resolves. The
+  receipt-loss fault has not been reproduced on a live chain. The project owner
+  accepted this for the hackathon scope.
 - Recommended before real funds: a DAO or multisig as owner. The DAO test is
   planned, not built.
 
