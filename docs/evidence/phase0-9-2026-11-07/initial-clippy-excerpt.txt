@@ -1,0 +1,13 @@
+Historical diagnostic excerpt observed before correction (not the complete original log):
+
+error: unused `near_sdk::Promise` that must be used
+    --> contracts/vault/src/lib.rs:1697:13
+     |
+1697 |             v.execute();
+     |             ^^^^^^^^^^^
+     |
+     = note: return or detach explicitly via `.detach()`
+     = note: `-D unused-must-use` implied by `-D warnings`
+
+Corrected test uses `let _ = v.execute();` inside the expected-panic closure.
+Fresh strict Clippy then exited0; no lint allow was added.

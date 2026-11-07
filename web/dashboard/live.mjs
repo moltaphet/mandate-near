@@ -40,6 +40,16 @@ function amount(value, field) {
   return uint(value, field, U128_MAX);
 }
 function optional(value, parse) { return value === null ? null : parse(value); }
+function modelId(value) {
+  if (typeof value !== "string" || !value.trim() || new TextEncoder().encode(value).length > 64) invalid("declared source ID");
+  return value;
+}
+function modelIds(value) {
+  if (!Array.isArray(value) || value.length > 8) invalid("declared source list");
+  const ids = value.map(modelId);
+  if (new Set(ids).size !== ids.length) invalid("duplicate declared source ID");
+  return ids;
+}
 
 export function validateAccount(value) {
   if (typeof value !== "string" || value.length < 2 || value.length > 64 ||
@@ -118,7 +128,9 @@ function mandate(raw) {
   if (new Set(stable).size !== stable.length || stable.some((id) => !identifiers.has(id))) invalid("stable subset");
   const maxTrade = uint(m.max_trade_usd, "trade cap"), daily = uint(m.max_daily_turnover_usd, "daily cap");
   if (maxTrade === 0n || maxTrade > daily) invalid("trade limits");
-  return { assets, stable_assets: stable, max_trade_usd: maxTrade, max_daily_turnover_usd: daily,
+  return { assets, stable_assets: stable,
+    allowed_model_ids: Object.hasOwn(m, "allowed_model_ids") ? modelIds(m.allowed_model_ids) : null,
+    max_trade_usd: maxTrade, max_daily_turnover_usd: daily,
     max_position_bps: uint(m.max_position_bps, "position cap", 10000n),
     max_slippage_bps: uint(m.max_slippage_bps, "slippage cap", 500n),
     max_drawdown_bps: uint(m.max_drawdown_bps, "drawdown cap", 10000n),
@@ -135,8 +147,11 @@ function trading(raw) {
 }
 function proposal(raw) {
   const p = object(raw, "proposal");
+  const reason = Object.hasOwn(p, "reason_hash") ? text(p.reason_hash, "reason hash", 64) : null;
+  if (reason !== null && !/^[0-9a-fA-F]{64}$/.test(reason)) invalid("reason hash");
   return { id: uint(p.id, "proposal ID"), asset_in: asset(p.asset_in), asset_out: asset(p.asset_out),
     amount_in: amount(p.amount_in, "proposal input"), min_amount_out: amount(p.min_amount_out, "proposal output"),
+    model_id: Object.hasOwn(p, "model_id") ? modelId(p.model_id) : null, reason_hash: reason,
     created_sec: uint(p.created_sec, "proposal creation"), expires_sec: uint(p.expires_sec, "proposal expiry") };
 }
 function withdrawal(raw) {
@@ -331,6 +346,9 @@ export function deriveReadiness(snapshot) {
   if (snapshot.halted) reasons.push("Proposal circuit breaker halted");
   if (!snapshot.agent) reasons.push("Agent not configured");
   if (!snapshot.registered) reasons.push("Intents key registration not recorded");
+  if (snapshot.mandate.allowed_model_ids === null) reasons.push("Declared-source admission unavailable in this contract schema");
+  else if (!snapshot.mandate.allowed_model_ids.length) reasons.push("All declared decision sources disabled");
+  else if (snapshot.proposal?.model_id && !snapshot.mandate.allowed_model_ids.includes(snapshot.proposal.model_id)) reasons.push("Pending proposal source no longer allowed");
   if (snapshot.inFlight) reasons.push("Execution or withdrawal guard active");
   if (snapshot.proposal && snapshot.now < snapshot.proposal.expires_sec) reasons.push("Unexpired proposal pending");
   if (snapshot.now < snapshot.trading.signed_intent_expires_at_sec) reasons.push("Signing reservation deadline open");
@@ -377,6 +395,7 @@ export function renderSnapshot(container, snapshot, documentRef = globalThis.doc
     row(list, "Drawdown", `${rules.max_drawdown_bps} bps`);
     row(list, "Cooldown / price age", `${rules.min_trade_interval_sec}s / ${rules.max_price_age_sec}s`);
     row(list, "Stable subset", rules.stable_assets.join(", ") || "None");
+    row(list, "Allowed declared sources", rules.allowed_model_ids === null ? "Unavailable · legacy schema" : rules.allowed_model_ids.join(", ") || "None · proposals disabled");
   };
   const assetFields = (rules) => {
     const table = element("table"), head = element("thead"), headers = element("tr"), body = element("tbody");
@@ -407,6 +426,7 @@ export function renderSnapshot(container, snapshot, documentRef = globalThis.doc
   const assetDetails = element("details", undefined, "audit-details");
   assetDetails.append(element("summary", "Inspect listed assets and price-feed mapping"), assetFields(m)); rules.append(assetDetails);
   rules.append(element("p", "USD fields are contract-recorded rule amounts. No current market valuation or oracle correctness is inferred.", "audit-note"));
+  rules.append(element("p", "Source IDs are declarations. Their presence does not authenticate a model response or prove model origin.", "audit-note"));
 
   const accounting = card("Signing reservations"), accountList = element("dl");
   row(accountList, "Reserved turnover", `${usd(snapshot.trading.day_turnover_usd)} · day ${date(snapshot.trading.day_start_sec)}`);
@@ -435,6 +455,7 @@ export function renderSnapshot(container, snapshot, documentRef = globalThis.doc
   if (snapshot.proposal) {
     const p = snapshot.proposal, expiry = deadlineState(snapshot.now, p.expires_sec);
     event(`Pending proposal ${p.id} · ${expiry.label.toLowerCase()}`, `${p.amount_in} base units ${p.asset_in} → minimum ${p.min_amount_out} base units ${p.asset_out}; deadline ${date(p.expires_sec)}`);
+    event("Decision evidence", `Declared source: ${p.model_id ?? "unavailable · legacy schema"}; reason hash: ${p.reason_hash ?? "unavailable"}. The hash requires the off-chain record and source-specific verifier; this page does not authenticate it.`);
   } else event("No pending proposal observed", "This does not prove there were no previous proposals.");
   if (snapshot.proposalOutcome) {
     const o = snapshot.proposalOutcome;

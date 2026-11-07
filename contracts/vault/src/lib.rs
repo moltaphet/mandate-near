@@ -99,10 +99,12 @@ pub struct Proposal {
     pub asset_out: String,
     pub amount_in: U128,
     pub min_amount_out: U128,
-    /// SHA-256 of the agent's off-chain reasoning, as 64 hex characters.
+    /// Off-chain evidence commitment, as 64 hex characters. Its interpretation
+    /// depends on the declared source; this contract does not authenticate model origin.
     pub reason_hash: String,
     pub created_sec: u64,
     pub expires_sec: u64,
+    pub model_id: String,
 }
 
 /// The execution that holds the in-flight lock. Its callbacks act only while they carry its id.
@@ -877,6 +879,7 @@ impl Vault {
         amount_in: U128,
         min_amount_out: U128,
         reason_hash: String,
+        model_id: String,
     ) -> U64 {
         self.assert_not_paused();
         require!(self.active_withdrawal.is_none(), "a withdrawal is unresolved");
@@ -888,6 +891,10 @@ impl Vault {
         );
         let agent = self.agent.clone().unwrap_or_else(|| env::panic_str("no agent is configured"));
         require!(env::predecessor_account_id() == agent, "only the agent can propose trades");
+        require!(
+            self.mandate.allowed_model_ids.contains(&model_id),
+            "the declared model id is not allowed"
+        );
 
         let now = now_sec();
         // One proposal at a time: a new one only after the pending one has expired.
@@ -917,6 +924,7 @@ impl Vault {
             reason_hash,
             created_sec: now,
             expires_sec: now + PROPOSAL_TTL_SEC,
+            model_id,
         });
         U64(id)
     }
@@ -964,6 +972,10 @@ impl Vault {
         require!(!self.execution_locked(now), "an execution is already in progress");
         require!(self.key_registered, "the intents key is not registered");
         require!(now < proposal.expires_sec, "the pending proposal has expired");
+        require!(
+            self.mandate.allowed_model_ids.contains(&proposal.model_id),
+            "the declared model id is no longer allowed"
+        );
         require!(
             self.trading.signed_intent_expires_at_sec <= now,
             "a signed intent is still outstanding"
@@ -1637,7 +1649,96 @@ mod tests {
             U128(20_000_000),
             U128(3_960_000_000_000_000_000_000_000),
             REASON.into(),
+            "manual-v1".into(),
         )
+    }
+
+    #[test]
+    fn unapproved_source_is_refused_before_proposal_state_changes() {
+        let mut v = vault_with_agent();
+        context(accounts(3), 0);
+        let sequence = v.next_proposal_id;
+        let error = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            v.propose(
+                USDC.into(),
+                WNEAR.into(),
+                U128(1),
+                U128(1),
+                REASON.into(),
+                "unapproved-model".into(),
+            );
+        }))
+        .expect_err("unknown source must be refused");
+        let message = error
+            .downcast_ref::<String>()
+            .map(String::as_str)
+            .or_else(|| error.downcast_ref::<&str>().copied())
+            .unwrap();
+        assert!(message.contains("the declared model id is not allowed"));
+        assert_eq!(v.next_proposal_id, sequence);
+        assert!(v.pending.is_none());
+        assert!(v.in_flight.is_none());
+    }
+
+    #[test]
+    fn source_removal_blocks_a_pending_proposal_before_execution_lock() {
+        let mut v = vault_with_agent();
+        v.key_registered = true;
+        context(accounts(3), 0);
+        let id = propose(&mut v);
+        assert_eq!(v.pending.as_ref().unwrap().model_id, "manual-v1");
+        let mut tighter = v.mandate.clone();
+        tighter.allowed_model_ids.retain(|source| source != "manual-v1");
+        context(accounts(1), 1);
+        assert_eq!(v.set_mandate(tighter), MandateChangeOutcome::Applied);
+        context(accounts(4), 0);
+        let sequence = v.next_execution_id;
+        let error = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let _ = v.execute();
+        }))
+        .expect_err("removed source must be refused");
+        let message = error
+            .downcast_ref::<String>()
+            .map(String::as_str)
+            .or_else(|| error.downcast_ref::<&str>().copied())
+            .unwrap();
+        assert!(message.contains("the declared model id is no longer allowed"));
+        assert_eq!(v.next_execution_id, sequence);
+        assert!(v.in_flight.is_none());
+        assert_eq!(v.pending.as_ref().unwrap().id, id);
+        assert_eq!(v.strikes, 0);
+    }
+
+    #[test]
+    fn first_source_addition_waits_the_full_mandate_delay() {
+        let mut v = vault_with_agent();
+        let mut empty = v.mandate.clone();
+        empty.allowed_model_ids.clear();
+        context(accounts(1), 1);
+        assert_eq!(v.set_mandate(empty.clone()), MandateChangeOutcome::Applied);
+        let mut first = empty;
+        first.allowed_model_ids.push("fixture-model".into());
+        let deadline = T0 + MANDATE_DELAY_SEC;
+        assert_eq!(
+            v.set_mandate(first),
+            MandateChangeOutcome::Queued { effective_sec: U64(deadline) }
+        );
+        assert!(v.mandate.allowed_model_ids.is_empty());
+        context_at(accounts(4), 0, deadline - 1);
+        let error =
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| v.apply_pending_mandate()))
+                .expect_err("source must not apply early");
+        let message = error
+            .downcast_ref::<String>()
+            .map(String::as_str)
+            .or_else(|| error.downcast_ref::<&str>().copied())
+            .unwrap();
+        assert!(message.contains("the mandate change is still in its delay"));
+        assert!(v.mandate.allowed_model_ids.is_empty());
+        context_at(accounts(4), 0, deadline);
+        v.apply_pending_mandate();
+        assert_eq!(v.mandate.allowed_model_ids, ["fixture-model"]);
+        assert!(v.pending_mandate.is_none());
     }
 
     #[test]
@@ -2317,7 +2418,7 @@ mod tests {
     fn propose_rejects_same_asset() {
         let mut v = vault_with_agent();
         context(accounts(3), 0);
-        v.propose(USDC.into(), USDC.into(), U128(1), U128(1), REASON.into());
+        v.propose(USDC.into(), USDC.into(), U128(1), U128(1), REASON.into(), "manual-v1".into());
     }
 
     #[test]
@@ -2325,7 +2426,14 @@ mod tests {
     fn propose_rejects_unlisted_asset() {
         let mut v = vault_with_agent();
         context(accounts(3), 0);
-        v.propose(USDC.into(), "nep141:pepe.near".into(), U128(1), U128(1), REASON.into());
+        v.propose(
+            USDC.into(),
+            "nep141:pepe.near".into(),
+            U128(1),
+            U128(1),
+            REASON.into(),
+            "manual-v1".into(),
+        );
     }
 
     #[test]
@@ -2333,7 +2441,7 @@ mod tests {
     fn propose_rejects_zero_amount() {
         let mut v = vault_with_agent();
         context(accounts(3), 0);
-        v.propose(USDC.into(), WNEAR.into(), U128(0), U128(1), REASON.into());
+        v.propose(USDC.into(), WNEAR.into(), U128(0), U128(1), REASON.into(), "manual-v1".into());
     }
 
     #[test]
@@ -2341,7 +2449,14 @@ mod tests {
     fn propose_rejects_bad_reason_hash() {
         let mut v = vault_with_agent();
         context(accounts(3), 0);
-        v.propose(USDC.into(), WNEAR.into(), U128(1), U128(1), "not-a-hash".into());
+        v.propose(
+            USDC.into(),
+            WNEAR.into(),
+            U128(1),
+            U128(1),
+            "not-a-hash".into(),
+            "manual-v1".into(),
+        );
     }
 
     // ---- In-flight lock: one pending proposal, no overlap with a signed intent ----

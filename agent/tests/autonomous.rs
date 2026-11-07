@@ -43,6 +43,11 @@ fn snapshot() -> Snapshot {
             max_drawdown_bps: 1000,
             min_trade_interval_sec: 60,
             max_price_age_sec: 60,
+            allowed_model_ids: vec![
+                "manual-v1".into(),
+                "rebalance-v1".into(),
+                "fixture-model".into(),
+            ],
         },
         trading: TradingState::default(),
         market: Market {
@@ -96,6 +101,28 @@ fn reverse_rebalance_keeps_24_decimal_precision() {
     assert_eq!(candidate.asset_in, B);
     assert_eq!(candidate.asset_out, A);
     assert_eq!(candidate.amount_in, 4 * NEAR);
+}
+
+#[test]
+fn denied_or_removed_rebalance_source_refuses_before_strategy_and_quote() {
+    let config = config();
+    let mut snapshot = snapshot();
+    assert!(choose(&config, &snapshot).is_ok());
+    snapshot.mandate.allowed_model_ids.retain(|id| id != "rebalance-v1");
+    assert_eq!(
+        choose(&config, &snapshot).unwrap_err().to_string(),
+        "the rebalance decision source is not allowed"
+    );
+    snapshot.mandate.allowed_model_ids = vec!["unknown-model".into()];
+    assert_eq!(
+        choose(&config, &snapshot).unwrap_err().to_string(),
+        "the rebalance decision source is not allowed"
+    );
+    snapshot.mandate.allowed_model_ids.clear();
+    assert_eq!(
+        choose(&config, &snapshot).unwrap_err().to_string(),
+        "the rebalance decision source is not allowed"
+    );
 }
 
 #[test]

@@ -1,6 +1,6 @@
 # Mandate — Architecture & Risk Register
 
-> Status: implemented prototype and remaining integration risks, 2026-11-06.
+> Status: implemented prototype and remaining integration risks, 2026-11-07.
 > Sandbox tests use an Intents WASM fixture with stand-in signer and oracle.
 > Historical R1 evidence uses mainnet simulation. Live funded vault signing,
 > settlement, withdrawal and failure recovery remain unverified.
@@ -63,6 +63,9 @@ positive signed values and confidence bounds. The provider is chosen at init and
 cannot be changed afterward. Current updater availability, asset units and
 deployed source/admin correspondence remain UNVERIFIED; see
 [OPERATIONAL-READINESS.md](OPERATIONAL-READINESS.md).
+Pyth is selected conditionally for the intended deployment, subject to usable
+fresh feeds and a reliable updater. A separate DAO account is the selected vault
+owner; its governance and recovery operations still require verification.
 
 The model input is compact JSON containing only final-block identity/time,
 listed assets, exact balances, accepted oracle prices/publication times, mandate
@@ -72,8 +75,34 @@ HTTPS transport has a bounded response and deadline, refuses redirects and
 does not retry automatically. Invalid output or failed transport produces no
 trade; paused/halted readiness is checked before inference. Rationale text is
 untrusted and never changes policy, recipients, amounts or execution commands.
-Manual/rebalance rationale hashes remain unchanged. Response verification and
-model-specific canonical commitments are not implemented at this first stage.
+Manual and rebalance rationale hashes remain SHA-256 of the original rationale
+UTF-8 bytes. A model proposal commits to the whole response envelope using
+`mandate-response-json-v1`: parse strict JSON, reject duplicate object keys at
+every depth, floats/exponents and numbers outside i64/u64, recursively sort
+object keys by UTF-8 byte order, preserve arrays and string contents, and emit
+compact deterministic UTF-8 JSON with no trailing newline. This format is not
+RFC 8785. The decision stored inside the chat content string stays a string for
+canonicalisation and is separately checked against the strict decision schema.
+
+Provider signatures are verified over the original wire bytes, independently of
+that canonical commitment. NEAR AI Cloud EIP-191 proofs bind SHA-256 of the exact
+request and response bodies: provider proofs sign `model:request:response`, and
+gateway proofs sign `request:response`. Recovery must match an independently
+configured public signing address. A supplied invalid or unsupported proof
+refuses the model trade before it can be proposed. Unsigned generic responses
+remain explicitly **UNVERIFIED**. Required lookup or verification failure has no
+unsigned fallback. Hardware attestation and live provider operation remain
+unverified; a valid signature alone establishes neither.
+
+The outbox record `model-<raw-response-sha256>.json` retains the exact request and
+response bodies, raw hashes, canonical version/commitment, provider-declared IDs,
+exact decision tuple and any separate proof. It is written before proposal
+submission. The offline verifier recomputes both raw hashes and the canonical
+commitment, derives identity and decision fields from the captured response, and
+refuses mismatched metadata. A stored proof always requires an external signer
+pin; omitting a flag cannot downgrade it. A supplied on-chain hash checks a
+commitment value only, and an optional public plan checks the exact tuple.
+Neither input authenticates the chain, gate approval, TEE or settlement.
 
 ## 4. Trade lifecycle (two transactions, by design)
 
@@ -156,9 +185,13 @@ Completed known receipts alone cannot exclude a duplicate holder's later
 burn/refund. Current supply is not lifetime issuance.
 
 Existing state requires the private `migrate` entry point for its known Borsh
-layout, or a fresh deployment. Exactly four historical layouts are recognized:
+layout, or a fresh deployment. Exactly five historical layouts are recognized:
 `77ebc0c` pre-sequence, `0de5c48` sequence-enabled, pre-provider remediation and
-provider-enabled pre-voucher. The last preserves its selected provider.
+provider-enabled pre-voucher, and voucher-enabled pre-source-admission at
+`b43569d`. The last two preserve their selected provider. Both migrated active
+and queued source lists are empty. The first source addition waits another
+24 hours; a matured old queue cannot authorize a source. Unresolved voucher
+stage or retry authorization also blocks migration.
 Migration requires a distinct owner, paused and
 quiescent state, and final-receipt evidence for legacy dispatched withdrawals.
 It must be called by the vault account in an authorized deployment transaction;
@@ -224,9 +257,10 @@ Precise choices:
   price or an exponent > 0 is a valuation error, never a panic.
 - NAV counts only mandate assets. Tokens airdropped into the account cannot
   inflate it.
-- Covered by unit tests at every boundary and by a property test. The
-  property test re-derives each rule for random trades and is guarded by a
-  coverage test (≈27% approvals; every rejection type produced).
+- Covered by boundary tests and an economic property test. The coverage sample
+  checks approvals and all six sampled economic rejection types. Timing, invalid
+  assets and price-error paths have separate tests; this generator does not
+  produce every engine error.
 
 Intent bytes come from `intent::token_diff_payload`, with a V1 expirable
 nonce from `intent::v1_nonce`. Legacy random nonces are marked for removal
@@ -271,7 +305,7 @@ Claims we do **not** make:
 | R2 | Payload hash/serialization mismatch (NEP-413 vs `raw_ed25519`) | High | **Retired: `raw_ed25519` signs exact payload bytes; tamper test rejects** ([spikes/R1.md](spikes/R1.md)) | 1 ✅ |
 | R3 | Live relay authentication or sufficiently long exact-input offers unavailable | High | Explicit Message Bus quote/publication client implemented; demonstrate live provider/auth access and offers exceeding the configured ≥450 s validity. No automatic alternate provider is implemented | open |
 | R4 | OutLayer: HTTPS from WASM to relay/NEAR AI, cost, latency, 900-byte output | Medium | Hello-world project on testnet Day 2; output is a compact struct | 2 |
-| R5 | `price-oracle.near` missing assets / stale | Medium | Restrict v1 universe to assets it serves; fail closed | 1 |
+| R5 | Selected Pyth feeds or updater unavailable | Medium | Provider choice is immutable at initialization. Require usable fresh feeds, correct units and a reliable updater before deploying; keep failure handling closed | open |
 | R6 | Gas across callbacks | Medium | Already split into TX-1 / TX-2; measure in sandbox. MPC `sign`: on-chain minimum is 15 TGas and 30 TGas worked in R1. The NEAR agent skill suggests 250 TGas, which would not fit TX-2, so the attachment is set from measurement | 3 |
 | R7 | Intended live Intents deployment and external trust not established | Medium | Sandbox runs the supplied Intents WASM fixture with stand-in MPC/oracle; current binary/source/audit/admin correspondence and funded live flow need separate evidence | open |
 | R8 | Our own contract bugs | High | Engine regressions; private callbacks; execution revision/expiry guards; identified withdrawal reconciliation; fresh verification and independent review | ongoing |
@@ -283,6 +317,11 @@ the README claims accordingly. We do not hide it.
 
 - `./scripts/verify.sh` runs formatting, Clippy, allowed-document reference
   checks and workspace unit/property tests. Counts come from that run.
+- The 7 November baseline attempt before this documentation reconciliation
+  exited 101: protocol tests could not bind loopback sockets (`PermissionDenied`).
+  Formatting and strict Clippy passed before the failure; later provenance targets
+  were not reached. Separate focused passes are not a complete fast or integration
+  pass; final combined verification remains required.
 - Add `--integration` for the listed sandbox targets, including owner controls,
   registration, execution, keeper/agent, attacks, withdrawal and supported-size
   gas regressions. New client/voucher paths still require final combined verification.

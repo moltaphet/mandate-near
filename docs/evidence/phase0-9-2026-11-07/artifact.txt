@@ -1,0 +1,4 @@
+Host build, not a Docker reproducible build
+bytes=391671
+sha256=5266d033e30c6311d10f92d494b1cb456471daace03124342d24ededbff70f6f
+path=/private/tmp/mandate-review-2026-11-07/vault-artifact/mandate_vault.wasm

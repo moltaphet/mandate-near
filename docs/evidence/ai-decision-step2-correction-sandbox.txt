@@ -1,0 +1,19 @@
+$ cargo test --offline -p mandate-vault --test agent -- --test-threads=1
+   Compiling mandate-vault v0.1.0 (/Users/ehs4n/mandate-near/contracts/vault)
+   Compiling mandate-agent v0.1.0 (/Users/ehs4n/mandate-near/agent)
+   Compiling mandate-keeper v0.1.0 (/Users/ehs4n/mandate-near/keeper)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 5.49s
+     Running tests/agent.rs (target/debug/deps/agent-caa2c0324720215a)
+
+running 5 tests
+test a_gate_that_closes_is_reported_as_rejected ... ok
+test an_unretained_proposal_outcome_is_unknown ... ok
+test quote_driven_rebalance_reaches_a_signed_intent_and_mock_relay_acknowledgement ... ok
+test the_agent_proposes_and_the_keeper_executes_it ... ok
+test the_agent_refuses_a_second_proposal_before_spending_gas ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 212.72s
+
+
+EXIT STATUS: 0
+

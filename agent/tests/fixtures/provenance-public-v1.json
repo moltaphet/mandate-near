@@ -1,0 +1,17 @@
+{
+  "source": "Independent public synthetic EIP-191 recovery vector (r = s = 1, v = 27), checked using Python eth_account.Account.recover_message. It is not a provider capture and proves no provider/model/TEE origin. No signing scalar or signing operation was used.",
+  "request_body": "{\"messages\":[{\"role\":\"system\",\"content\":\"Return one strict trade decision.\"},{\"role\":\"user\",\"content\":\"{\\\"assets\\\":[{\\\"asset_id\\\":\\\"nep141:stable.testnet\\\",\\\"balance\\\":\\\"100000000\\\",\\\"decimals\\\":6},{\\\"asset_id\\\":\\\"nep141:wrap.testnet\\\",\\\"balance\\\":\\\"5000000000000000000000000\\\",\\\"decimals\\\":24}],\\\"chain_time_sec\\\":1800000000}\"}],\"model\":\"fixture-model\"}",
+  "raw_body": "{\"choices\":[{\"finish_reason\":\"stop\",\"message\":{\"content\":\"{\\\"asset_in\\\":\\\"nep141:stable.testnet\\\",\\\"asset_out\\\":\\\"nep141:wrap.testnet\\\",\\\"amount_in\\\":\\\"20000000\\\",\\\"min_amount_out\\\":\\\"4000000000000000000000000\\\",\\\"rationale\\\":\\\"Rebalance within the owner-defined limits.\\\",\\\"no_trade\\\":false,\\\"no_trade_reason\\\":null}\",\"role\":\"assistant\"}}],\"id\":\"chat-public-v1\",\"model\":\"fixture-model\"}",
+  "signature": "0x000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000011b",
+  "synthetic_public_vector": true,
+  "request_sha256": "0c8fad96a6a5bf4c6f04521486d620b7d2051eddd4bc9d7e70aa356a6bd854ea",
+  "response_sha256": "ca458f8affb37673068cea81f04280f7d885c0a5092c3519c2151aaa0ffb9ef6",
+  "canonical_reason_hash": "ca458f8affb37673068cea81f04280f7d885c0a5092c3519c2151aaa0ffb9ef6",
+  "canonical_version": "mandate-response-json-v1",
+  "pinned_address": "0xb2d770ae443d7433defe7c36ad305469bbc0ec6d",
+  "eip191_digest": "566f83cd4ab2e3e2e82b2f14cdbbdd483af103463db5aea620409c695bbc1293",
+  "signature_proof": "{\"text\":\"fixture-model:0c8fad96a6a5bf4c6f04521486d620b7d2051eddd4bc9d7e70aa356a6bd854ea:ca458f8affb37673068cea81f04280f7d885c0a5092c3519c2151aaa0ffb9ef6\",\"signature\":\"0x000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000011b\",\"signing_address\":\"0xb2d770ae443d7433defe7c36ad305469bbc0ec6d\",\"signing_algo\":\"ecdsa\",\"signature_kind\":\"provider_tee\"}",
+  "gateway_pinned_address": "0x004b411aa9b88d502f579cb13c08cc56f344a029",
+  "gateway_eip191_digest": "c38b2cfdd7049a515d6056487e5887d444f199e157d6688658bef9a418b1209c",
+  "gateway_signature_proof": "{\"text\":\"0c8fad96a6a5bf4c6f04521486d620b7d2051eddd4bc9d7e70aa356a6bd854ea:ca458f8affb37673068cea81f04280f7d885c0a5092c3519c2151aaa0ffb9ef6\",\"signature\":\"0x000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000011b\",\"signing_address\":\"0x004b411aa9b88d502f579cb13c08cc56f344a029\",\"signing_algo\":\"ecdsa\",\"signature_kind\":\"gateway\"}"
+}

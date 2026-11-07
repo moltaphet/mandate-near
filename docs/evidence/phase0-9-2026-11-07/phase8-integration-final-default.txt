@@ -1,0 +1,649 @@
+
+==> Formatting (cargo fmt --check)
+
+==> Lints (cargo clippy, warnings are errors)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.84s
+
+==> Documentation references (allowed documents only)
+Allowed local references checked. External citations and security claims are not verified; no tests were run.
+
+==> Read-only dashboard transport, schema and rendering tests
+TAP version 13
+# Subtest: atomic final-block snapshot pins every subsequent vault and ledger read
+ok 1 - atomic final-block snapshot pins every subsequent vault and ledger read
+  ---
+  duration_ms: 38.52775
+  type: 'test'
+  ...
+# Subtest: wrong network stops before querying the account
+ok 2 - wrong network stops before querying the account
+  ---
+  duration_ms: 0.455458
+  type: 'test'
+  ...
+# Subtest: wrong code identity stops before reading vault views
+ok 3 - wrong code identity stops before reading vault views
+  ---
+  duration_ms: 0.415333
+  type: 'test'
+  ...
+# Subtest: missing expected code never implies verified identity
+ok 4 - missing expected code never implies verified identity
+  ---
+  duration_ms: 4.119459
+  type: 'test'
+  ...
+# Subtest: oracle provider is observed explicitly and only supported names are accepted
+ok 5 - oracle provider is observed explicitly and only supported names are accepted
+  ---
+  duration_ms: 15.2725
+  type: 'test'
+  ...
+# Subtest: an undeployed account is rejected
+ok 6 - an undeployed account is rejected
+  ---
+  duration_ms: 0.319083
+  type: 'test'
+  ...
+# Subtest: a mixed-block view is not combined with the snapshot
+ok 7 - a mixed-block view is not combined with the snapshot
+  ---
+  duration_ms: 1.3865
+  type: 'test'
+  ...
+# Subtest: account metadata and ledger must have the same block height as the anchor
+ok 8 - account metadata and ledger must have the same block height as the anchor
+  ---
+  duration_ms: 1.081084
+  type: 'test'
+  ...
+# Subtest: one failed member invalidates the whole read, never producing partial balances
+ok 9 - one failed member invalidates the whole read, never producing partial balances
+  ---
+  duration_ms: 1.156375
+  type: 'test'
+  ...
+# Subtest: large token values format exactly across 6, 24 and 30 decimals
+ok 10 - large token values format exactly across 6, 24 and 30 decimals
+  ---
+  duration_ms: 0.414417
+  type: 'test'
+  ...
+# Subtest: deadline equality is expired, not open
+ok 11 - deadline equality is expired, not open
+  ---
+  duration_ms: 0.131041
+  type: 'test'
+  ...
+# Subtest: unknown latest history never invents rejection or settlement
+ok 12 - unknown latest history never invents rejection or settlement
+  ---
+  duration_ms: 1.207875
+  type: 'test'
+  ...
+# Subtest: signatures and debit observations remain distinct from settlement and delivery
+ok 13 - signatures and debit observations remain distinct from settlement and delivery
+  ---
+  duration_ms: 1.614167
+  type: 'test'
+  ...
+# Subtest: untrusted RPC strings are literal text and never become markup
+ok 14 - untrusted RPC strings are literal text and never become markup
+  ---
+  duration_ms: 1.095958
+  type: 'test'
+  ...
+# Subtest: declared-source observations distinguish legacy, empty and removed sources
+ok 15 - declared-source observations distinguish legacy, empty and removed sources
+  ---
+  duration_ms: 2.671417
+  type: 'test'
+  ...
+# Subtest: source identifiers use UTF-8 byte bounds and render as literal declarations
+ok 16 - source identifiers use UTF-8 byte bounds and render as literal declarations
+  ---
+  duration_ms: 6.726875
+  type: 'test'
+  ...
+# Subtest: schema refuses malformed balances, unsafe numbers and incoherent outcomes
+ok 17 - schema refuses malformed balances, unsafe numbers and incoherent outcomes
+  ---
+  duration_ms: 8.287667
+  type: 'test'
+  ...
+# Subtest: queued rules are shown separately and do not replace current rules
+ok 18 - queued rules are shown separately and do not replace current rules
+  ---
+  duration_ms: 1.1525
+  type: 'test'
+  ...
+# Subtest: withdrawal phase uses recorded baseline; maturity equality does not bypass guards
+ok 19 - withdrawal phase uses recorded baseline; maturity equality does not bypass guards
+  ---
+  duration_ms: 2.351667
+  type: 'test'
+  ...
+# Subtest: incoherent receipt phase, authority or sink observations are refused
+ok 20 - incoherent receipt phase, authority or sink observations are refused
+  ---
+  duration_ms: 3.773958
+  type: 'test'
+  ...
+# Subtest: a safely requeued withdrawal shows that owner authorization is still required
+ok 21 - a safely requeued withdrawal shows that owner authorization is still required
+  ---
+  duration_ms: 1.280959
+  type: 'test'
+  ...
+# Subtest: account, RPC and receipt links reject executable URLs, credentials and wrong explorers
+ok 22 - account, RPC and receipt links reject executable URLs, credentials and wrong explorers
+  ---
+  duration_ms: 0.327333
+  type: 'test'
+  ...
+# Subtest: receipt references are links with no settlement inference
+ok 23 - receipt references are links with no settlement inference
+  ---
+  duration_ms: 1.415125
+  type: 'test'
+  ...
+# Subtest: RPC transport rejects invalid envelopes, malformed bytes and oversized responses
+ok 24 - RPC transport rejects invalid envelopes, malformed bytes and oversized responses
+  ---
+  duration_ms: 0.7565
+  type: 'test'
+  ...
+# Subtest: timeout aborts the RPC and no snapshot is accepted
+ok 25 - timeout aborts the RPC and no snapshot is accepted
+  ---
+  duration_ms: 6.12375
+  type: 'test'
+  ...
+# Subtest: read-only client cannot request mutation or account access-key lists
+ok 26 - read-only client cannot request mutation or account access-key lists
+  ---
+  duration_ms: 0.202417
+  type: 'test'
+  ...
+# Subtest: out-of-order responses and cancelled reads never replace newer state
+ok 27 - out-of-order responses and cancelled reads never replace newer state
+  ---
+  duration_ms: 0.238041
+  type: 'test'
+  ...
+1..27
+# tests 27
+# suites 0
+# pass 27
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 204.19575
+
+==> Main-site navigation, share-link and clipboard safety tests
+TAP version 13
+# Subtest: vault sharing drops RPC, receipt and unrelated URL data
+ok 1 - vault sharing drops RPC, receipt and unrelated URL data
+  ---
+  duration_ms: 2.127209
+  type: 'test'
+  ...
+# Subtest: invalid account text and unsupported or fixture networks cannot be shared
+ok 2 - invalid account text and unsupported or fixture networks cannot be shared
+  ---
+  duration_ms: 0.236375
+  type: 'test'
+  ...
+# Subtest: share link refuses executable/file URLs, credentials and invalid code hashes
+ok 3 - share link refuses executable/file URLs, credentials and invalid code hashes
+  ---
+  duration_ms: 0.173083
+  type: 'test'
+  ...
+# Subtest: shared links are bounded identity prefill, never a custom RPC instruction
+ok 4 - shared links are bounded identity prefill, never a custom RPC instruction
+  ---
+  duration_ms: 0.274208
+  type: 'test'
+  ...
+# Subtest: clipboard success is only returned after the real write resolves
+ok 5 - clipboard success is only returned after the real write resolves
+  ---
+  duration_ms: 0.103958
+  type: 'test'
+  ...
+# Subtest: clipboard unavailable or rejected reports failure without echoing raw errors
+ok 6 - clipboard unavailable or rejected reports failure without echoing raw errors
+  ---
+  duration_ms: 0.341375
+  type: 'test'
+  ...
+1..6
+# tests 6
+# suites 0
+# pass 6
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 98.844584
+
+==> Existing site inspection asset matches the tested reader
+Site audit asset matches the tested shared reader.
+
+==> Deployment inspection safety tests
+............
+----------------------------------------------------------------------
+Ran 12 tests in 0.029s
+
+OK
+
+==> Unit tests (cargo test --lib)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.38s
+     Running unittests src/lib.rs (target/debug/deps/mandate_agent-2a46fe478a3ef94c)
+
+running 7 tests
+test tests::missing_and_replaced_history_does_not_invent_rejection ... ok
+test tests::active_execution_keeps_an_expired_proposal_waiting ... ok
+test tests::a_plan_reads_from_the_json_a_person_writes ... ok
+test tests::only_a_matching_recorded_gate_failure_is_rejected ... ok
+test tests::a_recorded_signature_is_signed_not_settled ... ok
+test tests::refuses_what_the_vault_would_refuse ... ok
+test tests::reason_hash_is_sha256_hex_of_the_rationale ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/mandate_keeper-55ea4823ddd5f336)
+
+running 2 tests
+test tests::protocol_and_transport_failures_share_bounded_backoff ... ok
+test tests::protocol_failures_are_not_reported_as_signed ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/mandate_vault-2558258482bd5459)
+
+running 241 tests
+test engine::tests::error_messages_carry_codes ... ok
+test engine::tests::approves_an_honest_trade_and_returns_next_state ... ok
+test engine::tests::cooldown_boundary ... ok
+test engine::tests::high_water_mark_only_rises ... ok
+test engine::tests::one_signed_intent_at_a_time ... ok
+test engine::tests::max_trade_size_boundary ... ok
+test engine::tests::daily_turnover_resets_at_utc_midnight ... ok
+test engine::tests::drawdown_breaker_allows_only_derisking ... ok
+test engine::tests::position_cap_uses_worst_case ... ok
+test engine::tests::insufficient_balance ... ok
+test engine::tests::reducing_an_overweight_asset_can_leave_it_above_cap ... ok
+test engine::tests::held_but_untraded_assets_need_prices_too ... ok
+test engine::tests::price_freshness ... ok
+test engine::tests::stable_destination_skips_position_cap ... ok
+test engine::tests::slippage_boundary_is_exact ... ok
+test engine::tests::structural_rules ... ok
+test engine::tests::zero_price_is_a_valuation_error ... ok
+test engine::tests::stable_destination_cannot_increase_an_untouched_over_cap_share ... ok
+test intent::tests::rejects_invalid_diffs ... ok
+test intent::tests::rfc3339_known_dates ... ok
+test intent::tests::v1_nonce_deadline_bound ... ok
+test intent::tests::v1_nonce_layout ... ok
+test mandate::tests::adding_an_asset_or_a_stable_asset_is_loosening_and_removing_is_not ... ok
+test mandate::tests::changing_an_existing_asset_config_counts_as_loosening ... ok
+test mandate::tests::lookup_helpers ... ok
+test mandate::tests::loosened_fields_names_each_loosened_limit ... ok
+test intent::tests::payload_fits_mpc_eddsa_limit ... ok
+test intent::tests::golden_payload_matches_independent_encoding ... ok
+test mandate::tests::model_allowlist_empty_denies_all_and_exact_capacity_is_valid ... ok
+test mandate::tests::decimals_bound ... ok
+test mandate::tests::caps_asset_count ... ok
+test mandate::tests::model_ids_reject_exact_duplicates_and_preserve_exact_identity ... ok
+test mandate::tests::model_id_bound_counts_utf8_bytes_and_rejects_blank_ids ... ok
+test mandate::tests::bps_bounds ... ok
+test mandate::tests::price_age_bounds ... ok
+test mandate::tests::price_feed_id_rules ... ok
+test mandate::tests::rejects_duplicates ... ok
+test mandate::tests::rejects_empty_assets ... ok
+test mandate::tests::rejects_bad_asset_ids ... ok
+test mandate::tests::rejects_nep245_without_a_supported_withdrawal_path ... ok
+test mandate::tests::requires_a_stable_asset ... ok
+test mandate::tests::sample_is_valid ... ok
+test mandate::tests::stable_must_be_allowed ... ok
+test math::tests::extreme_inputs_overflow_cleanly ... ok
+test mandate::tests::trade_limits_are_consistent ... ok
+test math::tests::one_near_at_five_dollars ... ok
+test math::tests::rounding_direction_on_fractions ... ok
+test math::tests::usdc_at_one_dollar_pyth_style ... ok
+test math::tests::rejects_unusable_prices ... ok
+test mandate::tests::source_additions_loosen_and_removal_or_reordering_does_not ... ok
+test intent::tests::rfc3339_matches_chrono ... ok
+test engine::tests::approvals_always_satisfy_the_mandate ... ok
+test math::tests::rounding_brackets_the_exact_value ... ok
+test intent::tests::diff_signs_are_correct ... ok
+test migration::tests::migration_accepts_pre_sequence_state_emitted_by_the_historical_vault ... ok
+test migration::tests::migration_accepts_sequence_state_emitted_by_the_historical_vault ... ok
+test migration::tests::migration_accepts_actual_pre_model_price_oracle_voucher_state ... ok
+test migration::tests::migration_checks_the_stored_signature_deadline_too - should panic ... ok
+test migration::tests::migration_accepts_actual_pre_model_pyth_voucher_state ... ok
+test migration::tests::migration_never_discards_a_pre_provider_withdrawal_guard - should panic ... ok
+test migration::tests::migration_discards_an_inert_snapshot_and_refuses_its_stale_callback ... ok
+test migration::tests::migration_preserves_the_pre_sequence_legacy_layout ... ok
+test migration::tests::migration_preserves_the_quiescent_pre_provider_remediation_state ... ok
+test migration::tests::a_migrated_model_addition_cannot_apply_one_second_before_its_delay - should panic ... ok
+test migration::tests::a_migrated_vault_refuses_reserved_sources_without_an_owner_addition - should panic ... ok
+test migration::tests::migration_preserves_the_sequence_legacy_layout ... ok
+test migration::tests::migration_refuses_an_unusable_recovery_namespace - should panic ... ok
+test migration::tests::migration_rejects_a_pending_proposal - should panic ... ok
+test migration::tests::migration_rejects_a_queued_withdrawal - should panic ... ok
+test migration::tests::migration_rejects_an_external_caller - should panic ... ok
+test migration::tests::migration_rejects_a_self_owned_legacy_vault - should panic ... ok
+test migration::tests::migration_rejects_an_outstanding_signature - should panic ... ok
+test migration::tests::migration_rejects_current_state - should panic ... ok
+test migration::tests::migration_rejects_an_unpaused_vault - should panic ... ok
+test oracle::tests::a_fresh_report_does_not_hide_a_stale_contributing_report ... ok
+test oracle::tests::a_later_report_cannot_refresh_an_earlier_aggregate ... ok
+test oracle::tests::a_later_report_in_the_same_second_invalidates_the_snapshot ... ok
+test oracle::tests::asset_without_reports_gets_no_price ... ok
+test oracle::tests::converts_to_the_engines_price ... ok
+test oracle::tests::fresh_reports_pass_the_gates ... ok
+test oracle::tests::months_old_reports_with_a_non_null_aggregate_fail_closed ... ok
+test oracle::tests::null_oracle_answer_gives_no_prices ... ok
+test oracle::tests::null_oracle_makes_the_vault_fail_closed ... ok
+test oracle::tests::publish_time_comes_from_the_oldest_recent_report ... ok
+test oracle::tests::real_mainnet_answers_parse ... ok
+test oracle::tests::recency_boundary_is_conservative_to_the_nanosecond ... ok
+test oracle::tests::reports_outside_aggregate_recency_do_not_age_its_price ... ok
+test oracle::tests::unusable_prices_are_refused ... ok
+test oracle::tests::zero_recency_accepts_only_reports_at_the_snapshot ... ok
+test migration::tests::migration_rejects_even_an_expired_execution_record - should panic ... ok
+test migration::tests::migration_rejects_unknown_state - should panic ... ok
+test provider_tests::oracle_kind_serializes_as_explicit_provider_names ... ok
+test migration::tests::migration_revalidates_the_legacy_mandate - should panic ... ok
+test migration::tests::model_migration_never_discards_an_actual_pre_model_withdrawal_guard - should panic ... ok
+test migration::tests::migration_revalidates_a_queued_mandate - should panic ... ok
+test engine::tests::property_generator_covers_approvals_and_rejections ... ok
+test migration::tests::model_migration_refuses_an_orphaned_voucher_phase - should panic ... ok
+test migration::tests::model_migration_refuses_an_unresolved_retry_authorization - should panic ... ok
+test migration::tests::provider_migration_cannot_discard_an_old_unknown_withdrawal - should panic ... ok
+test migration::tests::quiescent_provider_migration_preserves_identity_and_starts_no_voucher_attempt ... ok
+test provider_tests::existing_initializers_keep_the_price_oracle_provider_and_feed_schema ... ok
+test migration::tests::a_migrated_queued_mandate_stays_empty_and_model_addition_waits_another_day ... ok
+test provider_tests::pyth_initializer_rejects_price_oracle_style_feed_ids - should panic ... ok
+test pyth::tests::actual_engine_enforces_pyth_age_and_future_boundaries ... ok
+test pyth::tests::missing_or_invalid_pyth_entry_reaches_the_actual_missing_price_gate ... ok
+test pyth::tests::pyth_confidence_limit_accepts_equality_and_refuses_one_unit_above ... ok
+test pyth::tests::pyth_feed_ids_are_exact_lowercase_hex ... ok
+test pyth::tests::pyth_price_uses_the_exact_receiver_json_shape ... ok
+test pyth::tests::pyth_receiver_fields_do_not_accept_lossy_or_wrong_json_types ... ok
+test pyth::tests::pyth_signed_fields_and_exponents_fail_closed ... ok
+test provider_tests::pyth_apply_mandate_revalidates_provider_feed_ids - should panic ... ok
+test provider_tests::pyth_preview_rejects_generic_feed_ids_without_changing_the_vault ... ok
+test provider_tests::pyth_set_mandate_rejects_invalid_feed_ids_before_queuing - should panic ... ok
+test provider_tests::pyth_preview_matches_applied_and_queued_setter_outcomes_for_valid_feeds ... ok
+test provider_tests::pyth_feed_changes_keep_the_existing_24_hour_loosening_delay ... ok
+test remediation_tests::invalid_near_account_grammar_and_unbounded_nep245_are_rejected ... ok
+test provider_tests::null_pyth_cache_rejects_exactly_once_without_a_signature_or_quota_reservation ... ok
+test provider_tests::pyth_approved_callback_records_price_deadline_without_early_quota_commit ... ok
+test provider_tests::pyth_balance_callback_sends_the_real_batch_method_and_arguments ... ok
+test provider_tests::stale_pyth_callback_cannot_change_a_new_execution ... ok
+test remediation_tests::aggregate_snapshot_beyond_future_skew_is_rejected ... ok
+test remediation_tests::failed_returned_promise_after_dispatch_cannot_duplicate_a_debit ... ok
+test remediation_tests::asset_reordering_cannot_relabel_an_old_balance_vector ... ok
+test remediation_tests::expired_lock_callback_cannot_erase_a_new_unexecuted_proposal ... ok
+test provider_tests::pyth_failed_or_oversized_read_releases_only_its_unsigned_execution ... ok
+test remediation_tests::later_queue_replacement_resets_the_withdrawal_delay ... ok
+test remediation_tests::later_queue_replacement_resets_the_agent_delay ... ok
+test remediation_tests::later_queue_replacement_resets_the_mandate_delay ... ok
+test remediation_tests::malformed_and_oversized_withdrawal_answers_do_not_release_or_retry ... ok
+test remediation_tests::configuration_change_does_not_free_an_already_requested_signature ... ok
+test provider_tests::pyth_callback_cannot_use_a_previous_configuration_or_expired_window ... ok
+test remediation_tests::partial_positive_withdrawal_is_not_full_delivery ... ok
+test remediation_tests::oversized_successful_signer_answer_keeps_the_timed_lock ... ok
+test remediation_tests::pre_send_timeout_requeues_safely_and_late_read_cannot_send ... ok
+test remediation_tests::proposal_is_blocked_while_a_withdrawal_is_unresolved - should panic ... ok
+test remediation_tests::same_asset_credit_can_mask_an_unknown_debit_and_must_remain_guarded ... ok
+test remediation_tests::salt_can_sign_at_the_exact_price_age_boundary ... ok
+test remediation_tests::pause_then_unpause_does_not_revive_unsigned_approval ... ok
+test remediation_tests::salt_at_the_approved_deadline_cannot_request_a_signature ... ok
+test remediation_tests::salt_cannot_sign_after_the_approved_prices_become_stale ... ok
+test remediation_tests::second_matured_withdrawal_cannot_send_during_the_first - should panic ... ok
+test remediation_tests::scalar_balance_observations_cannot_release_the_voucher_guard ... ok
+test remediation_tests::too_little_gas_cannot_dispatch_a_withdrawal - should panic ... ok
+test remediation_tests::tightening_invalidates_an_unsigned_approval ... ok
+test remediation_tests::signing_dispatch_reserves_quota_even_if_the_result_arrives_after_lock_expiry ... ok
+test remediation_tests::withdrawal_to_the_configured_intents_account_is_rejected - should panic ... ok
+test tests::a_failed_dispatched_withdrawal_stays_locked_without_retry ... ok
+test tests::a_delivered_withdrawal_is_not_queued_again ... ok
+test tests::a_callback_from_an_earlier_execution_changes_nothing ... ok
+test tests::a_failed_signer_call_keeps_the_timed_lock ... ok
+test remediation_tests::unicode_salt_fails_without_a_utf8_slice_panic ... ok
+test tests::a_late_salt_builds_no_intent_and_frees_the_lock ... ok
+test tests::a_later_agent_waits_and_the_old_agent_keeps_its_rights ... ok
+test tests::a_failed_withdrawal_does_not_replace_a_newer_request ... ok
+test tests::a_loosening_cannot_be_applied_early - should panic ... ok
+test tests::a_proposal_goes_through_once_the_lock_has_run_out ... ok
+test tests::a_malformed_signer_answer_keeps_the_lock ... ok
+test tests::a_queued_agent_can_be_cancelled ... ok
+test tests::a_proposal_waits_for_the_execution_in_flight - should panic ... ok
+test tests::a_failed_withdrawal_does_not_return_after_a_cancel ... ok
+test tests::a_second_loosening_replaces_the_first ... ok
+test tests::a_queued_agent_applies_after_the_delay ... ok
+test tests::a_refunded_withdrawal_is_queued_again ... ok
+test tests::a_queued_agent_does_not_apply_early - should panic ... ok
+test tests::a_tightening_drops_a_queued_loosening ... ok
+test tests::a_withdrawal_waits_for_the_delay ... ok
+test tests::a_second_queued_agent_replaces_the_first ... ok
+test tests::apply_without_a_withdrawal_panics - should panic ... ok
+test tests::agent_proposal_is_stored_with_expiry ... ok
+test tests::apply_without_a_queued_agent_panics - should panic ... ok
+test tests::apply_withdrawal_refused_before_the_delay - should panic ... ok
+test tests::approval_resets_strikes ... ok
+test tests::apply_withdrawal_refused_while_a_signed_intent_is_open - should panic ... ok
+test tests::apply_withdrawal_takes_it_after_the_delay ... ok
+test tests::cancel_without_a_queued_agent_panics - should panic ... ok
+test tests::init_rejects_invalid_mandate - should panic ... ok
+test tests::init_stores_owner_and_mandate ... ok
+test tests::execute_refuses_while_the_lock_holds - should panic ... ok
+test tests::owner_sets_agent_with_one_yocto ... ok
+test tests::loosening_waits_for_the_delay_and_the_old_limits_hold_meanwhile ... ok
+test tests::non_owner_cannot_resume - should panic ... ok
+test tests::owner_updates_mandate_with_one_yocto ... ok
+test tests::pause_rejects_non_owner - should panic ... ok
+test tests::first_source_addition_waits_the_full_mandate_delay ... ok
+test tests::pause_without_deposit_unpause_with_one_yocto ... ok
+test tests::owner_resumes_after_halt ... ok
+test tests::proposal_allowed_after_signed_intent_expires ... ok
+test tests::each_execution_takes_a_new_id_and_the_next_waits_for_the_lock ... ok
+test tests::pause_blocks_proposals - should panic ... ok
+test tests::proposal_blocked_while_signed_intent_outstanding - should panic ... ok
+test tests::propose_rejects_bad_reason_hash - should panic ... ok
+test tests::propose_rejects_same_asset - should panic ... ok
+test tests::propose_rejects_non_agent - should panic ... ok
+test tests::propose_rejects_zero_amount - should panic ... ok
+test tests::request_withdrawal_refuses_an_unlisted_asset - should panic ... ok
+test tests::propose_without_agent_panics - should panic ... ok
+test tests::proposal_ids_increase ... ok
+test tests::propose_rejects_unlisted_asset - should panic ... ok
+test tests::request_withdrawal_refuses_while_the_lock_holds - should panic ... ok
+test tests::request_withdrawal_refuses_while_a_signed_intent_is_open - should panic ... ok
+test tests::request_withdrawal_refuses_zero - should panic ... ok
+test tests::request_withdrawal_rejects_non_owner - should panic ... ok
+test tests::request_withdrawal_requires_one_yocto - should panic ... ok
+test tests::simulate_reports_the_effect_and_changes_nothing ... ok
+test tests::set_mandate_rejects_invalid_mandate - should panic ... ok
+test tests::set_agent_rejects_non_owner - should panic ... ok
+test tests::set_mandate_requires_one_yocto - should panic ... ok
+test tests::set_mandate_rejects_non_owner - should panic ... ok
+test tests::resume_requires_one_yocto - should panic ... ok
+test tests::the_owner_cannot_be_the_vault_itself - should panic ... ok
+test tests::second_proposal_allowed_exactly_at_expiry ... ok
+test tests::the_owner_can_cancel_a_queued_loosening ... ok
+test tests::trading_state_starts_empty ... ok
+test tests::second_proposal_blocked_while_first_pending - should panic ... ok
+test tests::the_owner_cancels_a_queued_withdrawal ... ok
+test tests::the_lock_runs_out_after_the_window_and_the_intent_lifetime ... ok
+test tests::two_rejections_do_not_halt ... ok
+test tests::tightening_applies_at_once ... ok
+test tests::three_rejections_halt_and_block_proposals ... ok
+test tests::source_removal_blocks_a_pending_proposal_before_execution_lock ... ok
+test tests::unapproved_source_is_refused_before_proposal_state_changes ... ok
+test tests::withdrawal_cannot_be_sent_to_the_vault_itself - should panic ... ok
+test withdrawal::tests::confirmed_refund_does_not_allow_permissionless_repeat_issuance - should panic ... ok
+test withdrawal::tests::duplicate_preparation_callback_cannot_send_a_second_original ... ok
+test withdrawal::tests::duplicate_uniqueness_callback_cannot_dispatch_or_overwrite_a_sent_phase ... ok
+test withdrawal::tests::late_uniqueness_callback_cannot_dispatch_after_preparing_timeout_or_new_id ... ok
+test withdrawal::tests::cancelled_proof_requeues_unarmed_and_all_old_callbacks_are_inert ... ok
+test withdrawal::tests::positive_sent_proof_consumes_authorization_without_claiming_delivery ... ok
+test withdrawal::tests::owner_cancellation_cannot_be_resurrected_or_rearmed_by_old_proof ... ok
+test withdrawal::tests::sixty_two_byte_vault_has_valid_inert_sink_names ... ok
+test withdrawal::tests::failed_cancellation_still_reads_proof_and_keeps_guard_until_positive ... ok
+test withdrawal::tests::sixty_three_byte_vault_cannot_initialize_unsafe_sink_names - should panic ... ok
+test withdrawal::tests::prep_timeout_invalidates_old_id_and_late_callback_cannot_dispatch ... ok
+test withdrawal::tests::rearm_requires_one_yocto - should panic ... ok
+test withdrawal::tests::replacement_arm_and_delay_survive_an_old_refund ... ok
+test withdrawal::tests::rearm_requires_owner_predecessor - should panic ... ok
+test withdrawal::tests::missing_null_failed_and_oversized_supply_never_authorize_preparation ... ok
+test withdrawal::tests::current_supply_source_and_empty_sinks_are_all_required_before_dispatch ... ok
+test withdrawal::tests::final_seeded_cancelled_proof_requires_consumed_source_and_unique_current_supply ... ok
+test withdrawal::tests::preparation_requires_exactly_one_voucher_and_sufficient_victim_balance ... ok
+test withdrawal::tests::invalid_or_missing_destination_proofs_never_release_unknown_execution ... ok
+
+test result: ok. 241 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.78s
+
+     Running unittests src/lib.rs (target/debug/deps/mock_externals-b8638bfe744f5b52)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/mock_ft-ec1f5dfa4bf2697f)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/mock_oracle-7741b5fd27b5138a)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+==> Autonomous strategy, offline model decisions, model provenance and relay protocol tests
+   Compiling mandate-vault v0.1.0 (/Users/ehs4n/mandate-near/contracts/vault)
+   Compiling mandate-agent v0.1.0 (/Users/ehs4n/mandate-near/agent)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 4.05s
+     Running tests/autonomous.rs (target/debug/deps/autonomous-2fcbf6a2beb137db)
+
+running 7 tests
+test quote_window_and_invalid_configuration_fail_closed ... ok
+test quote_exact_output_is_used_and_shared_engine_rejects_economic_loss ... ok
+test reverse_rebalance_keeps_24_decimal_precision ... ok
+test target_band_is_no_trade_and_pending_signature_blocks ... ok
+test denied_or_removed_rebalance_source_refuses_before_strategy_and_quote ... ok
+test exact_candidate_respects_trade_daily_and_balance_caps ... ok
+test cooldown_stale_data_and_exhausted_allowance_refuse_before_quote ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.56s
+
+     Running tests/model.rs (target/debug/deps/model-ce1c957a0ea6a8f1)
+
+running 38 tests
+test complete_request_marker_scan_covers_model_metadata_and_system_instructions ... ok
+test decoded_scan_detects_escaped_and_nested_public_markers_without_credentials ... ok
+test captured_envelope_rejects_oversize_and_non_model_reserved_ids ... ok
+test compact_prompt_preserves_public_integer_prices_balances_and_rules ... ok
+test empty_source_allowlist_makes_zero_model_calls ... ok
+test decoded_scan_fails_closed_when_embedded_json_exceeds_its_depth_budget ... ok
+test an_unlisted_returned_model_id_refuses_after_one_call ... ok
+test malformed_optional_settings_never_downgrade_to_absence ... ok
+test invalid_public_snapshot_stops_before_the_model_call ... ok
+test explicit_no_trade_stops_after_one_call_with_a_bounded_reason ... ok
+test manual_adapter_preserves_plan_hash_and_existing_structural_only_validation ... ok
+test inconsistent_client_content_is_rejected_without_repairing_the_capture ... ok
+test client_hash_and_identity_mutations_never_become_a_trade ... ok
+test paused_or_halted_snapshot_makes_zero_model_calls ... ok
+test malformed_and_fenced_json_fail_without_a_repair_request ... ok
+test pure_decision_extraction_retains_strict_schema_without_a_snapshot ... ok
+test canonical_commitment_preserves_equivalent_outer_json_while_raw_hashes_differ ... ok
+test only_distinct_mandate_assets_are_accepted ... ok
+test inline_unknown_signatures_and_duplicate_capture_fields_are_refused ... ok
+test no_trade_still_requires_valid_assets_amounts_and_rationale ... ok
+test attestation_address_metadata_is_retained_without_claiming_verified_provenance ... ok
+test signature_lookup_uses_only_the_configured_https_origin_and_encoded_id ... ok
+test every_field_is_required_including_explicit_nullable_reason ... ok
+test timeout_http_failure_and_missing_configuration_produce_no_trade ... ok
+test forged_plan_commitment_and_trade_tuple_do_not_validate_against_the_capture ... ok
+test unchanged_local_engine_refuses_excess_size_and_bad_minimum_output ... ok
+test nullable_and_string_no_trade_reasons_remain_schema_valid ... ok
+test removing_a_previously_allowed_model_refuses_its_next_decision ... ok
+test unknown_and_duplicate_fields_are_rejected_instead_of_overwritten ... ok
+test supplied_proof_without_an_external_pin_and_required_missing_proof_refuse ... ok
+test valid_model_json_preserves_exact_plan_and_raw_unverified_response ... ok
+test public_signed_fixture_is_verified_before_the_exact_trade_is_returned ... ok
+test wrong_json_types_do_not_get_coerced ... ok
+test returned_invalid_or_unsupported_proofs_refuse_even_with_optional_policy ... ok
+test rationale_bound_counts_unicode_characters_and_preserves_text ... ok
+test amounts_are_exact_positive_u128_decimal_strings ... ok
+test stalled_fake_client_times_out_once_without_network_or_twenty_second_wait ... ok
+test rebalance_adapter_uses_the_existing_exact_candidate_without_network_requests ... ok
+
+test result: ok. 38 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.65s
+
+     Running tests/protocol.rs (target/debug/deps/protocol-e84d827502084165)
+
+running 9 tests
+test prohibited_public_paths_are_refused_before_file_open ... ok
+test oversized_error_and_mismatched_rpc_envelopes_fail_without_echoing_data ... FAILED
+test malformed_expired_and_mismatched_quotes_never_get_selected ... FAILED
+test dry_run_binary_prepares_from_public_data_with_empty_account_environment ... FAILED
+test quote_publish_and_status_use_documented_protocol_and_do_not_invent_settlement ... FAILED
+test denied_rebalance_source_makes_public_reads_and_zero_quote_requests ... FAILED
+test final_views_are_pinned_and_wrong_height_network_or_hash_is_refused ... FAILED
+test larger_evidence_files_keep_default_limits_and_prohibited_path_guards ... ok
+test publication_association_rejects_wrong_ids_amounts_hashes_curves_and_deadlines ... ok
+
+failures:
+
+---- oversized_error_and_mismatched_rpc_envelopes_fail_without_echoing_data stdout ----
+
+thread 'oversized_error_and_mismatched_rpc_envelopes_fail_without_echoing_data' (288077) panicked at agent/tests/common_http/mod.rs:18:59:
+loopback HTTP fixture can bind: Os { code: 1, kind: PermissionDenied, message: "Operation not permitted" }
+
+---- malformed_expired_and_mismatched_quotes_never_get_selected stdout ----
+
+thread 'malformed_expired_and_mismatched_quotes_never_get_selected' (288076) panicked at agent/tests/common_http/mod.rs:18:59:
+loopback HTTP fixture can bind: Os { code: 1, kind: PermissionDenied, message: "Operation not permitted" }
+
+---- dry_run_binary_prepares_from_public_data_with_empty_account_environment stdout ----
+
+thread 'dry_run_binary_prepares_from_public_data_with_empty_account_environment' (288073) panicked at agent/tests/common_http/mod.rs:18:59:
+loopback HTTP fixture can bind: Os { code: 1, kind: PermissionDenied, message: "Operation not permitted" }
+
+---- quote_publish_and_status_use_documented_protocol_and_do_not_invent_settlement stdout ----
+
+thread 'quote_publish_and_status_use_documented_protocol_and_do_not_invent_settlement' (288080) panicked at agent/tests/common_http/mod.rs:18:59:
+loopback HTTP fixture can bind: Os { code: 1, kind: PermissionDenied, message: "Operation not permitted" }
+
+---- denied_rebalance_source_makes_public_reads_and_zero_quote_requests stdout ----
+
+thread 'denied_rebalance_source_makes_public_reads_and_zero_quote_requests' (288072) panicked at agent/tests/common_http/mod.rs:18:59:
+loopback HTTP fixture can bind: Os { code: 1, kind: PermissionDenied, message: "Operation not permitted" }
+
+---- final_views_are_pinned_and_wrong_height_network_or_hash_is_refused stdout ----
+
+thread 'final_views_are_pinned_and_wrong_height_network_or_hash_is_refused' (288074) panicked at agent/tests/common_http/mod.rs:18:59:
+loopback HTTP fixture can bind: Os { code: 1, kind: PermissionDenied, message: "Operation not permitted" }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    denied_rebalance_source_makes_public_reads_and_zero_quote_requests
+    dry_run_binary_prepares_from_public_data_with_empty_account_environment
+    final_views_are_pinned_and_wrong_height_network_or_hash_is_refused
+    malformed_expired_and_mismatched_quotes_never_get_selected
+    oversized_error_and_mismatched_rpc_envelopes_fail_without_echoing_data
+    quote_publish_and_status_use_documented_protocol_and_do_not_invent_settlement
+
+test result: FAILED. 3 passed; 6 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p mandate-agent --test protocol`

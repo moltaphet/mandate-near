@@ -69,9 +69,9 @@ blocks trade authorization.
 
 ## Deployment and migration
 
-Prefer a fresh vault with a distinct recoverable owner. Select the personal or
-multisig/DAO owner model before sealing permissions; that choice is currently
-UNVERIFIED. A self-owned vault loses external owner authority when its account
+Prefer a fresh vault with a distinct recoverable owner. The owner selected
+multisig/DAO governance on a separate account; its public AccountId, vote/cancel
+procedures and recoverability remain UNVERIFIED. A self-owned vault loses external owner authority when its account
 permissions are removed.
 
 Prefer a fresh account created, funded, deployed and initialized atomically
@@ -87,9 +87,12 @@ queue/cancel changes and authorize withdrawals. Do not emit permission values in
 evidence. Reinspect the sealed account at a final block.
 
 Appending provider and voucher fields changes Borsh state. A plain WASM replacement is unsafe
-for an old layout. The migration recognizes exactly four layouts: `77ebc0c`
+for an old layout. The migration recognizes exactly five layouts: `77ebc0c`
 pre-sequence, `0de5c48` sequence-enabled, pre-provider remediation and
-provider-enabled pre-voucher. The fourth preserves the selected provider. It must execute
+provider-enabled pre-voucher, and voucher-enabled pre-model admission at
+`b43569d`. The fourth and fifth preserve the selected provider. Active and
+queued migrated source lists start empty; first admission still waits 24 hours.
+Unresolved voucher stages and retry authorization must be resolved. It must execute
 privately and atomically with deployment, while paused and without an execution
 record, pending proposal, queued withdrawal or future signed deadline. An active
 remediation withdrawal guard is refused, never discarded. Inactive execution
@@ -153,6 +156,8 @@ Per-ID records persist in external Intents storage and need measured funding.
 7. Record gas, storage and quote/price latency at the supported asset limit,
    with operational alerts for stale feeds, guards and unpublished signatures.
 
-OutLayer/TEE integration and model inference remain separate planned features.
-They must not replace the on-chain authorization boundary or delay proving the
+OutLayer/TEE integration remains planned. The optional model client, canonical
+capture and declared-source admission are implemented locally; live provider
+signature compatibility and authenticated model origin remain UNVERIFIED.
+These features must not replace the on-chain authorization boundary or delay proving the
 funded core flow. No source review guarantees a hackathon rank or zero defects.

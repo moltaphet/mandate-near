@@ -1,0 +1,32 @@
+STEP 2 CORRECTION DEVELOPMENT EVIDENCE
+Initial direct rustfmt reported the following syntax errors before Cargo validation.
+Command: rustfmt --edition 2024 agent/src/main.rs agent/src/lib.rs agent/src/transport.rs agent/tests/protocol.rs agent/src/provenance.rs agent/tests/provenance.rs agent/tests/provenance_cli.rs
+The later git diff --check exited0; it did not make the rustfmt command successful.
+
+error: incorrect unicode escape sequence
+   --> /Users/ehs4n/mandate-near/agent/tests/provenance.rs:190:46
+    |
+190 |         canonical_response_bytes("{\"😀\":1,\"\uE000\":2}").unwrap(),
+    |                                               ^^^
+    |
+help: format of unicode escape sequences uses braces
+    |
+190 -         canonical_response_bytes("{\"😀\":1,\"\uE000\":2}").unwrap(),
+190 +         canonical_response_bytes("{\"😀\":1,\"\u{E000}\":2}").unwrap(),
+    |
+
+error: incorrect unicode escape sequence
+   --> /Users/ehs4n/mandate-near/agent/tests/provenance.rs:191:13
+    |
+191 |         "{\"\uE000\":2,\"😀\":1}".as_bytes()
+    |             ^^^
+    |
+help: format of unicode escape sequences uses braces
+    |
+191 -         "{\"\uE000\":2,\"😀\":1}".as_bytes()
+191 +         "{\"\u{E000}\":2,\"😀\":1}".as_bytes()
+    |
+
+Repair: use Rust braced Unicode escapes for the public UTF-8 sorting test.
+No assertion removed or weakened. Fresh formatting/compile/test output follows
+in separate ai-decision-step2-correction evidence files.

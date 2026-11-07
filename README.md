@@ -29,6 +29,11 @@ the trusted NEAR Intents and MPC contracts.
 > and [THREAT_MODEL.md](THREAT_MODEL.md) before trusting it with funds.
 > Recent autonomous-client and unique-voucher recovery changes are implemented;
 > final combined release verification and live operation remain open.
+> The 7 November baseline attempt, before this documentation reconciliation,
+> exited 101 when protocol tests could not bind local loopback sockets
+> (`PermissionDenied`). Formatting and strict Clippy passed before that failure;
+> later provenance targets were not reached. This is not a complete fast or
+> integration pass.
 
 ---
 
@@ -137,9 +142,10 @@ prerequisites and what they do not cover: [docs/RUN-WITHOUT-KEYS.md](docs/RUN-WI
 2. **Run `cargo test -p mandate-vault engine::`.** You should see every
    per-trade rule exercised at its exact boundary: cooldown, signed-intent
    lock, price staleness, trade size, UTC-day turnover, slippage, drawdown
-   breaker and position cap. A property test also re-derives every rule
-   for random trades. Add `-- --nocapture property_generator` to see the
-   outcome mix: roughly 27% approved, plus every rejection type.
+   breaker and position cap. A property test re-derives the economic constraints
+   for sampled trades. Add `-- --nocapture property_generator` to see approvals
+   and all six sampled economic rejection types. Timing, asset validity and
+   price-error paths have separate boundary tests.
 3. **Run `./scripts/verify.sh --integration`.** You should see the real wasm
    deployed to a local NEAR sandbox, with `owner_controls_on_a_real_chain`
    passing. That test covers:
@@ -221,6 +227,15 @@ these implementations.
 
 ### Optional model decision source
 
+The mandate's `allowed_model_ids` controls declared decision sources: at most
+8 unique nonblank IDs, each at most 64 UTF-8 bytes. An empty list disables all
+proposals. Manual and rebalancer callers use `manual-v1` and `rebalance-v1`;
+model callers use the response's declared model ID. Adding any ID uses the
+existing 24-hour mandate delay; removal applies immediately. The contract stores
+the ID with each proposal and checks it again before starting execution. The
+agent also refuses a disallowed source before submission. This is declared-ID
+admission, not proof that a particular model generated a response.
+
 `cargo run -p mandate-agent -- --model --dry-run` reads the existing final-block
 snapshot and asks a configured OpenAI-compatible chat-completions endpoint for
 one decision. Runtime settings are `NEAR_RPC_URL`, `VAULT_ID`, optional
@@ -238,11 +253,42 @@ it never repairs model amounts or changes the mandate from rationale text.
 `no_trade` makes no proposal. There is no automatic model retry loop.
 
 Without `--dry-run`, existing agent signing and outbox settings are needed to
-submit. The model never receives those settings or signs a transaction. At this
-implementation stage the model path still uses the existing rationale hash;
-response evidence and model-specific commitments are a separate next step.
-Provider/model labels and response provenance are **UNVERIFIED**. Neither this
-client nor a valid model response proves profitability, privacy or TEE execution.
+submit. The model never receives those settings or signs a transaction. Model
+`reason_hash` commits to the canonical response envelope; raw request/response
+SHA-256 values remain separate for signatures and evidence filenames. The exact
+format, `mandate-response-json-v1`, is specified in
+[architecture](docs/ARCHITECTURE.md). Manual/rebalance rationale hashes are unchanged.
+
+A supplied invalid or unsupported signature refuses the trade before proposal.
+Unsigned generic responses remain **UNVERIFIED**. NEAR EIP-191 verification uses
+an independently configured public signer pin; required proof lookup or
+verification failure produces no trade. Hardware attestation and live provider
+compatibility remain unverified.
+
+For separate NEAR proofs, configure `MODEL_SIGNATURE_URL` as an absolute HTTPS
+base ending in `/` on the same origin as the completion endpoint, and
+`MODEL_SIGNING_ADDRESS` as the independently established public signer address.
+The client appends the encoded response ID and documented ECDSA/model query
+parameters. Any configured lookup failure refuses the trade.
+`MODEL_SIGNATURE_REQUIRED=true` additionally requires lookup and signer
+configuration before inference; unset/`false` permits unsigned generic mode
+when no proof lookup or signature is supplied. No automatic retry occurs.
+Completion and proof lookup share a 20-second deadline and each body is bounded
+to 64 KiB. Public evidence records are bounded to one MiB.
+
+Each model proposal first writes `model-<raw-response-sha256>.json` containing the
+exact request/response bodies, canonical commitment, declared IDs, decision and
+separate proof. Verify a public record offline with:
+
+```bash
+cargo run -p mandate-agent -- --verify-model model-<hash>.json --reason-hash <on-chain hash>
+```
+
+For a signed record, supply `--signing-address <public-address>`; stored signatures
+cannot be skipped. `--signature <public-proof.json>` checks an additional proof,
+and `--plan <public-plan.json>` compares the exact decision tuple. A matching
+hash or pinned signature proves neither chain authenticity, gate approval,
+profitability, privacy, settlement nor TEE execution.
 
 ## Mandate rules
 
@@ -257,6 +303,7 @@ has not run on mainnet.
 | Rule | Purpose | Engine | On-chain wiring |
 |---|---|---|---|
 | NEP141 asset allowlist (max 20, each with decimals and price feed), stable subset | the agent trades only supported owner-chosen assets | ✅ | ✅ validated on `set_mandate` |
+| Declared source IDs (max 8, max 64 UTF-8 bytes each; empty denies all) | delayed admission, immediate removal; does not authenticate model origin | — | checked at proposal and execution; native tests pass, new sandbox/gas evidence pending |
 | Max notional per trade | bounds the damage of any single decision | ✅ | ✅ sandbox (attack 3) |
 | Signing-request turnover, approval-day accounting resets 00:00 UTC | bounds reserved oracle notional per approval day, not actual settlement-day turnover | ✅ | ✅ wired; engine and callback regressions |
 | Min-out ≥ oracle value − slippage (hard cap 5%) | blocks bad or manipulated quotes | ✅ | ✅ sandbox (attack 4) |
@@ -313,6 +360,11 @@ within its deadline.
 
 ## Deployment and recovery boundaries
 
+The intended owner is a DAO account distinct from the vault. Its vote, execution,
+cancellation and recovery paths still need verification. Pyth is the selected
+oracle subject to demonstrating usable fresh feeds and a reliable updater;
+selection alone does not establish a deployable account, feed or custody setup.
+
 The ordered live release gates, public read-only inspection tool and oracle
 availability observations are in [docs/OPERATIONAL-READINESS.md](docs/OPERATIONAL-READINESS.md).
 
@@ -323,15 +375,19 @@ NEP141 assets in the vault's Intents ledger; withdrawal receivers cannot be the
 vault or Intents contract.
 
 For an existing deployment, a new WASM alone cannot read a changed Borsh layout.
-The private `migrate` entry point supports exactly four historical layouts:
+The private `migrate` entry point supports exactly five historical layouts:
 the pre-sequence vault at `77ebc0c`, the sequence-enabled vault at `0de5c48`,
 the pre-provider remediation layout, and the provider-enabled pre-voucher
-layout. It preserves the selected provider for the fourth layout and
+layout, plus the voucher-enabled layout at `b43569d` before source admission.
+It preserves the selected provider for the fourth and fifth layouts and
 requires a paused, quiescent vault with a distinct owner. It must be called by
 the vault account in an authorized deployment transaction. The legacy layout
 does not prove that no withdrawal was already sent: require final-receipt
 evidence, and use a fresh deployment when that history is unknown. Migration
 does not replace the owner or provide an upgrade key for an already keyless vault.
+Both active and queued migrated mandates start with an empty source list;
+enabling even the first source requires a new 24-hour delayed change. An active
+withdrawal guard, voucher stage or armed retry must be resolved before migration.
 
 `get_chain_time_sec`, `get_last_proposal_outcome`, `get_withdrawal_status` and
 `get_last_withdrawal_outcome` expose bounded status. The withdrawal protocol is
@@ -359,6 +415,15 @@ and source balance zero before positive destination proof decides:
 sent=0/cancelled=1 safely requeues; sent=1/cancelled=0 records `DebitObserved`
 and consumes the authorization. Missing, failed or inconsistent proof retains
 the guard. Recovery never blindly repeats an unknown amount.
+
+**Accepted residual (F26).** A withdrawal may already have been dispatched or
+debited when its final callback is lost or malformed. Missing, failed or
+inconsistent proof retains the guard, blocking new withdrawals and trades.
+Elapsed time, a larger balance and owner authority cannot override that guard.
+Retaining it does not initiate another transfer; the original withdrawal may
+already have moved funds. Availability can be lost until authenticated proof
+resolves it. This receipt-loss fault has not been reproduced on a live chain.
+The project owner accepted this residual for the hackathon scope.
 
 `DebitObserved` proves the original initial debit, not terminal FT delivery or
 absence of a later refund. It releases the guard, so subsequent operations can

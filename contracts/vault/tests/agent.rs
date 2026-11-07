@@ -23,6 +23,7 @@ fn plan() -> Plan {
         amount_in: U128(2_000_000),
         min_amount_out: U128(MIN_OUT.parse().expect("MIN_OUT is a number")),
         rationale: RATIONALE.into(),
+        response_commitment: None,
     }
 }
 

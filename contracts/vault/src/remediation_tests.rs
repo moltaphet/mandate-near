@@ -39,6 +39,7 @@ fn run(v: &mut Vault) -> Proposal {
         U128(20_000_000),
         U128(3_960_000_000_000_000_000_000_000),
         "ab".repeat(32),
+        "manual-v1".into(),
     );
     context(accounts(2), 0, T, None);
     let _ = v.execute();
@@ -140,6 +141,7 @@ fn expired_lock_callback_cannot_erase_a_new_unexecuted_proposal() {
         U128(1),
         U128(1),
         "ab".repeat(32),
+        "manual-v1".into(),
     );
     context(accounts(0), 0, T + EXECUTION_WINDOW_SEC + INTENT_TTL_SEC, None);
     assert_eq!(
@@ -374,6 +376,7 @@ fn proposal_is_blocked_while_a_withdrawal_is_unresolved() {
         U128(1),
         U128(1),
         "ab".repeat(32),
+        "manual-v1".into(),
     );
 }
 

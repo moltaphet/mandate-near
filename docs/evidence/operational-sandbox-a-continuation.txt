@@ -1,0 +1,9 @@
+FINAL FROZEN-REVISION SERIAL A CONTINUATION
+Command: cargo test --offline -p mandate-vault --no-fail-fast --test sandbox --test settlement -- --skip a_new_agent_waits_24_hours_on_a_real_chain --test-threads=1
+Reason: initial A runner returned shell status0 while its log ended mid-test without sandbox/settlement summaries; completed results are authoritative.
+Expected: three unresolved sandbox cases and one settlement case; the previously passed agent-delay sandbox case is skipped explicitly.
+Source fingerprint: docs/evidence/operational-sandbox-sources.json
+Scope: local sandbox and supplied fixture; no live signing/funds/relay publication.
+Started UTC: 2026-11-06T18:57:02.886877+00:00
+
+   Compiling mandate-vault v0.1.0 (/Users/ehs4n/mandate-near/contracts/vault)

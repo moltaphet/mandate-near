@@ -55,6 +55,7 @@ fn run(vault: &mut Vault, time: u64) -> Proposal {
         U128(20_000_000),
         U128(4 * 10_u128.pow(24)),
         "ab".repeat(32),
+        "manual-v1".into(),
     );
     context(accounts(2), 0, time, None);
     drop(vault.execute());

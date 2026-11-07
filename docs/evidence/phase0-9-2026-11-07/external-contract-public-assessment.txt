@@ -1,0 +1,205 @@
+MANDATE — PUBLIC EXTERNAL-CONTRACT SOURCE ASSESSMENT
+Date: 7 November 2026
+Scope: public official documentation and source only. No authenticated request,
+chain mutation, deployment, funding, signing, cleanup or live provider call.
+This is not evidence that any deployed contract runs the reviewed source.
+
+1. CHAIN SIGNATURES — DOCUMENTATION AND SCHEMA
+
+Official documentation, fetched successfully:
+https://docs.near.org/chain-abstraction/chain-signatures.md
+https://docs.near.org/chain-abstraction/chain-signatures/implementation.md
+
+Saved excerpts:
+near-chain-signatures-public.md:117:
+"3. The `domain_id`: an integer that picks the key and signature scheme, only the two signing domains are currently supported: `0` for `Secp256k1` or `1` for `Ed25519`."
+near-signing-implementation-public.md:47-48:
+"> * Mainnet: `v1.signer`"
+"> * Testnet: `v1.signer-prod.testnet`"
+
+The implementation documentation links the official MPC sign entrypoint at
+revision d0fc87b19e2643299e7becdd7d9611afcd5d5a78. The exact DTO was followed
+through near-mpc-contract-interface to near-mpc-crypto-types.
+
+Immutable sources:
+https://github.com/near/mpc/blob/d0fc87b19e2643299e7becdd7d9611afcd5d5a78/crates/contract/src/api/sign.rs
+https://github.com/near/mpc/blob/d0fc87b19e2643299e7becdd7d9611afcd5d5a78/crates/near-mpc-crypto-types/src/sign.rs
+https://github.com/near/mpc/blob/d0fc87b19e2643299e7becdd7d9611afcd5d5a78/crates/near-mpc-crypto-types/src/primitives.rs
+https://github.com/near/mpc/blob/d0fc87b19e2643299e7becdd7d9611afcd5d5a78/crates/near-mpc-contract-interface/src/deposits.rs
+https://github.com/near/mpc/blob/d0fc87b19e2643299e7becdd7d9611afcd5d5a78/crates/near-mpc-contract-interface/src/types/config.rs
+
+Exact source excerpts:
+near-mpc-crypto-sign-public.rs:30-35:
+pub struct SignRequestArgs {
+    pub path: String,
+    #[serde(rename = "payload_v2")]
+    pub payload: Payload,
+    pub domain_id: DomainId,
+}
+
+near-mpc-crypto-primitives-public.rs:68:
+pub const EDDSA_PAYLOAD_SIZE_UPPER_BOUND_BYTES: usize = 1232;
+
+near-mpc-crypto-primitives-public.rs:100-106:
+    Eddsa(
+        #[serde(with = "hex_serde")]
+        #[cfg_attr(
+            all(feature = "abi", not(target_arch = "wasm32")),
+            schemars(with = "hex_serde::HexString<0, EDDSA_PAYLOAD_SIZE_UPPER_BOUND_BYTES>")
+        )]
+        UpperBoundedVec<u8, EDDSA_PAYLOAD_SIZE_UPPER_BOUND_BYTES>,
+
+near-mpc-crypto-primitives-public.rs:157-160:
+#[serde(tag = "scheme")]
+pub enum SignatureResponse {
+    Secp256k1(K256Signature),
+    Ed25519 { signature: Ed25519Signature },
+
+near-mpc-crypto-primitives-public.rs:188-189:
+    #[serde_as(as = "[_; 64]")]
+    [u8; 64],
+
+near-mpc-deposits-public.rs:4:
+pub const SIGN_DEPOSIT_YOCTONEAR: u128 = 1;
+
+near-sign-api-public.rs:53-54:
+            dtos::Protocol::Frost => {
+                request.payload.as_eddsa().expect("Payload is not EdDSA");
+
+The SignRequestArgs parser accepts payload_v2 or the legacy raw payload, but
+rejects both together. Legacy raw payload is ECDSA, not an EdDSA alias. It
+accepts domain_id or deprecated key_version, but rejects both together.
+The local current vault sends Eddsa as a hex string, with request.path and
+domain_id. This matches the pinned wire shape by reading. The official source
+declares a one-yocto sign deposit, and its source default config has a 15 Tgas
+sign-call requirement; deployed configuration must still be inspected.
+
+Status: documented testnet account and source/schema support established.
+UNVERIFIED: deployed account code/revision/config, live domain 1 availability,
+derived identity, signer registration with Intents, callback timing and a
+successful trade call from the selected fresh vault. Source docs cannot settle
+these. Use approved read-only account/code/config inspection plus separately
+approved live vault signing and final receipts.
+
+2. PYTH NEAR — RECEIVER AND ADAPTER SHAPE
+
+Official source revision resolved through public GitHub API:
+ec40e5f1705a3f6c7818b0f2f1e96a4ac75a7454
+Commit date returned by GitHub: 2026-11-05T10:20:46Z.
+Initially fetched main-branch receiver/state/README bytes were compared to
+this immutable revision; all three comparisons were equal.
+
+Immutable sources:
+https://github.com/pyth-network/pyth-crosschain/blob/ec40e5f1705a3f6c7818b0f2f1e96a4ac75a7454/target_chains/near/receiver/src/lib.rs
+https://github.com/pyth-network/pyth-crosschain/blob/ec40e5f1705a3f6c7818b0f2f1e96a4ac75a7454/target_chains/near/receiver/src/state.rs
+https://github.com/pyth-network/pyth-crosschain/blob/ec40e5f1705a3f6c7818b0f2f1e96a4ac75a7454/target_chains/near/README.md
+
+Exact source excerpts:
+pyth-near-receiver-public.rs:516-520:
+    pub fn list_prices_no_older_than(
+        &self,
+        price_ids: Vec<PriceIdentifier>,
+        age: Seconds,
+    ) -> HashMap<PriceIdentifier, Option<Price>> {
+
+pyth-near-state-public.rs:101-109:
+pub struct Price {
+    pub price: I64,
+    /// Confidence interval around the price
+    pub conf: U64,
+    /// The exponent
+    pub expo: i32,
+    /// Unix timestamp of when this price was computed
+    pub publish_time: i64,
+}
+
+pyth-near-state-public.rs:89-90:
+/// Both the price and confidence are stored in a fixed-point numeric representation,
+/// `x * (10^expo)`, where `expo` is the exponent.
+
+pyth-near-receiver-public.rs:458-459:
+    /// Pyth uses an on-demand update model, where consumers need to update the cached prices
+    /// before using them. Please read more about this at https://docs.pyth.network/documentation/pythnet-price-feeds/on-demand.
+
+pyth-near-receiver-public.rs:166:
+    pub fn update_price_feeds(&mut self, data: String) -> Result<(), Error> {
+
+pyth-near-receiver-public.rs:531:
+                    if u64::abs_diff(block_timestamp, price_timestamp.try_into().unwrap()) > age {
+
+Batch result is a map keyed by 64-character hex feed ID, with null for absent
+or outside-age cache entries. I64/U64 are the same NEAR JSON wrappers used by
+the current local Pyth adapter; exponent and publication time are numeric.
+The source PriceIdentifier parser accepts 64-character hex, while the local
+adapter requires lowercase. Pyth serializer emits lowercase feed IDs.
+
+Source update path is payable and calls Wormhole verification. It checks
+configured VAA emitter/chain and updates an existing cached feed only for a
+greater publication time. Cached prices are not maintained by a passive
+read. A reliable Hermes update process and transaction fee/storage funding
+must exist before price availability can be claimed.
+
+The receiver's age check accepts future publication time up to age. It is
+insufficient on its own for Mandate's tighter future-time guarantee. The
+current local engine has its own future-price guard. Negative Pyth timestamps
+can panic the receiver conversion; Mandate must handle a failed read safely.
+Confidence is provided separately from freshness. The current local adapter
+rejects nonpositive price, negative publication time, unsupported exponent,
+confidence at least price, and confidence above the mandate slippage budget.
+This is a guard on reported uncertainty, not proof of market correctness.
+
+3. PYTH DEPLOYED ACCOUNT / UPDATER — STILL UNVERIFIED
+
+Official pages attempted:
+https://docs.pyth.network/price-feeds/core/use-real-time-data/pull-integration/near
+Returned generic Pyth Pro overview; did not establish the NEAR receiver.
+https://docs.pyth.network/pro/contract-addresses.md
+Fetched but did not establish a NEAR receiver address.
+https://docs.pyth.network/documentation/pythnet-price-feeds/near
+Returned HTTP 404.
+
+The official NEAR README uses the placeholder contract-url.near, not a
+verified receiver deployment. The fetched public scripts/update.sh example
+uses update_price_feed (singular), whereas source and README use
+update_price_feeds (plural). Do not execute the example as-is or treat its
+example account/payload as an authenticated deployment/updater record.
+Opaque example values are omitted from this report.
+
+UNVERIFIED: exact NEAR receiver account and chain; deployed artifact binding;
+Wormhole/governance/data-source configuration; required USD feed mapping;
+actual fresh cache values for all held/traded assets; updater identity,
+frequency, funding, monitoring and outage behavior; full 20-asset live gas.
+What settles these: approved public account/code/config reads, authenticated
+artifact comparison, feed mapping and signed update receipts, repeated
+receiver batch responses, actual vault execution receipts and gas recording.
+No receiver RPC/Hermes/feed request or update was made during this research.
+
+4. LIMITED HISTORICAL VAULT INSPECTION PROVIDED BY TASK OWNER
+
+Command supplied and executed by task owner:
+inspector --network testnet --rpc https://rpc.testnet.near.org --vault mandate-r1-4715a0.testnet
+Evidence: selected-account-inspection.txt in this scratch directory.
+Reported exit 1; block 276611007; block hash
+3o76mvH6agHFN91kuxvCGgZ32ytcuC7cgKGSLjoKakWk.
+One FullAccess permission; code length 124611 bytes; control views valid=false.
+Code SHA256:
+3fe886513a58e592d33ffbe3e92f80924957e78de53ac645c455a8b40aea6be0
+Expected code artifact absent: expected_code_matches=null.
+Digest was authenticated against RPC code hash, not reviewed source/artifact.
+This is a historical MPC spike account, not the selected/approved fresh vault.
+Live current-vault readiness remains UNVERIFIED.
+
+5. SKIPPED PUBLIC METADATA PATH
+
+skipped: crates/near-mpc-crypto-types/src/key_state.rs
+No content from this path was fetched or read. No protected local source or
+credential file was opened. contracts/vault/tests/common/mod.rs was excluded.
+
+6. RESEARCH COMMAND LIMITATIONS
+
+Two discovery attempts failed without establishing schema:
+- Unquoted GitHub URL with ?ref= was rejected by zsh globbing before HTTP.
+- Guessed crates/contract-interface/src GitHub API path returned HTTP 404.
+Subsequent properly quoted requests found the actual near-mpc-* paths and
+completed the immutable schema reads. No cargo or sandbox test was run by
+this agent, and no repository implementation was changed by this research.

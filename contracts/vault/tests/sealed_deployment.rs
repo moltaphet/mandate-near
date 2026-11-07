@@ -70,9 +70,12 @@ async fn fresh_atomic_deployment_has_no_vault_permission_and_retains_external_ow
         .with_signer(vault_id.clone(), w.signer.clone())
         .send_to(&w.network)
         .await;
+    let missing_authority = attempted_issuer
+        .expect_err("an account without permissions cannot authorize a transaction");
+    let error = format!("{missing_authority:?}");
     assert!(
-        attempted_issuer.is_err(),
-        "an account without permissions cannot authorize a transaction"
+        error.contains("UNKNOWN_ACCESS_KEY") || error.contains("AccessKeyDoesNotExist"),
+        "the issuer refusal must identify missing access authority, not a transport failure"
     );
     let voucher = format!("nep245:{vault_id}:withdrawal-1");
     assert_eq!(

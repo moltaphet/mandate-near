@@ -1,0 +1,27 @@
+Observed command status, 2026-11-07
+Branch feat/ai-decision; HEAD b43569dbb2bdbd840571157e51d89fe6417ecb8a; uncommitted edits.
+
+Phase1 exact ./scripts/verify.sh: exit101 (loopback binding restrictions).
+Phase3 initial workspace libraries: exit101, 240 vault passes and one new fixture failure.
+Phase3 corrected workspace libraries: exit0, 250 passes across workspace.
+Phase3 scoped agent tests outside sandbox: exit0, 76 passes.
+Phase3 dashboard: exit0, 27 passes.
+Final cargo fmt --all -- --check: exit0.
+Final strict cargo clippy --workspace --all-targets -- -D warnings: exit0.
+Final cargo test --offline --workspace --lib: exit0, 250 passes.
+Final cargo test --offline -p mandate-vault --no-run: exit0; compilation is not execution.
+Final host cargo-near --locked build: exit0; not Docker reproducible-build proof.
+Default ./scripts/verify.sh --integration: exit101, six protocol loopback failures before sandbox.
+External ./scripts/verify.sh --integration: NOT EXECUTED, approval service error.
+External listed sandbox tests: NOT EXECUTED, approval service error.
+Browser documentation and completion summary: NOT EXECUTED, approval service error.
+Selected-account inspection: exit1, public RPC checks show blockers.
+Gas runtime on final artifact: NOT RUN.
+User-terminal full integration: pending; no output received at report preparation.
+No commit, push, PR mutation, deployment, funding or provider inference performed.
+
+Approval service response: Automatic approval review failed: content-blocked / agent_router_api_error.
+The action was not executed because automatic approval review could not be completed.
+This is a review failure, not a determination that the action is unsafe.
+
+After the final maximum-source gas test and script/doc changes, exact ./scripts/verify.sh --integration was rerun inside the default sandbox. Exit101. Formatting, strict Clippy, document checks, 33 JavaScript tests, 12 Python tests, 250 library tests, 7 autonomous and 38 model tests passed; protocol stopped at 3 passed/6 loopback fixture failures. Provenance and sandbox targets were not reached. Full final-snapshot log: phase8-integration-final-default.txt.

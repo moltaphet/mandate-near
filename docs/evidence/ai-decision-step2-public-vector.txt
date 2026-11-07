@@ -1,0 +1,46 @@
+Step 2 public synthetic recovery-vector evidence
+Date: 2026-11-07
+
+Fixture: agent/tests/fixtures/provenance-public-v1.json
+Method: public secp256k1 recovery with r=s=1 and recovery v=27;
+independent EIP-191 recovery checked using installed Python eth_account.
+No signing operation, signing scalar, provider configuration or network.
+The fixture is synthetic, not a provider capture. It proves no model, provider,
+hardware-attestation, chain-snapshot, on-chain inclusion or settlement origin.
+The canonical format is mandate-response-json-v1, not RFC 8785. The primary
+raw envelope is already sorted and compact; separate Rust tests exercise
+unequal raw/canonical hashes and unchanged embedded decision strings.
+
+Exact independently executed command (exit code 0):
+python3 -B - <<'PY'
+import hashlib,json
+from pathlib import Path
+from eth_account import Account
+from eth_account.messages import encode_defunct
+fixture=json.loads(Path('agent/tests/fixtures/provenance-public-v1.json').read_text())
+request_hash=hashlib.sha256(fixture['request_body'].encode()).hexdigest()
+response_hash=hashlib.sha256(fixture['raw_body'].encode()).hexdigest()
+signed_text='fixture-model:'+request_hash+':'+response_hash
+expected='0xb2d770ae443d7433defe7c36ad305469bbc0ec6d'
+recovered=Account.recover_message(encode_defunct(text=signed_text),signature=fixture['signature'])
+print('request_sha256='+request_hash)
+print('response_sha256='+response_hash)
+print('eth_account_recovered_address='+recovered)
+print('Independent eth_account EIP191 recovery matches public fixture: '+str(recovered.lower()==expected))
+print('No signing operation, private material, provider configuration, network or file output used.')
+PY
+
+Observed output:
+request_sha256=0c8fad96a6a5bf4c6f04521486d620b7d2051eddd4bc9d7e70aa356a6bd854ea
+response_sha256=ca458f8affb37673068cea81f04280f7d885c0a5092c3519c2151aaa0ffb9ef6
+eth_account_recovered_address=0xb2d770ae443D7433deFE7c36AD305469Bbc0EC6D
+Independent eth_account EIP191 recovery matches public fixture: True
+No signing operation, private material, provider configuration, network or file output used.
+
+Gateway vector: the same command was independently executed with
+signed_text=request_hash+':'+response_hash and
+expected='0x004b411aa9b88d502f579cb13c08cc56f344a029' (exit code 0).
+Observed eth_account recovery: 0x004b411AA9B88d502f579CB13C08CC56F344a029
+Observed independent_recovery_matches: true
+Observed EIP191 digest: c38b2cfdd7049a515d6056487e5887d444f199e157d6688658bef9a418b1209c
+No signing operation, private material, provider configuration, network or file output used.

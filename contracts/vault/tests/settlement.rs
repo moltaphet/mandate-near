@@ -162,7 +162,7 @@ async fn matched_funded_settlement_is_atomic_and_replay_is_refused() -> testresu
             "propose",
             json!({
                 "asset_in": USDC, "asset_out": asset,
-                "amount_in": "2000000", "min_amount_out": "2000000", "reason_hash": REASON,
+                "amount_in": "2000000", "min_amount_out": "2000000", "model_id": "manual-v1", "reason_hash": REASON,
             }),
         )
         .transaction()

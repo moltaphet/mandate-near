@@ -42,12 +42,12 @@ python3 -B scripts/inspect_deployment_test.py
 step "Unit tests (cargo test --lib)"
 cargo test --workspace --lib
 
-step "Autonomous strategy, offline model decisions and relay protocol tests"
-cargo test -p mandate-agent --test autonomous --test protocol --test model
+step "Autonomous strategy, offline model decisions, model provenance and relay protocol tests"
+cargo test -p mandate-agent --test autonomous --test protocol --test model --test provenance --test provenance_cli
 
 if $integration; then
   step "Sandbox integration and supported-size gas regressions (Intents fixture; stand-in signer and oracle)"
-  cargo test -p mandate-vault --test sandbox --test intents_registration --test execute_path --test keeper --test agent --test attacks --test withdraw --test gas --test settlement --test withdrawal_lifecycle --test recovery_protocol --test pyth_path --test sealed_deployment -- --test-threads=1
+  cargo test -p mandate-vault --test sandbox --test intents_registration --test execute_path --test keeper --test agent --test model_path --test attacks --test withdraw --test gas --test settlement --test withdrawal_lifecycle --test recovery_protocol --test pyth_path --test sealed_deployment -- --test-threads=1
 fi
 
 printf '\nAll checks passed.\n'

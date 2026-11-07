@@ -3,16 +3,22 @@
 //! Model mode: mandate-agent --model [--dry-run]; provider settings come only from environment.
 //! Autonomous dry-run reads public RPC/quotes only and loads no signing/auth material.
 //! Model dry-run calls its configured provider but sends no NEAR transaction or outbox write.
+//! Model verification: mandate-agent --verify-model <record.json> ... runs offline checks only.
 
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use mandate_agent::autonomous::{AutonomousConfig, Preparation};
-use mandate_agent::decision::{Decision, DecisionSource, ManualDecision, RebalanceDecision};
+use mandate_agent::decision::{
+    Decision, DecisionSource, MANUAL_SOURCE_ID, ManualDecision, REBALANCE_SOURCE_ID,
+    RebalanceDecision,
+};
 use mandate_agent::model::{HttpChatClient, ModelDecision};
+use mandate_agent::provenance::{ModelRecord, parse_signature_proof, verify_signature};
 use mandate_agent::relay::Relay;
 use mandate_agent::transport::{
-    JsonRpc, PublicReader, create_public_dir, read_public_json, write_public,
+    JsonRpc, PublicReader, create_public_dir, read_public_bytes, read_public_json, write_public,
+    write_public_bounded,
 };
 use mandate_agent::{Agent, AgentError, Plan, wait};
 use near_api::{NetworkConfig, Signer};
@@ -41,13 +47,18 @@ fn signed_agent(rpc_url: &str, vault_id: &str) -> Result<Agent, AgentError> {
     })
 }
 
-async fn submit(agent: &Agent, plan: &Plan, outbox: &Path) -> Result<u64, AgentError> {
+async fn submit(
+    agent: &Agent,
+    plan: &Plan,
+    outbox: &Path,
+    model_id: &str,
+) -> Result<u64, AgentError> {
     write_public(
         &outbox.join(format!("rationale-{}.txt", plan.reason_hash())),
         plan.rationale.as_bytes(),
     )?;
-    let id = agent.propose(plan).await?;
-    println!("proposal {id} submitted; rationale hash {}", plan.reason_hash());
+    let id = agent.propose_from_source(plan, model_id).await?;
+    println!("proposal {id} submitted; reason hash {}", plan.reason_hash());
     Ok(id)
 }
 
@@ -61,6 +72,92 @@ async fn record_outcome(
     println!("proposal {id}: {outcome:?}; settlement remains unverified");
     let report = json!({"proposal_id":id,"reason_hash":plan.reason_hash(),"outcome":outcome,"settlement_verified":false});
     write_public(&outbox.join(format!("outcome-{id}.json")), &serde_json::to_vec_pretty(&report)?)
+}
+
+/// Offline verification authenticates no chain or settlement. Stored signatures
+/// are always checked against an externally supplied public pin; flags cannot
+/// downgrade them. Public file path and byte limits apply before any file open.
+fn verify_model(args: &[String]) -> Result<(), AgentError> {
+    const USAGE: &str = "usage: mandate-agent --verify-model <record.json> [--reason-hash H] [--plan <public-plan.json>] [--signature <signature.json>] [--signing-address 0x…]";
+    let record_path = args.first().filter(|arg| !arg.starts_with('-')).ok_or(USAGE)?;
+    let mut reason_hash = None;
+    let mut plan_path = None;
+    let mut signature_path = None;
+    let mut signing_address = None;
+    let mut flags = std::collections::BTreeSet::new();
+    let mut rest = args[1..].iter();
+    while let Some(flag) = rest.next() {
+        if !flags.insert(flag.as_str()) {
+            return Err(USAGE.into());
+        }
+        let value = rest.next().ok_or(USAGE)?;
+        match flag.as_str() {
+            "--reason-hash" => reason_hash = Some(value.clone()),
+            "--plan" => plan_path = Some(value.clone()),
+            "--signature" => signature_path = Some(value.clone()),
+            "--signing-address" => signing_address = Some(value.clone()),
+            _ => return Err(USAGE.into()),
+        }
+    }
+    let record_bytes = read_public_bytes(Path::new(record_path), 1024 * 1024)?;
+    let record: ModelRecord =
+        serde_json::from_slice(&record_bytes).map_err(|_| "model record is malformed")?;
+    record.check_hashes().map_err(|error| error.to_string())?;
+    if reason_hash.as_ref().is_some_and(|expected| expected != &record.reason_hash) {
+        return Err(
+            "the supplied reason hash does not match the canonical response commitment".into()
+        );
+    }
+    if let Some(path) = plan_path {
+        let plan: Plan = read_public_json(Path::new(&path))?;
+        record.check_plan(&plan).map_err(|error| error.to_string())?;
+    }
+    let supplied_signature = signature_path
+        .as_ref()
+        .map(|path| -> Result<_, AgentError> {
+            let bytes = read_public_bytes(Path::new(path), 64 * 1024)?;
+            let proof = std::str::from_utf8(&bytes).map_err(|_| "signature is malformed")?;
+            parse_signature_proof(proof).map_err(|error| error.to_string().into())
+        })
+        .transpose()?;
+    let stored_signature = record
+        .signature_proof
+        .as_ref()
+        .map(|proof| parse_signature_proof(proof).map_err(|error| error.to_string()))
+        .transpose()?;
+    let has_signature = stored_signature.is_some() || supplied_signature.is_some();
+    if has_signature != signing_address.is_some() {
+        return Err(
+            "a signature requires an external signing address; a pin alone proves nothing".into()
+        );
+    }
+    if let Some(address) = &signing_address {
+        for signature in stored_signature.iter().chain(supplied_signature.iter()) {
+            verify_signature(&record, signature, address).map_err(|error| error.to_string())?;
+        }
+    }
+    let verification = if has_signature { "VERIFIED_PINNED_SIGNER" } else { "UNVERIFIED" };
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&json!({
+            "record": "hashes_and_decision_match",
+            "canonical_version": record.canonical_version,
+            "reason_hash": record.reason_hash,
+            "request_sha256": record.request_sha256,
+            "response_sha256": record.response_sha256,
+            "verification": verification,
+            "signature": verification,
+            "signing_address": signing_address,
+            "model": record.model,
+            "response_id": record.response_id,
+            "chain_authenticated": false,
+            "snapshot_authenticated": false,
+            "gate_approval_verified": false,
+            "settlement_verified": false,
+            "hardware_attestation_verified": false,
+        }))?
+    );
+    Ok(())
 }
 
 #[tokio::main]
@@ -105,12 +202,14 @@ async fn main() -> Result<(), AgentError> {
                         "status": "model_candidate",
                         "response_id": response.id,
                         "model_id": response.model,
-                        "verification": "UNVERIFIED",
+                        "verification": if response.signature_proof.is_some() { "VERIFIED_PINNED_SIGNER" } else { "UNVERIFIED" },
                         "asset_in": plan.asset_in,
                         "asset_out": plan.asset_out,
                         "amount_in": plan.amount_in,
                         "min_amount_out": plan.min_amount_out,
                         "reason_hash": plan.reason_hash(),
+                        "request_sha256": response.request_sha256,
+                        "response_sha256": response.response_sha256,
                         "block_hash": snapshot.block_hash,
                         "dry_run": dry
                     }))?
@@ -150,11 +249,27 @@ async fn main() -> Result<(), AgentError> {
                     return Err("configured account is not this vault's agent".into());
                 }
                 let outbox = create_public_dir(&PathBuf::from(setting("AGENT_OUTBOX")?))?;
-                let id = submit(&agent, &plan, &outbox).await?;
+                // Written before submission, so the exact bytes exist even if the send fails.
+                let mut record = ModelRecord::from_response(&response, &plan)
+                    .map_err(|error| error.to_string())?;
+                record.verification = if response.signature_proof.is_some() {
+                    "VERIFIED_PINNED_SIGNER".into()
+                } else {
+                    "UNVERIFIED".into()
+                };
+                write_public_bounded(
+                    &outbox.join(format!("model-{}.json", response.response_sha256)),
+                    &serde_json::to_vec_pretty(&record)?,
+                    1024 * 1024,
+                )?;
+                let id = submit(&agent, &plan, &outbox, &response.model).await?;
                 record_outcome(&agent, id, &plan, &outbox).await?;
             }
         }
         return Ok(());
+    }
+    if args.first().is_some_and(|arg| arg == "--verify-model") {
+        return verify_model(&args[1..]);
     }
     if args.first().is_some_and(|arg| arg == "--auto") {
         let path = args
@@ -187,7 +302,7 @@ async fn main() -> Result<(), AgentError> {
                     }
                     let outbox = create_public_dir(&PathBuf::from(setting("AGENT_OUTBOX")?))?;
                     let plan = prepared.plan.clone();
-                    let id = submit(&agent, &plan, &outbox).await?;
+                    let id = submit(&agent, &plan, &outbox, REBALANCE_SOURCE_ID).await?;
                     let binding = prepared.binding(&config.vault_id, id);
                     write_public(
                         &outbox.join(format!("proposal-{id}.json")),
@@ -209,6 +324,6 @@ async fn main() -> Result<(), AgentError> {
     let plan = ManualDecision::new(plan).validated_plan()?;
     let agent = signed_agent(&setting("NEAR_RPC_URL")?, &setting("VAULT_ID")?)?;
     let outbox = create_public_dir(&PathBuf::from(setting("AGENT_OUTBOX")?))?;
-    let id = submit(&agent, &plan, &outbox).await?;
+    let id = submit(&agent, &plan, &outbox, MANUAL_SOURCE_ID).await?;
     record_outcome(&agent, id, &plan, &outbox).await
 }

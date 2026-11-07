@@ -6,21 +6,82 @@
 //! withdrawal: these checks cannot prove that its receipts have completed.
 //! Operators must establish that externally before upgrading, or use a fresh
 //! deployment. This is not a recovery path for every historical deployment.
+//! Frozen pre-model nested types keep every historical Borsh layout independent
+//! of the current mandate and proposal schemas. Migrated model lists start empty.
 
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 
 use super::*;
+
+/// The mandate field order before any model-source admission list existed.
+#[derive(Clone, Debug, PartialEq, Eq, BorshDeserialize, BorshSerialize)]
+#[borsh(crate = "near_sdk::borsh")]
+struct PreModelMandate {
+    assets: Vec<AssetConfig>,
+    stable_assets: Vec<String>,
+    max_trade_usd: U64,
+    max_daily_turnover_usd: U64,
+    max_position_bps: u16,
+    max_slippage_bps: u16,
+    max_drawdown_bps: u16,
+    min_trade_interval_sec: u32,
+    max_price_age_sec: u32,
+}
+
+impl From<PreModelMandate> for Mandate {
+    fn from(old: PreModelMandate) -> Self {
+        Self {
+            assets: old.assets,
+            stable_assets: old.stable_assets,
+            max_trade_usd: old.max_trade_usd,
+            max_daily_turnover_usd: old.max_daily_turnover_usd,
+            max_position_bps: old.max_position_bps,
+            max_slippage_bps: old.max_slippage_bps,
+            max_drawdown_bps: old.max_drawdown_bps,
+            min_trade_interval_sec: old.min_trade_interval_sec,
+            max_price_age_sec: old.max_price_age_sec,
+            allowed_model_ids: Vec::new(),
+        }
+    }
+}
+
+/// No source identifier is invented for an old proposal. Migration requires None.
+#[derive(BorshDeserialize, BorshSerialize)]
+#[borsh(crate = "near_sdk::borsh")]
+struct PreModelProposal {
+    id: U64,
+    asset_in: String,
+    asset_out: String,
+    amount_in: U128,
+    min_amount_out: U128,
+    reason_hash: String,
+    created_sec: u64,
+    expires_sec: u64,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, BorshDeserialize, BorshSerialize)]
+#[borsh(crate = "near_sdk::borsh")]
+struct PreModelPendingMandate {
+    mandate: PreModelMandate,
+    effective_sec: u64,
+}
+
+impl From<PreModelPendingMandate> for PendingMandate {
+    fn from(old: PreModelPendingMandate) -> Self {
+        Self { mandate: old.mandate.into(), effective_sec: old.effective_sec }
+    }
+}
 
 /// The exact serialized field order at 77ebc0c.
 #[derive(BorshDeserialize, BorshSerialize)]
 #[borsh(crate = "near_sdk::borsh")]
 struct LegacyVault {
     owner: AccountId,
-    mandate: Mandate,
+    mandate: PreModelMandate,
     paused: bool,
     trading: TradingState,
     agent: Option<AccountId>,
-    pending: Option<Proposal>,
+    pending: Option<PreModelProposal>,
     next_proposal_id: u64,
     strikes: u32,
     halted: bool,
@@ -32,7 +93,7 @@ struct LegacyVault {
     in_flight: Option<InFlight>,
     next_execution_id: u64,
     signed_intent: Option<SignedIntent>,
-    pending_mandate: Option<PendingMandate>,
+    pending_mandate: Option<PreModelPendingMandate>,
     pending_agent: Option<PendingAgent>,
     pending_withdrawal: Option<PendingWithdrawal>,
 }
@@ -67,6 +128,15 @@ struct LegacyProviderVault {
     oracle_kind: OracleKind,
 }
 
+/// Exact b43569d voucher-enabled state before adding model-source fields.
+#[derive(BorshDeserialize, BorshSerialize)]
+#[borsh(crate = "near_sdk::borsh")]
+struct LegacyVoucherVault {
+    provider: LegacyProviderVault,
+    withdrawal_stage: Option<WithdrawalStage>,
+    withdrawal_retry_armed: Option<U64>,
+}
+
 pub(super) fn migrate() -> Vault {
     require!(
         env::predecessor_account_id() == env::current_account_id(),
@@ -75,14 +145,23 @@ pub(super) fn migrate() -> Vault {
     let bytes = env::storage_read(b"STATE")
         .unwrap_or_else(|| env::panic_str("there is no legacy vault state to migrate"));
     require!(borsh::from_slice::<Vault>(&bytes).is_err(), "the vault state is already current");
+    if let Ok(old) = borsh::from_slice::<LegacyVoucherVault>(&bytes) {
+        require!(
+            old.provider.remediated.active_withdrawal.is_none(),
+            "resolve the withdrawal guard before migrating"
+        );
+        require!(
+            old.withdrawal_stage.is_none(),
+            "resolve the withdrawal voucher phase before migrating"
+        );
+        require!(
+            old.withdrawal_retry_armed.is_none(),
+            "resolve the withdrawal retry authorization before migrating"
+        );
+        return from_provider(old.provider);
+    }
     if let Ok(old) = borsh::from_slice::<LegacyProviderVault>(&bytes) {
-        let mut vault = from_remediated(old.remediated);
-        validate_oracle_mandate(&vault.mandate, old.oracle_kind);
-        if let Some(pending) = &vault.pending_mandate {
-            validate_oracle_mandate(&pending.mandate, old.oracle_kind);
-        }
-        vault.oracle_kind = old.oracle_kind;
-        return vault;
+        return from_provider(old);
     }
     if let Ok(old) = borsh::from_slice::<LegacyRemediatedVault>(&bytes) {
         return from_remediated(old);
@@ -96,6 +175,16 @@ pub(super) fn migrate() -> Vault {
         env::panic_str("unsupported legacy vault state layout");
     };
     from_legacy(legacy, withdrawal_seq)
+}
+
+fn from_provider(old: LegacyProviderVault) -> Vault {
+    let mut vault = from_remediated(old.remediated);
+    validate_oracle_mandate(&vault.mandate, old.oracle_kind);
+    if let Some(pending) = &vault.pending_mandate {
+        validate_oracle_mandate(&pending.mandate, old.oracle_kind);
+    }
+    vault.oracle_kind = old.oracle_kind;
+    vault
 }
 
 fn from_remediated(old: LegacyRemediatedVault) -> Vault {
@@ -126,17 +215,19 @@ fn from_legacy(legacy: LegacyVault, withdrawal_seq: u64) -> Vault {
             && legacy.signed_intent.as_ref().is_none_or(|intent| intent.expires_sec <= now),
         "wait for the legacy signed intent to expire before migrating"
     );
-    validate_or_panic(&legacy.mandate);
-    if let Some(pending) = &legacy.pending_mandate {
+    let mandate: Mandate = legacy.mandate.into();
+    let pending_mandate: Option<PendingMandate> = legacy.pending_mandate.map(Into::into);
+    validate_or_panic(&mandate);
+    if let Some(pending) = &pending_mandate {
         validate_or_panic(&pending.mandate);
     }
     Vault {
         owner: legacy.owner,
-        mandate: legacy.mandate,
+        mandate,
         paused: legacy.paused,
         trading: legacy.trading,
         agent: legacy.agent,
-        pending: legacy.pending,
+        pending: None,
         next_proposal_id: legacy.next_proposal_id,
         strikes: legacy.strikes,
         halted: legacy.halted,
@@ -148,7 +239,7 @@ fn from_legacy(legacy: LegacyVault, withdrawal_seq: u64) -> Vault {
         in_flight: legacy.in_flight,
         next_execution_id: legacy.next_execution_id,
         signed_intent: legacy.signed_intent,
-        pending_mandate: legacy.pending_mandate,
+        pending_mandate,
         pending_agent: legacy.pending_agent,
         pending_withdrawal: legacy.pending_withdrawal,
         withdrawal_seq,
@@ -173,13 +264,39 @@ mod tests {
     use crate::mandate::tests::{USDC, WNEAR, sample};
 
     const NOW: u64 = 1_793_697_676;
+    const GOLDEN_NOW: u64 = 1_793_448_000;
+    const PRICE_ORACLE_GOLDEN: &[u8] =
+        include_bytes!("../tests/fixtures/pre-model-voucher-b43569d-price-oracle-state.borsh");
+    const PYTH_GOLDEN: &[u8] =
+        include_bytes!("../tests/fixtures/pre-model-voucher-b43569d-pyth-state.borsh");
+
+    impl From<Mandate> for PreModelMandate {
+        fn from(mandate: Mandate) -> Self {
+            Self {
+                assets: mandate.assets,
+                stable_assets: mandate.stable_assets,
+                max_trade_usd: mandate.max_trade_usd,
+                max_daily_turnover_usd: mandate.max_daily_turnover_usd,
+                max_position_bps: mandate.max_position_bps,
+                max_slippage_bps: mandate.max_slippage_bps,
+                max_drawdown_bps: mandate.max_drawdown_bps,
+                min_trade_interval_sec: mandate.min_trade_interval_sec,
+                max_price_age_sec: mandate.max_price_age_sec,
+            }
+        }
+    }
 
     fn context(predecessor: &str) {
+        context_at(predecessor, 0, NOW);
+    }
+
+    fn context_at(predecessor: &str, deposit: u128, time: u64) {
         testing_env!(
             VMContextBuilder::new()
                 .current_account_id("vault.testnet".parse().unwrap())
                 .predecessor_account_id(predecessor.parse().unwrap())
-                .block_timestamp(NOW * 1_000_000_000)
+                .attached_deposit(NearToken::from_yoctonear(deposit))
+                .block_timestamp(time * 1_000_000_000)
                 .build()
         );
     }
@@ -187,7 +304,7 @@ mod tests {
     fn legacy() -> LegacyVault {
         LegacyVault {
             owner: "owner.testnet".parse().unwrap(),
-            mandate: sample(),
+            mandate: sample().into(),
             paused: true,
             trading: TradingState {
                 last_trade_at_sec: Some(NOW - 200),
@@ -215,8 +332,8 @@ mod tests {
                 signature: "expired signature fixture".into(),
                 expires_sec: NOW,
             }),
-            pending_mandate: Some(PendingMandate {
-                mandate: Mandate { max_trade_usd: U64(75_000_000), ..sample() },
+            pending_mandate: Some(PreModelPendingMandate {
+                mandate: PreModelMandate { max_trade_usd: U64(75_000_000), ..sample().into() },
                 effective_sec: NOW + MANDATE_DELAY_SEC,
             }),
             pending_agent: Some(PendingAgent {
@@ -233,11 +350,12 @@ mod tests {
 
     fn assert_preserved(vault: &Vault, old: &LegacyVault, seq: u64) {
         assert_eq!(vault.owner, old.owner);
-        assert_eq!(vault.mandate, old.mandate);
+        assert_eq!(vault.mandate, Mandate::from(old.mandate.clone()));
+        assert!(vault.mandate.allowed_model_ids.is_empty());
         assert_eq!(vault.paused, old.paused);
         assert_eq!(vault.trading, old.trading);
         assert_eq!(vault.agent, old.agent);
-        assert_eq!(vault.pending, old.pending);
+        assert!(vault.pending.is_none() && old.pending.is_none());
         assert_eq!(vault.next_proposal_id, old.next_proposal_id);
         assert_eq!(vault.strikes, old.strikes);
         assert_eq!(vault.halted, old.halted);
@@ -250,7 +368,8 @@ mod tests {
         assert_eq!(vault.in_flight, old.in_flight);
         assert_eq!(vault.next_execution_id, old.next_execution_id);
         assert_eq!(vault.signed_intent, old.signed_intent);
-        assert_eq!(vault.pending_mandate, old.pending_mandate);
+        assert_eq!(vault.pending_mandate, old.pending_mandate.clone().map(PendingMandate::from));
+        assert!(vault.pending_mandate.as_ref().unwrap().mandate.allowed_model_ids.is_empty());
         assert_eq!(vault.pending_agent, old.pending_agent);
         assert_eq!(vault.pending_withdrawal, old.pending_withdrawal);
         assert_eq!(vault.withdrawal_seq, seq);
@@ -305,6 +424,7 @@ mod tests {
             max_drawdown_bps: 1_500,
             min_trade_interval_sec: 300,
             max_price_age_sec: 60,
+            allowed_model_ids: Vec::new(),
         };
         assert_eq!(vault.owner.as_str(), "owner.testnet");
         assert!(vault.paused);
@@ -399,7 +519,7 @@ mod tests {
     fn migration_rejects_a_pending_proposal() {
         context("vault.testnet");
         let mut old = legacy();
-        old.pending = Some(Proposal {
+        old.pending = Some(PreModelProposal {
             id: U64(16),
             asset_in: USDC.into(),
             asset_out: WNEAR.into(),
@@ -506,6 +626,8 @@ mod tests {
         assert_eq!(upgraded.last_withdrawal_outcome, old.last_withdrawal_outcome);
         assert_eq!(upgraded.next_withdrawal_id, 11);
         assert_eq!(upgraded.oracle_kind, OracleKind::PriceOracle);
+        assert!(upgraded.mandate.allowed_model_ids.is_empty());
+        assert!(upgraded.pending_mandate.unwrap().mandate.allowed_model_ids.is_empty());
     }
 
     #[test]
@@ -569,6 +691,7 @@ mod tests {
             reason_hash: "ab".repeat(32),
             created_sec: NOW - 120,
             expires_sec: NOW - 60,
+            model_id: "manual-v1".into(),
         };
         let outcome =
             upgraded.on_salt(Err(PromiseError::Failed), proposal, TradingState::default(), U64(22));
@@ -630,8 +753,11 @@ mod tests {
         env::storage_write(b"STATE", &borsh::to_vec(&old).unwrap());
         let v = migrate();
         assert_eq!(v.oracle_kind, OracleKind::Pyth);
-        assert_eq!(v.mandate, old.remediated.legacy.legacy.mandate);
-        assert_eq!(v.pending_mandate, old.remediated.legacy.legacy.pending_mandate);
+        assert_eq!(v.mandate, Mandate::from(old.remediated.legacy.legacy.mandate.clone()));
+        assert_eq!(
+            v.pending_mandate,
+            old.remediated.legacy.legacy.pending_mandate.clone().map(PendingMandate::from)
+        );
         assert_eq!(v.trading, old.remediated.legacy.legacy.trading);
         assert_eq!(v.withdrawal_seq, 41);
         assert_eq!(v.next_withdrawal_id, 11);
@@ -641,6 +767,8 @@ mod tests {
         assert!(v.withdrawal_retry_armed.is_none());
         assert!(v.active_withdrawal.is_none());
         assert_eq!(v.get_withdrawal_protocol(), "unique_voucher_v1");
+        assert!(v.mandate.allowed_model_ids.is_empty());
+        assert!(v.pending_mandate.as_ref().unwrap().mandate.allowed_model_ids.is_empty());
     }
 
     #[test]
@@ -661,6 +789,300 @@ mod tests {
             },
         });
         env::storage_write(b"STATE", &borsh::to_vec(&old).unwrap());
+        migrate();
+    }
+
+    /// Expected values come from the actual old Vault exporter, not its decoder.
+    fn golden_mandate(kind: OracleKind) -> Mandate {
+        Mandate {
+            assets: vec![
+                AssetConfig {
+                    asset_id: WNEAR.into(),
+                    decimals: 24,
+                    price_feed_id: if kind == OracleKind::Pyth {
+                        "11".repeat(32)
+                    } else {
+                        "wrap.near".into()
+                    },
+                },
+                AssetConfig {
+                    asset_id: USDC.into(),
+                    decimals: 6,
+                    price_feed_id: if kind == OracleKind::Pyth {
+                        "22".repeat(32)
+                    } else {
+                        "17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1".into()
+                    },
+                },
+            ],
+            stable_assets: vec![USDC.into()],
+            max_trade_usd: U64(50_000_000),
+            max_daily_turnover_usd: U64(200_000_000),
+            max_position_bps: 6_000,
+            max_slippage_bps: 100,
+            max_drawdown_bps: 1_500,
+            min_trade_interval_sec: 300,
+            max_price_age_sec: 60,
+            allowed_model_ids: Vec::new(),
+        }
+    }
+
+    fn assert_voucher_golden(kind: OracleKind, bytes: &[u8], length: usize, digest: &str) -> Vault {
+        context_at("vault.testnet", 0, GOLDEN_NOW);
+        assert_eq!(bytes.len(), length, "immutable actual-old-Vault fixture length");
+        assert_eq!(to_hex(&env::sha256(bytes)), digest, "immutable actual-old-Vault SHA-256");
+        env::storage_write(b"STATE", bytes);
+        let mut vault = migrate();
+        let mandate = golden_mandate(kind);
+        assert_eq!(vault.owner.as_str(), "dao.testnet");
+        assert_eq!(vault.mandate, mandate);
+        for source in ["manual-v1", "rebalance-v1", "fixture-model"] {
+            assert!(!vault.mandate.allows_model_id(source));
+        }
+        assert!(vault.paused && vault.halted);
+        assert_eq!(vault.strikes, 2);
+        let trading = TradingState {
+            last_trade_at_sec: Some(GOLDEN_NOW - 200),
+            day_start_sec: GOLDEN_NOW - GOLDEN_NOW % engine::SECONDS_PER_DAY,
+            day_turnover_usd: 12_000_000,
+            high_water_mark_usd: 99_000_000,
+            signed_intent_expires_at_sec: GOLDEN_NOW,
+        };
+        assert_eq!(vault.trading, trading);
+        assert_eq!(vault.agent.as_ref().unwrap().as_str(), "agent.testnet");
+        assert!(vault.pending.is_none() && vault.in_flight.is_none());
+        assert_eq!(vault.next_proposal_id, 17);
+        assert_eq!(vault.next_execution_id, 23);
+        assert_eq!(vault.signer.as_str(), "signer.testnet");
+        assert_eq!(vault.intents.as_str(), "intents.testnet");
+        assert_eq!(
+            vault.oracle.as_str(),
+            if kind == OracleKind::Pyth { "pyth-oracle.testnet" } else { "price-oracle.testnet" }
+        );
+        assert_eq!(vault.oracle_kind, kind);
+        assert_eq!(vault.intents_key.as_deref(), Some("registered-public-fixture"));
+        assert!(vault.key_registered);
+        assert_eq!(
+            vault.signed_intent,
+            Some(SignedIntent {
+                proposal_id: U64(16),
+                payload: "expired public payload fixture".into(),
+                public_key: "public fixture".into(),
+                signature: "expired public signature fixture".into(),
+                expires_sec: GOLDEN_NOW,
+            })
+        );
+        assert_eq!(
+            vault.pending_mandate,
+            Some(PendingMandate {
+                mandate: Mandate { max_trade_usd: U64(75_000_000), ..mandate },
+                effective_sec: GOLDEN_NOW + MANDATE_DELAY_SEC,
+            })
+        );
+        assert_eq!(
+            vault.pending_agent,
+            Some(PendingAgent {
+                agent: "replacement.testnet".parse().unwrap(),
+                effective_sec: GOLDEN_NOW + AGENT_DELAY_SEC,
+            })
+        );
+        assert!(vault.pending_withdrawal.is_none() && vault.active_withdrawal.is_none());
+        assert!(vault.withdrawal_stage.is_none() && vault.withdrawal_retry_armed.is_none());
+        assert_eq!(vault.withdrawal_seq, 41);
+        assert_eq!(vault.next_withdrawal_id, 11);
+        assert_eq!(vault.config_revision, 7);
+        assert_eq!(
+            vault.last_proposal_outcome,
+            Some(ProposalOutcome {
+                proposal_id: U64(16),
+                outcome: ExecutionOutcome::Rejected {
+                    code: "TradeTooLarge".into(),
+                    reason: "public fixture rejection".into(),
+                },
+            })
+        );
+        assert_eq!(
+            vault.last_withdrawal_outcome,
+            Some(WithdrawalOutcome::DebitObserved { withdrawal_id: U64(10) })
+        );
+        assert!(vault.execution_context.is_none(), "expired orphan snapshot is discarded");
+        let old_proposal = Proposal {
+            id: U64(16),
+            asset_in: USDC.into(),
+            asset_out: WNEAR.into(),
+            amount_in: U128(20_000_000),
+            min_amount_out: U128(4 * 10_u128.pow(24)),
+            reason_hash: "ab".repeat(32),
+            created_sec: GOLDEN_NOW - 120,
+            expires_sec: GOLDEN_NOW - 60,
+            model_id: "manual-v1".into(),
+        };
+        assert!(matches!(
+            vault.on_salt(Err(PromiseError::Failed), old_proposal, TradingState::default(), U64(22)),
+            PromiseOrValue::Value(ExecutionOutcome::Failed { reason })
+                if reason == "superseded by a newer execution"
+        ));
+        assert_eq!(vault.trading, trading);
+        assert_eq!(vault.next_execution_id, 23);
+        assert!(vault.pending.is_none() && vault.in_flight.is_none());
+        vault
+    }
+
+    #[test]
+    fn migration_accepts_actual_pre_model_price_oracle_voucher_state() {
+        assert_voucher_golden(
+            OracleKind::PriceOracle,
+            PRICE_ORACLE_GOLDEN,
+            1244,
+            "dd0fdd89250e4e8d69d36f53c647e8e868d0a28df4e5653dc21ac39bd5d3d8a4",
+        );
+    }
+
+    #[test]
+    fn migration_accepts_actual_pre_model_pyth_voucher_state() {
+        assert_voucher_golden(
+            OracleKind::Pyth,
+            PYTH_GOLDEN,
+            1408,
+            "3aad251192859840065506be36d655119adaa2e998749f10a9d118fea02ed892",
+        );
+    }
+
+    #[test]
+    fn a_migrated_queued_mandate_stays_empty_and_model_addition_waits_another_day() {
+        let mut vault = assert_voucher_golden(
+            OracleKind::Pyth,
+            PYTH_GOLDEN,
+            1408,
+            "3aad251192859840065506be36d655119adaa2e998749f10a9d118fea02ed892",
+        );
+        let original_maturity = GOLDEN_NOW + MANDATE_DELAY_SEC;
+        context_at("caller.testnet", 0, original_maturity);
+        vault.apply_pending_mandate();
+        assert_eq!(vault.mandate.max_trade_usd, U64(75_000_000));
+        assert!(vault.mandate.allowed_model_ids.is_empty());
+        let mut enabled = vault.mandate.clone();
+        enabled.allowed_model_ids = vec!["manual-v1".into()];
+        context_at("dao.testnet", 1, original_maturity);
+        assert_eq!(
+            vault.set_mandate(enabled.clone()),
+            MandateChangeOutcome::Queued {
+                effective_sec: U64(original_maturity + MANDATE_DELAY_SEC)
+            }
+        );
+        assert!(vault.mandate.allowed_model_ids.is_empty());
+        assert_eq!(vault.pending_mandate.as_ref().unwrap().mandate, enabled);
+        context_at("caller.testnet", 0, original_maturity + MANDATE_DELAY_SEC);
+        vault.apply_pending_mandate();
+        assert_eq!(vault.mandate.allowed_model_ids, vec!["manual-v1"]);
+        context_at("dao.testnet", 1, original_maturity + MANDATE_DELAY_SEC);
+        vault.unpause();
+        vault.resume_proposals();
+        context_at("agent.testnet", 0, original_maturity + MANDATE_DELAY_SEC);
+        assert_eq!(
+            vault.propose(
+                USDC.into(),
+                WNEAR.into(),
+                U128(20_000_000),
+                U128(4 * 10_u128.pow(24)),
+                "ab".repeat(32),
+                "manual-v1".into(),
+            ),
+            U64(17)
+        );
+        assert_eq!(vault.pending.as_ref().unwrap().model_id, "manual-v1");
+    }
+
+    #[test]
+    #[should_panic(expected = "the declared model id is not allowed")]
+    fn a_migrated_vault_refuses_reserved_sources_without_an_owner_addition() {
+        let mut vault = assert_voucher_golden(
+            OracleKind::Pyth,
+            PYTH_GOLDEN,
+            1408,
+            "3aad251192859840065506be36d655119adaa2e998749f10a9d118fea02ed892",
+        );
+        context_at("dao.testnet", 1, GOLDEN_NOW);
+        vault.unpause();
+        vault.resume_proposals();
+        context_at("agent.testnet", 0, GOLDEN_NOW);
+        vault.propose(
+            USDC.into(),
+            WNEAR.into(),
+            U128(20_000_000),
+            U128(4 * 10_u128.pow(24)),
+            "ab".repeat(32),
+            "manual-v1".into(),
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "the mandate change is still in its delay")]
+    fn a_migrated_model_addition_cannot_apply_one_second_before_its_delay() {
+        let mut vault = assert_voucher_golden(
+            OracleKind::Pyth,
+            PYTH_GOLDEN,
+            1408,
+            "3aad251192859840065506be36d655119adaa2e998749f10a9d118fea02ed892",
+        );
+        let mut enabled = vault.mandate.clone();
+        enabled.allowed_model_ids = vec!["manual-v1".into()];
+        context_at("dao.testnet", 1, GOLDEN_NOW);
+        assert_eq!(
+            vault.set_mandate(enabled),
+            MandateChangeOutcome::Queued { effective_sec: U64(GOLDEN_NOW + MANDATE_DELAY_SEC) }
+        );
+        context_at("caller.testnet", 0, GOLDEN_NOW + MANDATE_DELAY_SEC - 1);
+        vault.apply_pending_mandate();
+    }
+
+    fn voucher_legacy() -> LegacyVoucherVault {
+        borsh::from_slice(PYTH_GOLDEN).unwrap()
+    }
+
+    fn write_voucher(old: &LegacyVoucherVault) {
+        env::storage_write(b"STATE", &borsh::to_vec(old).unwrap());
+    }
+
+    #[test]
+    #[should_panic(expected = "resolve the withdrawal guard before migrating")]
+    fn model_migration_never_discards_an_actual_pre_model_withdrawal_guard() {
+        context("vault.testnet");
+        let mut old = voucher_legacy();
+        old.provider.remediated.active_withdrawal = Some(ActiveWithdrawal {
+            id: U64(10),
+            request_seq: U64(41),
+            request: PendingWithdrawal {
+                asset_id: USDC.into(),
+                receiver: "dao.testnet".parse().unwrap(),
+                amount: U128(20),
+                effective_sec: GOLDEN_NOW,
+            },
+            started_sec: GOLDEN_NOW,
+            balance_before: Some(U128(100)),
+        });
+        old.withdrawal_stage = Some(WithdrawalStage::Dispatched);
+        write_voucher(&old);
+        migrate();
+    }
+
+    #[test]
+    #[should_panic(expected = "resolve the withdrawal voucher phase before migrating")]
+    fn model_migration_refuses_an_orphaned_voucher_phase() {
+        context("vault.testnet");
+        let mut old = voucher_legacy();
+        old.withdrawal_stage = Some(WithdrawalStage::Preparing);
+        write_voucher(&old);
+        migrate();
+    }
+
+    #[test]
+    #[should_panic(expected = "resolve the withdrawal retry authorization before migrating")]
+    fn model_migration_refuses_an_unresolved_retry_authorization() {
+        context("vault.testnet");
+        let mut old = voucher_legacy();
+        old.withdrawal_retry_armed = Some(U64(41));
+        write_voucher(&old);
         migrate();
     }
 

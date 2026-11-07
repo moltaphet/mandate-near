@@ -1,0 +1,58 @@
+FINAL POST-HARDENING FROZEN-REVISION SANDBOX GROUP A
+Command: cargo test --offline -p mandate-vault --test attacks --test recovery_protocol --test gas --test keeper --test sandbox --test settlement -- --test-threads=1
+Scope: local sandbox; supplied Intents fixture; oracle/MPC stand-ins. No live signing/funds/relay publication.
+Reference source fingerprint: docs/evidence/operational-sandbox-sources.json
+Started UTC: 2026-11-06T18:36:01.055012+00:00
+
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.40s
+     Running tests/attacks.rs (target/debug/deps/attacks-d93a750217cfacc5)
+
+running 8 tests
+test attack_1_a_stranger_proposes_a_trade ... ok
+test attack_2_the_agent_trades_an_asset_outside_the_mandate ... ok
+test attack_3_an_oversized_trade_passes_the_agent_and_fails_the_gate ... ok
+test attack_4_the_agent_accepts_a_quote_far_below_the_oracle_value ... ok
+test attack_5_the_trade_is_priced_on_an_old_quote ... ok
+test attack_6_the_trade_is_priced_on_a_quote_from_the_future ... ok
+test attack_7_a_signed_trade_is_altered_before_settlement ... ok
+test attack_8_a_stolen_owner_key_cannot_loosen_the_cap_before_the_delay ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 331.60s
+
+     Running tests/gas.rs (target/debug/deps/gas-5013040329367e6d)
+
+running 2 tests
+test gas_by_feed_count ... ok
+test gas_per_call ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 242.44s
+
+     Running tests/keeper.rs (target/debug/deps/keeper-351d9891c7191981)
+
+running 4 tests
+test keeper_does_nothing_without_a_proposal ... ok
+test keeper_runs_a_proposal_then_reports_the_signed_intent_once ... ok
+test keeper_waits_for_registration_without_executing ... ok
+test keeper_waits_while_paused_without_executing ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 116.74s
+
+     Running tests/recovery_protocol.rs (target/debug/deps/recovery_protocol-c6be37f918cb64d0)
+
+running 8 tests
+test committed_marker_is_not_proof_of_terminal_delivery_or_absence_of_refund ... ok
+test failed_second_action_rolls_back_the_first_debit_and_scheduled_transfer ... ok
+test global_supply_exposes_future_voucher_preseeded_outside_both_sinks ... ok
+test native_voucher_retains_confirmed_refund_and_each_retry_requires_a_new_unit ... ok
+test preexisting_named_sentinel_can_erase_the_proof_and_enable_duplicate_debit ... ok
+test same_receipt_marker_commits_with_the_debit_and_survives_a_masking_credit ... ok
+test unique_voucher_cancellation_wins_and_blocks_two_delayed_originals ... ok
+test unique_voucher_original_wins_preserves_the_withdrawal_return_and_cannot_be_forged ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 310.22s
+
+     Running tests/sandbox.rs (target/debug/deps/sandbox-6c011d517d904b1e)
+
+running 4 tests
+test a_new_agent_waits_24_hours_on_a_real_chain ... ok
+test outside_accounts_cannot_invoke_callbacks_or_migration ... 

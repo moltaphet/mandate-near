@@ -39,6 +39,7 @@ fn mandate(max_slippage_bps: u16) -> Value {
         "max_drawdown_bps": 1500,
         "min_trade_interval_sec": 300,
         "max_price_age_sec": 60,
+        "allowed_model_ids": ["manual-v1", "rebalance-v1", "fixture-model"],
     })
 }
 
@@ -266,6 +267,7 @@ async fn wasm_migration_consumes_historical_state_and_writes_current_state()
         "max_drawdown_bps": 1500,
         "min_trade_interval_sec": 300,
         "max_price_age_sec": 60,
+        "allowed_model_ids": [],
     });
     let mut queued_mandate = original_mandate.clone();
     queued_mandate["max_trade_usd"] = json!("75000000");
@@ -342,6 +344,64 @@ async fn wasm_migration_consumes_historical_state_and_writes_current_state()
             .expect_err("a migrated state must not be migrated twice");
         let repeated = format!("{repeated:?}");
         assert!(repeated.contains("already current"), "{commit}: {repeated}");
+    }
+    Ok(())
+}
+
+#[tokio::test]
+async fn wasm_migration_consumes_actual_pre_model_voucher_goldens() -> testresult::TestResult<()> {
+    let e = setup().await?;
+    let vault_id = e.vault.account_id().clone();
+    for (kind, state) in [
+        (
+            "price_oracle",
+            include_bytes!("fixtures/pre-model-voucher-b43569d-price-oracle-state.borsh")
+                .as_slice(),
+        ),
+        ("pyth", include_bytes!("fixtures/pre-model-voucher-b43569d-pyth-state.borsh").as_slice()),
+    ] {
+        e._sandbox
+            .patch_state(vault_id.as_str().parse()?)
+            .storage(BASE64.encode(b"STATE"), BASE64.encode(state))
+            .send()
+            .await?;
+        let external = e
+            .vault
+            .call_function("migrate", json!({}))
+            .transaction()
+            .with_signer(e.stranger.clone(), e.signer.clone())
+            .send_to(&e.network)
+            .await?
+            .into_result()
+            .expect_err("outside account must not migrate voucher state");
+        assert!(format!("{external:?}").contains("private"));
+        assert!(e.call(&vault_id, "migrate", json!({}), 0).await, "{kind}: self migration");
+        assert_eq!(e.view("get_owner").await, json!("dao.testnet"));
+        assert_eq!(e.view("get_oracle_kind").await, json!(kind));
+        assert_eq!(e.view("get_withdrawal_protocol").await, json!("unique_voucher_v1"));
+        assert_eq!(e.view("is_paused").await, json!(true));
+        assert_eq!(e.view("is_halted").await, json!(true));
+        let active = e.view("get_mandate").await;
+        let queued = e.view("get_pending_mandate").await;
+        assert_eq!(active["allowed_model_ids"], json!([]));
+        assert_eq!(active["max_trade_usd"], json!("50000000"));
+        assert_eq!(queued["mandate"]["allowed_model_ids"], json!([]));
+        assert_eq!(queued["mandate"]["max_trade_usd"], json!("75000000"));
+        assert_eq!(queued["effective_sec"], json!(1_793_534_400_u64));
+        assert_eq!(e.view("get_pending_proposal").await, Value::Null);
+        assert_eq!(e.view("get_pending_withdrawal").await, Value::Null);
+        assert_eq!(e.view("get_withdrawal_status").await, Value::Null);
+        assert_eq!(e.view("is_in_flight").await, json!(false));
+        let repeated = e
+            .vault
+            .call_function("migrate", json!({}))
+            .transaction()
+            .with_signer(vault_id.clone(), e.signer.clone())
+            .send_to(&e.network)
+            .await?
+            .into_result()
+            .expect_err("current voucher state cannot migrate twice");
+        assert!(format!("{repeated:?}").contains("already current"));
     }
     Ok(())
 }

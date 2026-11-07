@@ -1,0 +1,40 @@
+{
+  "vault": "mandate-r1-4715a0.testnet",
+  "chain_id": "testnet",
+  "block_hash": "3o76mvH6agHFN91kuxvCGgZ32ytcuC7cgKGSLjoKakWk",
+  "block_height": 276611007,
+  "read_only": true,
+  "live_readiness": "UNVERIFIED",
+  "historical_issuer_receipt_quiescence": "UNVERIFIED",
+  "checks": {
+    "expected_chain_matches": true,
+    "no_bypass_access_keys": false,
+    "expected_code_matches": null,
+    "control_views_valid": false
+  },
+  "code": {
+    "account": "mandate-r1-4715a0.testnet",
+    "code_hash": "5JULCMf9fAGVtVXzgp8Jaea7eMoMNz9nqT3D3Ej2KdLb",
+    "wasm_bytes": 124611,
+    "sha256": "3fe886513a58e592d33ffbe3e92f80924957e78de53ac645c455a8b40aea6be0"
+  },
+  "permissions": {
+    "total": 1,
+    "full_access": 1,
+    "function_call": 0,
+    "unknown": 0,
+    "no_access_keys": false
+  },
+  "blocking_checks": [
+    "no_bypass_access_keys",
+    "control_views_valid"
+  ],
+  "unverified_obligations": [
+    "unknown withdrawal recovery",
+    "owner recoverability and governance",
+    "oracle feed availability, units and trust",
+    "external source/audit/admin correspondence",
+    "exact vault live MPC and matched settlement",
+    "real elapsed 24-hour withdrawal and failure recovery"
+  ]
+}
