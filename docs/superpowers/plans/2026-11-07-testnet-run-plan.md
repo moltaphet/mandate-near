@@ -34,7 +34,7 @@ Do not inspect, enumerate or use credential files to resolve an AccountId.
 
 Additional public operation inputs remain pending: approved existing parent/
 sponsor account, DAO implementation/factory and governance policy, permissionless
-operator account, testnet Intents account, Pyth receiver, asset/feed mapping,
+operator account, testnet Intents account, oracle source (decision open), asset/feed mapping,
 withdrawal asset/amount/receiver, and separate funding/gas budgets. AccountIds
 must come from the user; external deployment identity must be independently checked.
 
@@ -152,8 +152,8 @@ new_with_oracle {
   mandate: complete approved Mandate OBJECT,
   signer: inspected approved testnet Chain Signatures AccountId,
   intents: inspected approved testnet Intents AccountId,
-  oracle: inspected approved testnet Pyth receiver AccountId,
-  oracle_kind: "pyth"
+  oracle: inspected approved testnet oracle AccountId (<PENDING: oracle decision open>),
+  oracle_kind: "<PENDING: price_oracle or pyth, per the oracle decision>"
 }
 ```
 
@@ -168,7 +168,7 @@ zero vault permissions, immutable external/provider views, absent inert sinks
 and DAO controls. Do not split deploy and initialize. Do not fund custody or
 start trading until those checks pass.
 
-## Task 3 — Pyth and Chain Signatures setup
+## Task 3 — Oracle and Chain Signatures setup
 
 Read-only inspection command template; no signing or account mutation:
 
@@ -180,7 +180,8 @@ Official docs list `v1.signer` on mainnet and `v1.signer-prod.testnet` on testne
 Testnet cannot cross-call the mainnet `v1.signer` account. Domain 1 is Ed25519;
 the reviewed wire shape is `payload_v2.Eddsa` as hex, at most 1232 decoded bytes.
 No default signer account is selected until its deployed code/config is inspected.
-The Pyth receiver, fresh USD feed caches and reliable payable update process
+The selected oracle's feeds, fresh USD caches and reliable payable update process
+(oracle decision open; Pyth Core is documented as unsupported on NEAR)
 also remain unverified; passive reads do not update caches.
 
 **NEEDS APPROVAL / NOT RUN — exact public call blueprint:**
