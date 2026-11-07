@@ -74,7 +74,7 @@ Exact URLs, source excerpts and limitations are saved in
 1. Freeze the final source and artifact. Complete the serial fast/integration
    commands, record failures verbatim and measure final gas. The latest default
    baseline exited 101 on loopback permissions; it is not a complete pass.
-2. Resolve the exact approved vault/DAO/signer/Intents/Pyth accounts. Confirm
+2. Resolve the exact approved vault/DAO/signer/Intents/oracle accounts (oracle decision open). Confirm
    fresh held/traded feeds and a functioning updater. Keep the run blocked if
    the necessary testnet contracts or prices are unavailable.
 3. Review atomic deployment and initialization with a distinct DAO owner,
