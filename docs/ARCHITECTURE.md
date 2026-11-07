@@ -63,9 +63,10 @@ positive signed values and confidence bounds. The provider is chosen at init and
 cannot be changed afterward. Current updater availability, asset units and
 deployed source/admin correspondence remain UNVERIFIED; see
 [OPERATIONAL-READINESS.md](OPERATIONAL-READINESS.md).
-Pyth is selected conditionally for the intended deployment, subject to usable
-fresh feeds and a reliable updater. A separate DAO account is the selected vault
-owner; its governance and recovery operations still require verification.
+The oracle is not yet selected. Pyth Core is documented as no longer supporting
+NEAR, and the price-oracle adapter needs verified feeds, units and an updater on
+testnet. A separate DAO account is the selected vault owner; its governance and
+recovery operations still require verification.
 
 The model input is compact JSON containing only final-block identity/time,
 listed assets, exact balances, accepted oracle prices/publication times, mandate
@@ -305,7 +306,7 @@ Claims we do **not** make:
 | R2 | Payload hash/serialization mismatch (NEP-413 vs `raw_ed25519`) | High | **Retired: `raw_ed25519` signs exact payload bytes; tamper test rejects** ([spikes/R1.md](spikes/R1.md)) | 1 ✅ |
 | R3 | Live relay authentication or sufficiently long exact-input offers unavailable | High | Explicit Message Bus quote/publication client implemented; demonstrate live provider/auth access and offers exceeding the configured ≥450 s validity. No automatic alternate provider is implemented | open |
 | R4 | OutLayer: HTTPS from WASM to relay/NEAR AI, cost, latency, 900-byte output | Medium | Hello-world project on testnet Day 2; output is a compact struct | 2 |
-| R5 | Selected Pyth feeds or updater unavailable | Medium | Provider choice is immutable at initialization. Require usable fresh feeds, correct units and a reliable updater before deploying; keep failure handling closed | open |
+| R5 | Oracle not selected; Pyth Core documented as unsupported on NEAR | Medium | Provider choice is immutable at initialization. Choose and verify a feed source with fresh feeds, correct units and a reliable updater before deploying; keep failure handling closed | open |
 | R6 | Gas across callbacks | Medium | Already split into TX-1 / TX-2; measure in sandbox. MPC `sign`: on-chain minimum is 15 TGas and 30 TGas worked in R1. The NEAR agent skill suggests 250 TGas, which would not fit TX-2, so the attachment is set from measurement | 3 |
 | R7 | Intended live Intents deployment and external trust not established | Medium | Sandbox runs the supplied Intents WASM fixture with stand-in MPC/oracle; current binary/source/audit/admin correspondence and funded live flow need separate evidence | open |
 | R8 | Our own contract bugs | High | Engine regressions; private callbacks; execution revision/expiry guards; identified withdrawal reconciliation; fresh verification and independent review | ongoing |

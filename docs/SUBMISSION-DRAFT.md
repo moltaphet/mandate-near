@@ -36,8 +36,8 @@ the contract constrains authority rather than grading strategy quality.
 **Phase4 status: NOT RUN.**
 
 The selected owner is a DAO account distinct from the vault. Its governance and
-recovery operations remain unverified. Pyth is selected conditionally on usable
-fresh feeds, correct units and a reliable updater. Live vault MPC signing,
+recovery operations remain unverified. The oracle is not yet selected; Pyth Core
+is documented as unsupported on NEAR, so a verified feed source is still required. Live vault MPC signing,
 funded matched settlement, a genuinely elapsed 24-hour withdrawal and SR-1/SR-6
 recovery still need intended-chain evidence. The historical
 `mandate-r1-4715a0.testnet` MPC spike is not evidence of a current deployed vault.
