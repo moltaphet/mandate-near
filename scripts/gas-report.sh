@@ -6,20 +6,21 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-raw="$(mktemp)"
-out="docs/evidence/gas.txt"
+mandate_gas_raw="$(mktemp)"
+mandate_gas_out="docs/evidence/gas.txt"
 mkdir -p docs/evidence
 
-status=0
-cargo test -p mandate-vault --test gas -- --nocapture >"$raw" 2>&1 || status=$?
+mandate_gas_status=0
+cargo test -p mandate-vault --test gas --test pyth_path -- --test-threads=1 --nocapture >"$mandate_gas_raw" 2>&1 || mandate_gas_status=$?
 
 {
   echo "# Gas per call, local NEAR sandbox, $(date -u +%Y-%m-%dT%H:%M:%SZ)"
   echo "# Protocol gas burnt by the receipts of each call. Not a mainnet fee."
-  grep -o 'GAS | .*' "$raw" || true
-  grep 'test result' "$raw" || true
-} >"$out"
+  printf '# Full command output retained at: %s\n' "$mandate_gas_raw"
+  printf '# Command exit code: %s\n' "$mandate_gas_status"
+  rg -o '(GAS|PYTH) \| .*' "$mandate_gas_raw" || true
+  rg 'test result|^error:|FAILED' "$mandate_gas_raw" || true
+} >"$mandate_gas_out"
 
-rm -f "$raw"
-cat "$out"
-exit "$status"
+cat "$mandate_gas_out"
+exit "$mandate_gas_status"

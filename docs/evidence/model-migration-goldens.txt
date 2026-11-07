@@ -1,0 +1,40 @@
+Public pre-model voucher state goldens
+Recorded: 2026-11-07
+Old contract schema: b43569dbb2bdbd840571157e51d89fe6417ecb8a
+
+The serial parent runner executed this exact native exporter before Mandate or
+Proposal model fields were added:
+
+cargo test --offline -p mandate-vault --lib tests::export_pre_model_voucher_state_for_migration -- --exact --nocapture
+
+Observed runner status: exit 0.
+Public exporter output:
+pre-model-voucher-b43569d-price-oracle-state.borsh bytes=1244 sha256=dd0fdd89250e4e8d69d36f53c647e8e868d0a28df4e5653dc21ac39bd5d3d8a4
+pre-model-voucher-b43569d-pyth-state.borsh bytes=1408 sha256=3aad251192859840065506be36d655119adaa2e998749f10a9d118fea02ed892
+
+The temporary test constructed the actual old Vault with new_with_oracle for
+each provider, then serialized it with near_sdk::borsh::to_vec. It did not
+construct bytes with the future migration decoder. create_new(true) prevented
+overwriting existing fixtures. The exporter was removed before schema changes
+and before ordinary test runs.
+
+All fixture accounts, payloads and signature labels are public fake data.
+Both states have a distinct dao.testnet owner, paused/halted controls, public
+trading counters, expired signed intent, preserved queued mandate/agent
+deadlines, monotonic identifiers, revision and retained outcomes. An expired
+orphan execution snapshot is present; no proposal, in-flight execution,
+queued/active withdrawal, voucher stage or retry authorization is present.
+This is not evidence of an actual DAO deployment, signing or live migration.
+
+An independent Python hashlib read after export confirmed all four public
+fixture lengths and SHA-256 values without changing any fixture:
+
+legacy-77ebc0c-state.borsh bytes=457 sha256=3d9c70ab5bcc78ca2d28e18c9874034bdf3230376c8d3c209d5e7c0e4308c848
+legacy-0de5c48-state.borsh bytes=465 sha256=aa8735db9ac4ef54286252703d07fb13a9eab4a14adbfa7f2fbb83f9476359a7
+pre-model-voucher-b43569d-price-oracle-state.borsh bytes=1244 sha256=dd0fdd89250e4e8d69d36f53c647e8e868d0a28df4e5653dc21ac39bd5d3d8a4
+pre-model-voucher-b43569d-pyth-state.borsh bytes=1408 sha256=3aad251192859840065506be36d655119adaa2e998749f10a9d118fea02ed892
+
+Migration tests use these immutable bytes and assert expected public state,
+empty active/pending model lists, retained deadlines and stale-callback fencing.
+Final migration and combined verification results must be recorded separately;
+golden generation does not establish that the new migration tests pass.

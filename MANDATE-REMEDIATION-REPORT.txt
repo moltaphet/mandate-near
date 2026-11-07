@@ -1,3 +1,30 @@
+HISTORICAL REPORT — SCOPE NOTICE, 2026-11-07
+The dated report and update below preserve earlier review evidence. Their source
+line numbers, counts, gas measurements, artifact hashes, publication statements
+and descriptions of the agent/dashboard are not current release verification.
+They must not be silently relabelled as results for a later revision.
+
+F26 below originally describes balance-only reconciliation. The current voucher
+protocol changes that mechanism under its deployment/trust prerequisites; the
+remaining F26 is an accepted availability residual for the hackathon scope.
+A withdrawal may already have been dispatched or debited when its final callback
+is lost or malformed. Missing, failed or inconsistent proof retains the guard,
+blocking new withdrawals and trades. Elapsed time, a larger balance and owner
+authority cannot override it. Guard retention initiates no additional transfer;
+the original withdrawal may already have moved funds. Live receipt-loss recovery
+remains unverified. Read current README, SECURITY and THREAT_MODEL for this scope.
+
+The selected owner is a DAO distinct from the vault; governance still needs
+verification. Pyth is selected conditionally on fresh usable feeds and a reliable
+updater. Neither decision establishes live deployment or custody readiness.
+The 7 November baseline attempt before documentation reconciliation exited 101
+after protocol tests hit loopback-socket PermissionDenied. Formatting and strict
+Clippy passed before the failure; later provenance targets were not reached.
+Separate focused passes do not establish a complete fast/integration pass.
+An escalated whole-script rerun was not executed because approval review service
+failed; this is an infrastructure block, not an unsafe-action determination.
+Retention of this historical report remains a project-owner decision.
+
 UPDATE, 2026-11-06 (later). This block supersedes the statements below that the fixes are uncommitted or that nothing was committed, pushed or deployed.
 - Latest main commit: 7379f3c (HEAD and origin/main equal).
 - Committed and pushed to main: 0de5c48 (audit fixes), 166736b (round-two remediation), 9b573d1 (sandbox evidence and site), 63d40ee (merge of main), 2d6c1da (logo restored), 6001298 (operational report), 3bba41d (logo, earlier).

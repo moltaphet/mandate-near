@@ -22,6 +22,10 @@ pub const MAX_PRICE_AGE_SEC_CAP: u32 = 300;
 pub const MAX_ASSETS: usize = 20;
 /// Token decimals above this are rejected; keeps USD math inside 256 bits.
 pub const MAX_DECIMALS: u8 = 30;
+/// Bounds the owner-defined declared decision-source allowlist.
+pub const MAX_MODEL_IDS: usize = 8;
+/// Declared source identifiers are bounded by UTF-8 byte length.
+pub const MAX_MODEL_ID_BYTES: usize = 64;
 const MAX_PRICE_FEED_ID_LEN: usize = 128;
 
 /// One tradable asset.
@@ -54,6 +58,9 @@ pub struct Mandate {
     pub max_drawdown_bps: u16,
     pub min_trade_interval_sec: u32,
     pub max_price_age_sec: u32,
+    /// Declared decision sources allowed to propose trades. Empty denies all.
+    /// Membership does not prove that a model generated the decision.
+    pub allowed_model_ids: Vec<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -71,6 +78,9 @@ pub enum MandateError {
     BpsOutOfRange(&'static str),
     SlippageAboveCap,
     PriceAgeOutOfRange,
+    TooManyModelIds,
+    InvalidModelId(String),
+    DuplicateModelId(String),
 }
 
 impl fmt::Display for MandateError {
@@ -97,6 +107,16 @@ impl fmt::Display for MandateError {
             Self::PriceAgeOutOfRange => {
                 write!(f, "max_price_age_sec must be in 1..={MAX_PRICE_AGE_SEC_CAP}")
             }
+            Self::TooManyModelIds => {
+                write!(f, "mandate may allow at most {MAX_MODEL_IDS} model ids")
+            }
+            Self::InvalidModelId(id) => {
+                write!(
+                    f,
+                    "model id must be nonblank and at most {MAX_MODEL_ID_BYTES} UTF-8 bytes: {id}"
+                )
+            }
+            Self::DuplicateModelId(id) => write!(f, "duplicate model id: {id}"),
         }
     }
 }
@@ -141,6 +161,19 @@ impl Mandate {
             }
         }
 
+        if self.allowed_model_ids.len() > MAX_MODEL_IDS {
+            return Err(MandateError::TooManyModelIds);
+        }
+        let mut seen_model_ids = BTreeSet::new();
+        for id in &self.allowed_model_ids {
+            if id.trim().is_empty() || id.len() > MAX_MODEL_ID_BYTES {
+                return Err(MandateError::InvalidModelId(id.clone()));
+            }
+            if !seen_model_ids.insert(id.as_str()) {
+                return Err(MandateError::DuplicateModelId(id.clone()));
+            }
+        }
+
         if self.max_trade_usd.0 == 0 {
             return Err(MandateError::ZeroTradeLimit);
         }
@@ -167,6 +200,10 @@ impl Mandate {
 
     pub fn is_stable(&self, asset_id: &str) -> bool {
         self.stable_assets.iter().any(|s| s == asset_id)
+    }
+
+    pub fn allows_model_id(&self, model_id: &str) -> bool {
+        self.allowed_model_ids.iter().any(|id| id == model_id)
     }
 }
 
@@ -195,7 +232,7 @@ fn is_valid_price_feed_id(id: &str) -> bool {
 ///
 /// A loosened field lets the vault do something it could not do before:
 /// a higher cap, a shorter cooldown, a longer price age, an asset that was not
-/// listed, a changed asset config, or a new stable asset. Anything else is a
+/// listed, a changed asset config, a new stable asset, or a new decision source. Anything else is a
 /// tightening (or no change). The owner applies a tightening at once; a
 /// loosening waits (see `MANDATE_DELAY_SEC`). Unknown changes count as loosening.
 pub fn loosened_fields(old: &Mandate, new: &Mandate) -> Vec<&'static str> {
@@ -229,6 +266,9 @@ pub fn loosened_fields(old: &Mandate, new: &Mandate) -> Vec<&'static str> {
     if new.stable_assets.iter().any(|id| !old.stable_assets.contains(id)) {
         out.push("stable_assets");
     }
+    if new.allowed_model_ids.iter().any(|id| !old.allowed_model_ids.contains(id)) {
+        out.push("allowed_model_ids");
+    }
     out
 }
 
@@ -259,6 +299,11 @@ pub(crate) mod tests {
             max_drawdown_bps: 1_500,
             min_trade_interval_sec: 300,
             max_price_age_sec: 60,
+            allowed_model_ids: vec![
+                "manual-v1".into(),
+                "rebalance-v1".into(),
+                "fixture-model".into(),
+            ],
         }
     }
 
@@ -306,6 +351,75 @@ pub(crate) mod tests {
     #[test]
     fn sample_is_valid() {
         assert_eq!(sample().validate(), Ok(()));
+    }
+
+    #[test]
+    fn model_allowlist_empty_denies_all_and_exact_capacity_is_valid() {
+        let mut m = sample();
+        m.allowed_model_ids.clear();
+        assert_eq!(m.validate(), Ok(()));
+        assert!(!m.allows_model_id("manual-v1"));
+        m.allowed_model_ids = (0..MAX_MODEL_IDS).map(|i| format!("model-{i}")).collect();
+        assert_eq!(m.validate(), Ok(()));
+        assert!(m.allows_model_id("model-0"));
+        assert!(!m.allows_model_id("model-other"));
+        m.allowed_model_ids.push("model-over-cap".into());
+        assert_eq!(m.validate(), Err(MandateError::TooManyModelIds));
+    }
+
+    #[test]
+    fn model_id_bound_counts_utf8_bytes_and_rejects_blank_ids() {
+        for id in ["x".repeat(MAX_MODEL_ID_BYTES), "é".repeat(MAX_MODEL_ID_BYTES / 2)] {
+            assert_eq!(id.len(), MAX_MODEL_ID_BYTES);
+            let m = Mandate { allowed_model_ids: vec![id], ..sample() };
+            assert_eq!(m.validate(), Ok(()));
+        }
+        for id in [
+            String::new(),
+            " \n\t".into(),
+            "\u{2003}".into(),
+            "x".repeat(MAX_MODEL_ID_BYTES + 1),
+            "é".repeat(MAX_MODEL_ID_BYTES / 2 + 1),
+        ] {
+            let m = Mandate { allowed_model_ids: vec![id.clone()], ..sample() };
+            assert_eq!(m.validate(), Err(MandateError::InvalidModelId(id)));
+        }
+    }
+
+    #[test]
+    fn model_ids_reject_exact_duplicates_and_preserve_exact_identity() {
+        let m = Mandate {
+            allowed_model_ids: vec!["fixture-model".into(), "fixture-model".into()],
+            ..sample()
+        };
+        assert_eq!(m.validate(), Err(MandateError::DuplicateModelId("fixture-model".into())));
+        let m = Mandate {
+            allowed_model_ids: vec!["fixture-model".into(), "Fixture-model".into()],
+            ..sample()
+        };
+        assert_eq!(m.validate(), Ok(()));
+        assert!(!m.allows_model_id(" fixture-model"));
+    }
+
+    #[test]
+    fn source_additions_loosen_and_removal_or_reordering_does_not() {
+        let old = sample();
+        let mut reordered = old.clone();
+        reordered.allowed_model_ids.reverse();
+        assert!(loosened_fields(&old, &reordered).is_empty());
+        let mut removed = old.clone();
+        removed.allowed_model_ids.clear();
+        assert!(loosened_fields(&old, &removed).is_empty());
+        assert_eq!(loosened_fields(&removed, &old), vec!["allowed_model_ids"]);
+        let mut added = old.clone();
+        added.allowed_model_ids.push("new-model".into());
+        assert_eq!(loosened_fields(&old, &added), vec!["allowed_model_ids"]);
+        let mixed = Mandate {
+            allowed_model_ids: vec!["manual-v1".into(), "new-model".into()],
+            ..old.clone()
+        };
+        assert_eq!(loosened_fields(&old, &mixed), vec!["allowed_model_ids"]);
+        assert!(loosened_fields(&old, &old).is_empty());
     }
 
     #[test]

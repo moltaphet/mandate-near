@@ -1,134 +1,227 @@
-//! Runs the `--verify-model` command on real files. No network, no environment.
+//! Offline command tests using independent public recovery vectors and valid
+//! strict trade decisions. No provider/network/authentication or signing scalar.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use mandate_agent::model::ChatResponse;
-use mandate_agent::provenance::ModelRecord;
-use near_sdk::serde_json::{self, json};
-use secp256k1::{Message, PublicKey, Secp256k1, SecretKey};
-use sha3::{Digest, Keccak256};
+use mandate_agent::model::{ChatResponse, extract_decision, sha256_hex};
+use mandate_agent::provenance::{ModelRecord, canonical_response_hash};
+use near_sdk::serde_json::{self, Value, json};
 
-const REQUEST_SHA256: &str = "3f2b8c1d9e0a7f6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b";
-
-fn hex(bytes: &[u8]) -> String {
-    bytes.iter().map(|b| format!("{b:02x}")).collect()
+fn fixture() -> Value {
+    serde_json::from_str(include_str!("fixtures/provenance-public-v1.json")).unwrap()
 }
 
-fn key(label: &[u8]) -> SecretKey {
-    SecretKey::from_slice(&Keccak256::digest(label)).expect("valid key")
-}
-
-fn address_of(key: &SecretKey) -> String {
-    let public = PublicKey::from_secret_key(&Secp256k1::signing_only(), key);
-    format!("0x{}", hex(&Keccak256::digest(&public.serialize_uncompressed()[1..])[12..]))
-}
-
-fn sign_personal(key: &SecretKey, text: &str) -> String {
-    let mut hasher = Keccak256::new();
-    hasher.update(b"\x19Ethereum Signed Message:\n");
-    hasher.update(text.len().to_string().as_bytes());
-    hasher.update(text.as_bytes());
-    let digest: [u8; 32] = hasher.finalize().into();
-    let message = Message::from_slice(&digest).expect("digest");
-    let (recovery, compact) =
-        Secp256k1::signing_only().sign_ecdsa_recoverable(&message, key).serialize_compact();
-    format!("0x{}{:02x}", hex(&compact), 27 + recovery.to_i32())
-}
-
-/// A scratch directory unique to this test run.
-fn scratch(name: &str) -> PathBuf {
-    let dir =
-        std::env::temp_dir().join(format!("mandate-provenance-{}-{name}", std::process::id()));
-    std::fs::create_dir_all(&dir).expect("scratch dir");
-    dir
-}
-
-fn write_fixture(dir: &Path, signer: &SecretKey) -> (PathBuf, PathBuf) {
-    let raw = serde_json::to_string(&json!({
-        "id": "chat-cli",
-        "model": "fixture-model",
-        "choices": [{"message": {"role": "assistant", "content": "decision"}, "finish_reason": "stop"}],
-    }))
+fn captured_record(signed: bool) -> ModelRecord {
+    let fixture = fixture();
+    let mut response = ChatResponse::from_raw(
+        fixture["raw_body"].as_str().unwrap().into(),
+        fixture["request_body"].as_str().unwrap().into(),
+    )
     .unwrap();
-    let response = ChatResponse::from_raw(raw, REQUEST_SHA256.into()).expect("envelope");
-    let record = ModelRecord::from_response(&response);
-    let text = format!("fixture-model:{}:{}", record.request_sha256, record.response_sha256);
-    let signature = json!({
-        "text": text,
-        "signature": sign_personal(signer, &text),
-        "signing_address": address_of(signer),
-        "signing_algo": "ecdsa",
-        "signature_kind": "provider_tee",
-    });
-    let record_path = dir.join("model-record.json");
-    let signature_path = dir.join("signature.json");
-    std::fs::write(&record_path, serde_json::to_vec_pretty(&record).unwrap()).unwrap();
-    std::fs::write(&signature_path, serde_json::to_vec_pretty(&signature).unwrap()).unwrap();
-    (record_path, signature_path)
+    if signed {
+        response.signature_proof = Some(fixture["signature_proof"].as_str().unwrap().into());
+    }
+    let mut plan = extract_decision(&response.content).unwrap().plan;
+    plan.response_commitment = Some(canonical_response_hash(&response.raw_body).unwrap());
+    ModelRecord::from_response(&response, &plan).unwrap()
 }
 
-fn run(args: &[&str]) -> std::process::Output {
+struct Scratch(PathBuf);
+
+impl Scratch {
+    fn new(name: &str) -> Self {
+        let path =
+            std::env::temp_dir().join(format!("mandate-provenance-{}-{name}", std::process::id()));
+        std::fs::create_dir_all(&path).unwrap();
+        Self(path)
+    }
+
+    fn write(&self, name: &str, bytes: &[u8]) -> PathBuf {
+        let path = self.0.join(name);
+        std::fs::write(&path, bytes).unwrap();
+        path
+    }
+
+    fn record(&self, record: &ModelRecord) -> PathBuf {
+        self.write("model-record.json", &serde_json::to_vec_pretty(record).unwrap())
+    }
+}
+
+impl Drop for Scratch {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_dir_all(&self.0);
+    }
+}
+
+fn run(path: &Path, flags: &[&str]) -> std::process::Output {
     Command::new(env!("CARGO_BIN_EXE_mandate-agent"))
         .arg("--verify-model")
-        .args(args)
+        .arg(path)
+        .args(flags)
         .output()
-        .expect("agent binary runs")
+        .unwrap()
+}
+
+fn success(output: &std::process::Output) -> Value {
+    assert!(output.status.success(), "{}", String::from_utf8_lossy(&output.stderr));
+    serde_json::from_slice(&output.stdout).unwrap()
+}
+
+fn refusal(output: &std::process::Output, expected: &str) {
+    assert!(!output.status.success());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains(expected), "expected {expected:?}; got {stderr}");
 }
 
 #[test]
 fn verify_model_passes_for_the_pinned_signer_and_fails_otherwise() {
-    let signer = key(b"mandate-test-signer-v1");
-    let other = key(b"another-test-signer");
-    let dir = scratch("pass");
-    let (record, signature) = write_fixture(&dir, &signer);
-    let record_text = record.to_str().unwrap();
-    let signature_text = signature.to_str().unwrap();
-
-    let ok = run(&[
-        record_text,
-        "--signature",
-        signature_text,
-        "--signing-address",
-        &address_of(&signer),
-    ]);
-    assert!(ok.status.success(), "{}", String::from_utf8_lossy(&ok.stderr));
-    let stdout = String::from_utf8_lossy(&ok.stdout);
-    assert!(stdout.contains("\"signature\": \"VERIFIED\""), "{stdout}");
-
-    let wrong = run(&[
-        record_text,
-        "--signature",
-        signature_text,
-        "--signing-address",
-        &address_of(&other),
-    ]);
-    assert!(!wrong.status.success());
-    assert!(String::from_utf8_lossy(&wrong.stderr).contains("not made by the pinned address"));
-
-    let _ = std::fs::remove_dir_all(&dir);
+    let scratch = Scratch::new("public-signed");
+    let record = captured_record(false);
+    let record_path = scratch.record(&record);
+    let fixture = fixture();
+    let signature =
+        scratch.write("signature.json", fixture["signature_proof"].as_str().unwrap().as_bytes());
+    let pinned = fixture["pinned_address"].as_str().unwrap();
+    let output = success(&run(
+        &record_path,
+        &[
+            "--signature",
+            signature.to_str().unwrap(),
+            "--signing-address",
+            pinned,
+            "--reason-hash",
+            &record.reason_hash,
+        ],
+    ));
+    assert_eq!(output["signature"], "VERIFIED_PINNED_SIGNER");
+    assert_eq!(output["verification"], "VERIFIED_PINNED_SIGNER");
+    assert_eq!(output["record"], "hashes_and_decision_match");
+    assert_eq!(output["reason_hash"], record.reason_hash);
+    assert_eq!(output["chain_authenticated"], false);
+    assert_eq!(output["settlement_verified"], false);
+    assert_eq!(output["hardware_attestation_verified"], false);
+    let wrong = run(
+        &record_path,
+        &[
+            "--signature",
+            signature.to_str().unwrap(),
+            "--signing-address",
+            fixture["gateway_pinned_address"].as_str().unwrap(),
+        ],
+    );
+    refusal(&wrong, "not made by the pinned address");
 }
 
 #[test]
 fn verify_model_without_a_signature_reports_not_checked_and_checks_the_reason_hash() {
-    let signer = key(b"mandate-test-signer-v1");
-    let dir = scratch("hashes");
-    let (record, _) = write_fixture(&dir, &signer);
-    let record_text = record.to_str().unwrap();
-    let stored: ModelRecord = serde_json::from_slice(&std::fs::read(&record).unwrap()).unwrap();
+    let scratch = Scratch::new("public-unsigned");
+    let record = captured_record(false);
+    let path = scratch.record(&record);
+    let plain = success(&run(&path, &[]));
+    assert_eq!(plain["verification"], "UNVERIFIED");
+    assert_eq!(plain["signature"], "UNVERIFIED");
+    assert_eq!(plain["reason_hash"], record.reason_hash);
+    success(&run(&path, &["--reason-hash", &record.reason_hash]));
+    refusal(&run(&path, &["--reason-hash", &"00".repeat(32)]), "supplied reason hash");
+    let fixture = fixture();
+    let proof =
+        scratch.write("signature.json", fixture["signature_proof"].as_str().unwrap().as_bytes());
+    refusal(&run(&path, &["--signature", proof.to_str().unwrap()]), "external signing address");
+}
 
-    let plain = run(&[record_text]);
-    assert!(plain.status.success());
-    assert!(String::from_utf8_lossy(&plain.stdout).contains("\"signature\": \"NOT_CHECKED\""));
+#[test]
+fn stored_signature_is_always_checked_and_cannot_be_downgraded_to_unsigned() {
+    let scratch = Scratch::new("embedded-proof");
+    let mut record = captured_record(true);
+    let path = scratch.record(&record);
+    refusal(&run(&path, &[]), "external signing address");
+    let fixture = fixture();
+    let pinned = fixture["pinned_address"].as_str().unwrap();
+    let output = success(&run(&path, &["--signing-address", pinned]));
+    assert_eq!(output["verification"], "VERIFIED_PINNED_SIGNER");
+    record.signature_proof = Some("{\"signature\":\"bad\"}".into());
+    let path = scratch.record(&record);
+    refusal(&run(&path, &["--signing-address", pinned]), "signature document is malformed");
+    let external =
+        scratch.write("signature.json", fixture["signature_proof"].as_str().unwrap().as_bytes());
+    refusal(
+        &run(&path, &["--signature", external.to_str().unwrap(), "--signing-address", pinned]),
+        "signature document is malformed",
+    );
+}
 
-    let matching = run(&[record_text, "--reason-hash", &stored.response_sha256]);
-    assert!(matching.status.success());
+#[test]
+fn verifier_refuses_tampered_wire_hashes_metadata_and_decision() {
+    let scratch = Scratch::new("tampered-record");
+    let original = captured_record(false);
+    let mut changed = original.clone();
+    changed.raw_body.push(' ');
+    refusal(&run(&scratch.record(&changed), &[]), "stored response bytes");
+    changed = original.clone();
+    changed.request_sha256 = "00".repeat(32);
+    refusal(&run(&scratch.record(&changed), &[]), "stored request bytes");
+    changed = original.clone();
+    changed.model = "fabricated-model".into();
+    refusal(&run(&scratch.record(&changed), &[]), "stored decision does not match");
+    changed = original.clone();
+    changed.response_id = "fabricated-response".into();
+    refusal(&run(&scratch.record(&changed), &[]), "stored decision does not match");
+    changed = original.clone();
+    changed.plan.amount_in = "1".into();
+    refusal(&run(&scratch.record(&changed), &[]), "stored decision does not match");
+    changed = original;
+    let mut body: Value = serde_json::from_str(&changed.raw_body).unwrap();
+    body["choices"][0]["message"]["content"] = json!("not a decision");
+    changed.raw_body = serde_json::to_string(&body).unwrap();
+    changed.response_sha256 = sha256_hex(changed.raw_body.as_bytes());
+    changed.reason_hash = canonical_response_hash(&changed.raw_body).unwrap();
+    refusal(&run(&scratch.record(&changed), &[]), "stored decision does not match");
+}
 
-    let mismatched = run(&[record_text, "--reason-hash", &"0".repeat(64)]);
-    assert!(!mismatched.status.success());
+#[test]
+fn verifier_checks_public_plan_tuple_and_refuses_duplicate_flags() {
+    let scratch = Scratch::new("public-plan");
+    let record = captured_record(false);
+    let path = scratch.record(&record);
+    let mut plan = serde_json::to_value(&record.plan).unwrap();
+    let plan_path = scratch.write("plan.json", &serde_json::to_vec(&plan).unwrap());
+    success(&run(&path, &["--plan", plan_path.to_str().unwrap()]));
+    plan["min_amount_out"] = json!("1");
+    let plan_path = scratch.write("plan.json", &serde_json::to_vec(&plan).unwrap());
+    refusal(
+        &run(&path, &["--plan", plan_path.to_str().unwrap()]),
+        "stored decision does not match",
+    );
+    refusal(
+        &run(&path, &["--reason-hash", &record.reason_hash, "--reason-hash", &record.reason_hash]),
+        "usage:",
+    );
+    refusal(&run(&path, &["--unknown", "value"]), "usage:");
+}
 
-    let half = run(&[record_text, "--signature", "x.json"]);
-    assert!(!half.status.success(), "a signature needs its pinned address");
+#[test]
+fn verifier_refuses_duplicate_record_fields_prohibited_paths_and_oversized_files() {
+    let scratch = Scratch::new("bounded-input");
+    let record = captured_record(false);
+    let json = serde_json::to_string(&record).unwrap();
+    let duplicate = format!("{{\"model\":\"forged\",{}", &json[1..]);
+    let path = scratch.write("duplicate.json", duplicate.as_bytes());
+    refusal(&run(&path, &[]), "model record is malformed");
+    // This prohibited path is intentionally absent; it must be rejected before
+    // any attempt to resolve or open a file. No protected file is created.
+    refusal(&run(&scratch.0.join(".env"), &[]), "refused prohibited public-file path");
+    let path = scratch.write("oversized.json", &vec![b' '; 1024 * 1024 + 1]);
+    refusal(&run(&path, &[]), "public file exceeds size limit");
+}
 
-    let _ = std::fs::remove_dir_all(&dir);
+#[cfg(unix)]
+#[test]
+fn verifier_resolves_allowed_symlinks_before_reading_the_public_record() {
+    let scratch = Scratch::new("public-symlink");
+    let path = scratch.record(&captured_record(false));
+    let link = scratch.0.join("model-link.json");
+    std::os::unix::fs::symlink(&path, &link).unwrap();
+    let output = success(&run(&link, &[]));
+    assert_eq!(output["verification"], "UNVERIFIED");
 }

@@ -1,0 +1,131 @@
+Mandate repository inventory — metadata only
+Branch: feat/ai-decision
+HEAD: b43569dbb2bdbd840571157e51d89fe6417ecb8a
+No commit, staging, deletion or branch/worktree modification performed.
+
+Code and scripts (16 entries)
+ M agent/Cargo.toml
+ M agent/src/autonomous.rs
+ M agent/src/lib.rs
+ M agent/src/main.rs
+ M agent/src/model.rs
+ M agent/src/provenance.rs
+ M agent/src/transport.rs
+ M contracts/vault/src/lib.rs
+ M contracts/vault/src/mandate.rs
+ M contracts/vault/src/migration.rs
+ M contracts/vault/src/provider_tests.rs
+ M contracts/vault/src/remediation_tests.rs
+ M scripts/dashboard-fixture.py
+ M scripts/gas-report.sh
+ M scripts/verify.sh
+?? scripts/deploy-site.sh
+
+Tests (14 entries)
+ M agent/tests/autonomous.rs
+ M agent/tests/model.rs
+ M agent/tests/protocol.rs
+ M agent/tests/provenance.rs
+ M agent/tests/provenance_cli.rs
+ M contracts/vault/tests/attacks.rs
+ M contracts/vault/tests/common/mod.rs
+ M contracts/vault/tests/execute_path.rs
+ M contracts/vault/tests/gas.rs
+ M contracts/vault/tests/sandbox.rs
+ M contracts/vault/tests/sealed_deployment.rs
+ M contracts/vault/tests/settlement.rs
+ M web/dashboard/live.test.mjs
+?? contracts/vault/tests/model_path.rs
+
+Frontend (3 entries)
+ M web/dashboard/live.mjs
+ M web/site/audit.mjs
+ M web/site/index.html
+
+Documentation and reports (12 entries)
+ M MANDATE-AI-DECISION-REPORT.txt
+ M MANDATE-OPERATIONAL-REPORT.txt
+ M MANDATE-REMEDIATION-REPORT.txt
+ M README.md
+ M SECURITY.md
+ M THREAT_MODEL.md
+ M docs/ARCHITECTURE.md
+ M docs/OPERATIONAL-READINESS.md
+ M docs/PROJECT.md
+?? docs/DEMO-SCRIPT.md
+?? docs/SUBMISSION-DRAFT.md
+?? docs/TESTNET-RUNBOOK.md
+
+Evidence (29 entries)
+ M docs/evidence/gas-limit.txt
+?? docs/evidence/ai-decision-step2-correction-fast.txt
+?? docs/evidence/ai-decision-step2-correction-protocol.txt
+?? docs/evidence/ai-decision-step2-correction-sandbox.txt
+?? docs/evidence/ai-decision-step2-development.txt
+?? docs/evidence/ai-decision-step2-public-vector.txt
+?? docs/evidence/ai-decision-step2-review-baseline.txt
+?? docs/evidence/ai-decision-step2-source-checkpoint.txt
+?? docs/evidence/model-migration-goldens.txt
+?? docs/evidence/operational-sandbox-a-continuation.txt
+?? docs/evidence/operational-sandbox-final-incomplete-a.txt
+?? docs/evidence/phase0-9-2026-11-07/allowed-source-checkpoint.txt
+?? docs/evidence/phase0-9-2026-11-07/artifact.txt
+?? docs/evidence/phase0-9-2026-11-07/command-status.txt
+?? docs/evidence/phase0-9-2026-11-07/external-contract-public-assessment.txt
+?? docs/evidence/phase0-9-2026-11-07/initial-clippy-excerpt.txt
+?? docs/evidence/phase0-9-2026-11-07/phase1-fast.txt
+?? docs/evidence/phase0-9-2026-11-07/phase3-agent.txt
+?? docs/evidence/phase0-9-2026-11-07/phase3-dashboard.txt
+?? docs/evidence/phase0-9-2026-11-07/phase3-native-initial.txt
+?? docs/evidence/phase0-9-2026-11-07/phase3-native.txt
+?? docs/evidence/phase0-9-2026-11-07/phase8-clippy-final.txt
+?? docs/evidence/phase0-9-2026-11-07/phase8-integration-default.txt
+?? docs/evidence/phase0-9-2026-11-07/phase8-integration-final-default.txt
+?? docs/evidence/phase0-9-2026-11-07/phase8-native-final.txt
+?? docs/evidence/phase0-9-2026-11-07/phase8-sandbox-compile.txt
+?? docs/evidence/phase0-9-2026-11-07/phase8-vault-build.txt
+?? docs/evidence/phase0-9-2026-11-07/related-work-public.txt
+?? docs/evidence/phase0-9-2026-11-07/selected-account-inspection.txt
+
+Plans (2 entries)
+?? docs/superpowers/plans/2026-11-06-ai-decision.md
+?? docs/superpowers/plans/2026-11-07-testnet-run-plan.md
+
+Fixtures (3 entries)
+?? agent/tests/fixtures/provenance-public-v1.json
+?? contracts/vault/tests/fixtures/pre-model-voucher-b43569d-price-oracle-state.borsh
+?? contracts/vault/tests/fixtures/pre-model-voucher-b43569d-pyth-state.borsh
+
+Local branches (name | HEAD | upstream | ancestor of current HEAD)
+feat/agent-script|06b1ecf|origin/feat/agent-script|yes
+feat/ai-decision|b43569d|origin/main|yes
+feat/dashboard-attacks|aa6c3cb|origin/feat/dashboard-attacks|yes
+feat/execute-path|32201ee|origin/feat/execute-path|yes
+feat/logo|3bba41d|origin/feat/logo|yes
+feat/mandate-engine|a60c735|origin/feat/mandate-engine|yes
+feat/owner-controls|6d32763|origin/feat/owner-controls|yes
+feat/sr1-execution-window|7a5d2b3|origin/feat/sr1-execution-window|yes
+feat/sr3-gas-by-feeds|bb49b12|origin/feat/sr3-gas-by-feeds|yes
+feat/sr5-set-agent-delay|1414f10||yes
+feat/sr6-withdraw|77ebc0c|origin/feat/sr6-withdraw|yes
+feat/step1-evidence|d467bb0|origin/feat/step1-evidence|yes
+feat/testnet-run|d441519|origin/feat/testnet-run|no
+fix/audit-round-1|bb0b30b|origin/fix/audit-round-1|yes
+main|0539319|origin/main|yes
+spike/r1-mpc-intents|54f49c7|origin/spike/r1-mpc-intents|yes
+
+Worktrees (Git metadata only)
+worktree /Users/ehs4n/mandate-near
+HEAD b43569dbb2bdbd840571157e51d89fe6417ecb8a
+branch refs/heads/feat/ai-decision
+
+worktree /private/var/folders/l_/yq_br9d17qg_hzr5l5mq9zw40000gn/T/testnet-wt
+HEAD d441519547776d67747eef96d65073f1998dfa5a
+branch refs/heads/feat/testnet-run
+prunable gitdir file points to non-existent location
+
+Cleanup proposal is metadata-based only. No branch or worktree has been deleted.
+Do not delete main, feat/ai-decision or any checked-out branch.
+Merged, non-checked-out branches may be candidates only after the user confirms retention and the chosen base.
+The testnet worktree must be preserved until dirty state and ownership are independently reviewed.
+Excluded fixture helper contents have not been inspected.

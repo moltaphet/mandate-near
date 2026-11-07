@@ -6,10 +6,10 @@
 mod common;
 
 use common::{
-    REASON, USDC, WNEAR, World, fund_extra_assets, fund_vault, mandate, now_sec, set_prices, world,
-    world_with_extra,
+    REASON, USDC, WNEAR, World, fund_extra_assets, fund_vault, mandate, now_sec, set_prices, view,
+    world, world_with_extra,
 };
-use near_api::{AccountId, NearGas, NearToken};
+use near_api::{AccountId, Contract, NearGas, NearToken};
 use near_sdk::serde_json::{Value, json};
 
 /// Sends one call and returns its answer and the TGas it burnt.
@@ -55,7 +55,7 @@ async fn gas_per_call() -> testresult::TestResult<()> {
         "asset_out": WNEAR,
         "amount_in": "2000000",
         "min_amount_out": "450000000000000000000000",
-        "reason_hash": REASON,
+        "model_id": "manual-v1", "reason_hash": REASON,
     });
     let (_, burnt) = call(&w, "propose", proposal, &agent, 0).await?;
     record("propose (agent, one trade, 2 assets in mandate)", burnt);
@@ -113,8 +113,9 @@ fn short_reason(debug: &str) -> String {
     quoted.unwrap_or(debug).chars().take(120).collect()
 }
 
-/// `execute` as the number of feeds it reads grows. Every asset is held, so the chain
-/// reads one price feed per asset. Each size runs on its own sandbox, because the mandate
+/// `execute` as the number of feeds it reads grows. Non-traded assets are held;
+/// the traded pair also requires prices, so the chain reads one feed per asset.
+/// Each size runs on its own sandbox, because the mandate
 /// is fixed at deploy. A failure is recorded, not hidden: it is the answer to SR-3.
 #[tokio::test]
 async fn gas_by_feed_count() -> testresult::TestResult<()> {
@@ -134,7 +135,7 @@ async fn gas_by_feed_count() -> testresult::TestResult<()> {
             "asset_out": WNEAR,
             "amount_in": "2000000",
             "min_amount_out": "450000000000000000000000",
-            "reason_hash": REASON,
+            "model_id": "manual-v1", "reason_hash": REASON,
         });
         call(&w, "propose", proposal, &agent, 0).await?;
         match execute_once(&w).await? {
@@ -151,5 +152,106 @@ async fn gas_by_feed_count() -> testresult::TestResult<()> {
             }
         }
     }
+    Ok(())
+}
+
+/// The supported maximum combines twenty held-or-traded assets with eight longest source
+/// IDs. The accepted ID is last and shares a 63-byte prefix with every rejected
+/// ID, exercising the full bounded source lookup on proposal and execution.
+#[tokio::test]
+async fn gas_at_max_assets_and_last_long_source_id() -> testresult::TestResult<()> {
+    let mut w = world_with_extra(18).await?;
+    let mut configured = view(&w.vault, &w.network, "get_mandate", json!({})).await;
+    assert_eq!(configured["assets"].as_array().unwrap().len(), 20);
+    let ids: Vec<String> =
+        (b'a'..=b'h').map(|suffix| format!("{}{}", "x".repeat(63), char::from(suffix))).collect();
+    assert_eq!(ids.len(), 8);
+    assert!(ids.iter().all(|id| id.len() == 64));
+    let last = ids.last().unwrap().clone();
+    configured["allowed_model_ids"] = json!(ids);
+    let externals = view(&w.vault, &w.network, "get_externals", json!({})).await;
+    assert_eq!(externals.as_array().unwrap().len(), 3);
+
+    // Deploy a fresh instance with this policy, preserving the normal 24-hour
+    // update rule instead of changing a pending timer or adding an owner bypass.
+    let sandbox_id: near_sdk::AccountId = "gas-max-source.sandbox".parse()?;
+    w._sandbox.create_account(sandbox_id).initial_balance(NearToken::from_near(10)).send().await?;
+    let vault_id: AccountId = "gas-max-source.sandbox".parse()?;
+    let code = std::fs::read(cargo_near_build::build_with_cli(Default::default())?)?;
+    Contract::deploy(vault_id.clone())
+        .use_code(code)
+        .with_init_call(
+            "new_with_externals",
+            json!({
+                "owner":w.owner, "mandate":configured,
+                "signer":externals[0], "intents":externals[1], "oracle":externals[2]
+            }),
+        )?
+        .with_signer(w.signer.clone())
+        .send_to(&w.network)
+        .await?
+        .assert_success();
+    w.vault = Contract(vault_id);
+    assert_eq!(view(&w.vault, &w.network, "get_mandate", json!({})).await, configured);
+    let (owner, agent, stranger) = (w.owner.clone(), w.agent.clone(), w.stranger.clone());
+    call(&w, "set_agent", json!({"agent":agent}), &owner, 1).await?;
+    assert_eq!(view(&w.vault, &w.network, "get_agent", json!({})).await, json!(agent));
+    // Use the existing raw registration call; no cached identity assumption from
+    // the originally deployed World is used for this fresh instance.
+    call(&w, "register_intents_key", json!({}), &stranger, 0).await?;
+    assert_eq!(view(&w.vault, &w.network, "is_key_registered", json!({})).await, json!(true));
+    fund_vault(&w, 10_000_000).await?;
+    fund_extra_assets(&w, 1_000_000).await?;
+    set_prices(&w, now_sec()).await?;
+    let assets: Vec<Value> = configured["assets"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|asset| asset["asset_id"].clone())
+        .collect();
+    let balances = view(
+        &w.intents,
+        &w.network,
+        "mt_batch_balance_of",
+        json!({
+            "account_id":w.vault.account_id(), "token_ids":assets
+        }),
+    )
+    .await;
+    assert_eq!(balances.as_array().unwrap().len(), 20);
+    assert!(assets.iter().any(|asset| asset.as_str() == Some(WNEAR)));
+    for (asset, balance) in assets.iter().zip(balances.as_array().unwrap()) {
+        if asset.as_str() != Some(WNEAR) {
+            assert!(
+                balance.as_str().unwrap().parse::<u128>().unwrap() > 0,
+                "each non-destination asset must be held: {asset}, {balance}"
+            );
+        }
+    }
+    // WNEAR is the traded destination below, so its price is required even if
+    // its prior balance is zero. Every other asset has a positive holding.
+    call(
+        &w,
+        "propose",
+        json!({
+            "asset_in":USDC, "asset_out":WNEAR,
+            "amount_in":"2000000", "min_amount_out":"450000000000000000000000",
+            "reason_hash":REASON, "model_id":last
+        }),
+        &agent,
+        0,
+    )
+    .await?;
+    let pending = view(&w.vault, &w.network, "get_pending_proposal", json!({})).await;
+    assert_eq!(pending["model_id"], last);
+    let (outcome, burnt) = execute_once(&w)
+        .await?
+        .map_err(|reason| format!("maximum policy execution failed: {reason}"))?;
+    assert!(outcome.get("Executed").is_some(), "{outcome}");
+    assert_eq!(view(&w.vault, &w.network, "is_in_flight", json!({})).await, json!(false));
+    record(
+        "execute, every gate passes, MPC sign (20 relevant held/traded feeds; 8 source IDs of 64 bytes; last ID matched)",
+        burnt,
+    );
     Ok(())
 }

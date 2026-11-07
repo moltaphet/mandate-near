@@ -11,6 +11,10 @@ run, not every later source revision. The recent client/voucher changes need
 final combined release verification.
 **planned** means it is not in the code. **not verified** means the claim rests
 on reading, not on a run.
+The 7 November baseline attempt before this documentation reconciliation exited
+101 after protocol tests hit loopback-socket `PermissionDenied`. Formatting and
+strict Clippy passed before that failure; later provenance targets were not
+reached. Final combined fast and integration verification remain incomplete.
 
 ## Assets
 
@@ -39,6 +43,11 @@ are outside its supported custody path. See T3 and SR-6.
 | `v1.signer` (MPC) | signing only what the vault asks for, under its derivation rules | nothing on the vault's behalf beyond the call |
 | `intents.near` | correct custody ledger, signature verification and atomic settlement | Current deployed code hash, administrator/upgrade controls and applicable audit coverage UNVERIFIED |
 
+The selected owner is a DAO account distinct from the vault. Its governance and
+recovery operations remain to be verified. Pyth is selected conditionally on
+usable fresh feeds, correct units and a reliable updater; those deployment
+conditions remain unverified.
+
 ## Threats
 
 ### T1. Compromised or jailbroken agent proposes harmful trades
@@ -46,15 +55,29 @@ are outside its supported custody path. See T3 and SR-6.
 The agent is the most exposed component: it reads untrusted market data and,
 in the planned design, runs in a TEE with a pinned code hash.
 
-The optional model client can also receive injected instructions in market
-text or the model response. Its decision is strictly parsed and validated; the
+The optional model client receives structured public-chain state, including
+bounded owner-configured feed identifiers. It receives no news commentary,
+previous rationale or arbitrary tool-output message. A hostile model response
+or misleading structured metadata can still influence strategy. Its decision is strictly parsed and validated; the
 rationale is untrusted text and is never executed or used to override trade
 fields or owner rules. Paused/halted readiness prevents inference calls. Local
 preview is advisory: a compromised agent can bypass the client, so the unchanged
 on-chain gates remain the final boundary. A provider/model label alone proves
-no model origin. The offline verifier can check a NEAR AI Cloud signature
-against an address the operator pins, but the pin is only as trustworthy as its
-source; attestation of that key and live signature retrieval are not implemented.
+no model origin. A supplied invalid or unsupported proof stops a model proposal. Required NEAR
+proof retrieval also fails closed. Signature recovery is checked against an
+external public pin, whose source remains a trust assumption; hardware
+attestation and live provider compatibility are unverified. Unsigned generic
+responses remain UNVERIFIED. The offline verifier recomputes raw wire hashes,
+the canonical commitment and exact decision binding; it authenticates no chain
+or settlement.
+
+The contract also enforces a declared source allowlist at proposal and execution.
+Owner additions wait 24 hours; removals apply immediately. Migrated active and
+queued mandates deny all sources until a delayed owner addition, including
+manual/rebalance sources. The agent can lie about an allowed ID, so this policy
+does not prove the origin of a model response. Canonical record verification
+links the captured response and exact trade tuple; external pinned signature
+verification has the separate, explicitly limited provenance meaning above.
 
 **Mechanism.** Every proposal is checked on-chain at execution against the
 mandate: asset allowlist, per-trade size, UTC-day turnover, slippage against
@@ -127,17 +150,17 @@ unverified.
   delay, so the funds leave. This is the main residual risk for real funds.
 - The owner can tighten a mandate to a point that stops all trading. That is a
   liveness loss, not a theft.
-- **Accepted residual (F26): a stuck withdrawal guard.** If the final callback of
-  a withdrawal is lost or malformed after Intents has debited, the guard stays
-  set. Missing, failed or inconsistent proof keeps it set by design, and while it
-  is set, new withdrawals and trades are refused. The vault does not release it
-  on elapsed time or on a larger balance, and no owner override exists. It clears
-  only through the authenticated recovery described in the README. This path
-  takes no funds, but availability can be lost until the proof resolves. The
-  receipt-loss fault has not been reproduced on a live chain. The project owner
-  accepted this for the hackathon scope.
-- Recommended before real funds: a DAO or multisig as owner. The DAO test is
-  planned, not built.
+- **Accepted residual (F26): a stuck withdrawal guard.** A withdrawal may already
+  have been dispatched or debited when its final callback is lost or malformed.
+  Missing, failed or inconsistent proof retains the guard, blocking new
+  withdrawals and trades. Elapsed time, a larger balance and owner authority
+  cannot override it. Retaining the guard initiates no additional transfer;
+  the original withdrawal may already have moved funds. Availability can be
+  lost until authenticated proof resolves it. This receipt-loss fault has not
+  been reproduced on a live chain. The project owner accepted this residual
+  for the hackathon scope.
+- The selected DAO owner's vote, execution, cancellation and recovery tests
+  remain required before real funds.
 
 ### T4. Strike griefing by a stranger
 
@@ -336,11 +359,14 @@ compare its hash.
 - `new_with_externals` lets the deployer choose the signer, intents and oracle
   accounts. Users must check `get_externals` before trusting a deployment.
 - Changed Borsh state requires private atomic migration or fresh deployment.
-  Exactly four historical layouts are recognized: `77ebc0c` pre-sequence,
+  Exactly five historical layouts are recognized: `77ebc0c` pre-sequence,
   `0de5c48` sequence-enabled, pre-provider remediation and provider-enabled
-  pre-voucher. All require paused/quiescent state and a distinct owner; an
+  pre-voucher, plus voucher-enabled pre-source-admission at `b43569d`.
+  Migrated active and queued lists deny all declared sources until a new delayed
+  owner addition. All require paused/quiescent state and a distinct owner; an
   active withdrawal guard is never discarded. The provider-enabled layout
-  preserves its adapter. Old unrecorded sends require external final-receipt
+  and voucher-enabled layouts preserve their adapter. Unresolved voucher stage
+  or retry authorization also blocks migration. Old unrecorded sends require external final-receipt
   history; deploying new WASM alone is not migration or recovery.
 - A voucher-capable vault name is limited to 62 bytes. Verify absence and inert
   authority for both `s.<vault>` and `c.<vault>`, then seal every bypass-capable

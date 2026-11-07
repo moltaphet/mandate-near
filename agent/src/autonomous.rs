@@ -13,6 +13,7 @@ use near_sdk::json_types::{U64, U128};
 use near_sdk::serde_json::{Value, json};
 use serde::{Deserialize, Serialize};
 
+use crate::decision::REBALANCE_SOURCE_ID;
 use crate::relay::{ProposalBinding, Quote, Relay};
 use crate::transport::PublicReader;
 use crate::{AgentError, Plan};
@@ -224,6 +225,9 @@ pub fn choose(config: &AutonomousConfig, snapshot: &Snapshot) -> Result<Candidat
         return Err(reason.clone().into());
     }
     let mandate = &snapshot.mandate;
+    if !mandate.allows_model_id(REBALANCE_SOURCE_ID) {
+        return Err("the rebalance decision source is not allowed".into());
+    }
     if mandate.assets.len() != 2
         || mandate.asset(&config.asset_a).is_none()
         || mandate.asset(&config.asset_b).is_none()

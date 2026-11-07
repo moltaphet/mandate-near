@@ -1,4 +1,20 @@
-# Execute gas by feed count, local NEAR sandbox, 2026-11-04
+# Final-source checkpoint, 2026-11-07: new gas measurements UNVERIFIED.
+# Fast checks (scripts/verify.sh) passed outside the sandbox after the model-name fix:
+# docs/evidence/phase0-9-2026-11-07/final-fast-outside-sandbox-after-model-name-fix.txt
+# The integration suite and the gas measurements below have not been run on this tree.
+# The current tests cover 16/20 relevant held-or-traded feeds and an additional
+# 20-feed, 8-source-ID, 64-byte, last-ID-match case. Pyth also has a 20-feed batch test.
+# Their final runtime is not verified: automatic approval review failed with
+# content-blocked / agent_router_api_error before local sandbox execution.
+# The default verify.sh --integration exited 101 on loopback permission failures
+# before reaching the sandbox/gas stage. That is not a gas-test failure or pass.
+# Run ./scripts/gas-report.sh after full integration; it retains the complete raw
+# log and returns the test exit status. Refresh this record from that output.
+# Current host-built WASM: 391671 bytes, SHA256
+# 5266d033e30c6311d10f92d494b1cb456471daace03124342d24ededbff70f6f
+# No historical value below is a measurement of that artifact.
+#
+# HISTORICAL execute gas by feed count, local NEAR sandbox, 2026-11-04
 # One feed per asset: every asset is held, so the execute chain reads each price feed.
 # Total assets are wNEAR, USDC and the extras. 22 passed on this run; 24 and 32 failed with 'Exceeded the prepaid gas'.
 # MAX_ASSETS was then set to 20, two below the largest size that passed. A mandate above it is refused at deploy.

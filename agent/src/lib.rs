@@ -5,8 +5,8 @@
 //! mandate, including economically harmful trades that still pass the gates.
 //! A permissionless keeper runs `execute`; the vault constructs the signed bytes.
 //!
-//! The reasoning stays off chain. Only its SHA-256 goes into the proposal, so
-//! anyone holding the rationale text can check it against the on-chain hash.
+//! Decision evidence stays off chain. Manual/rebalance proposals commit to the
+//! rationale; model proposals commit to the canonical captured response envelope.
 
 use std::error::Error;
 use std::sync::Arc;
@@ -34,10 +34,10 @@ pub struct Plan {
     pub asset_out: String,
     pub amount_in: U128,
     pub min_amount_out: U128,
-    /// The agent's reasoning, in plain text. Only its hash is sent on chain.
+    /// Untrusted reasoning text. Manual/rebalance paths hash this UTF-8 text.
     pub rationale: String,
-    /// Set only by the model path: the SHA-256 of the exact response bytes received from
-    /// the provider. Skipped in both directions, so a plan file can never choose it.
+    /// Set by the model path to SHA-256 of `mandate-response-json-v1` canonical
+    /// response bytes. Skipped in both directions; public plan files cannot set it.
     #[serde(skip)]
     pub response_commitment: Option<String>,
 }
@@ -60,7 +60,7 @@ impl Plan {
     }
 
     /// The value the vault stores, as 64 hex characters. For a model decision this is the
-    /// SHA-256 of the exact response bytes; otherwise the SHA-256 of the rationale.
+    /// SHA-256 of the canonical response bytes; otherwise SHA-256 of the rationale.
     pub fn reason_hash(&self) -> String {
         if let Some(commitment) = &self.response_commitment {
             return commitment.clone();
@@ -115,8 +115,18 @@ pub struct Agent {
 impl Agent {
     /// Submits the plan, if the vault is open for a new proposal. Returns the proposal id.
     pub async fn propose(&self, plan: &Plan) -> Result<u64, AgentError> {
+        self.propose_from_source(plan, decision::MANUAL_SOURCE_ID).await
+    }
+
+    /// The ID is a declared source label, not cryptographic model-origin proof.
+    /// Legacy callers use `propose`; model/rebalance paths supply their source.
+    pub async fn propose_from_source(
+        &self,
+        plan: &Plan,
+        model_id: &str,
+    ) -> Result<u64, AgentError> {
         plan.validate()?;
-        self.check_open().await?;
+        self.check_open(model_id).await?;
         let id: U64 = Contract(self.vault.clone())
             .call_function(
                 "propose",
@@ -126,6 +136,7 @@ impl Agent {
                     "amount_in": plan.amount_in,
                     "min_amount_out": plan.min_amount_out,
                     "reason_hash": plan.reason_hash(),
+                    "model_id": model_id,
                 }),
             )
             .transaction()
@@ -163,13 +174,16 @@ impl Agent {
     }
 
     /// Asks the vault the questions it would answer `no` to, so the agent can say why first.
-    async fn check_open(&self) -> Result<(), AgentError> {
+    async fn check_open(&self, model_id: &str) -> Result<(), AgentError> {
         if self.read::<Option<String>>("get_agent").await?.as_deref() != Some(self.account.as_str())
         {
             return Err("this account is not the configured vault agent".into());
         }
         if !self.read::<bool>("is_key_registered").await? {
             return Err("vault signing identity is not registered".into());
+        }
+        if !self.read::<mandate_vault::Mandate>("get_mandate").await?.allows_model_id(model_id) {
+            return Err("the declared model id is not allowed".into());
         }
         if self.read::<bool>("is_paused").await? {
             return Err("the vault is paused".into());

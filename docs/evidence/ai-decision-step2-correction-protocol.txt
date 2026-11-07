@@ -1,0 +1,20 @@
+$ cargo test --offline -p mandate-agent --test protocol -- --test-threads=1
+   Compiling mandate-agent v0.1.0 (/Users/ehs4n/mandate-near/agent)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.72s
+     Running tests/protocol.rs (target/debug/deps/protocol-e84d827502084165)
+
+running 8 tests
+test dry_run_binary_prepares_from_public_data_with_empty_account_environment ... ok
+test final_views_are_pinned_and_wrong_height_network_or_hash_is_refused ... ok
+test larger_evidence_files_keep_default_limits_and_prohibited_path_guards ... ok
+test malformed_expired_and_mismatched_quotes_never_get_selected ... ok
+test oversized_error_and_mismatched_rpc_envelopes_fail_without_echoing_data ... ok
+test prohibited_public_paths_are_refused_before_file_open ... ok
+test publication_association_rejects_wrong_ids_amounts_hashes_curves_and_deadlines ... ok
+test quote_publish_and_status_use_documented_protocol_and_do_not_invent_settlement ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.89s
+
+
+EXIT STATUS: 0
+

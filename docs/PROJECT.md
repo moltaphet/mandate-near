@@ -16,7 +16,7 @@ recovery evidence remain OPEN. See [OPERATIONAL-READINESS.md](OPERATIONAL-READIN
 
 ## 1. One sentence
 
-Mandate is an on-chain policy layer for NEAR agents: a vault that authorizes trade signatures against owner-defined rules, with a separate delayed owner withdrawal path. The Rust reference agent accepts manual plans or deterministically rebalances two assets from holdings, oracle values and quotes. TEE and model inference are planned. Permitted trades can still lose money, and custody depends on the sealed deployment, NEAR Intents and MPC trust assumptions.
+Mandate is an on-chain policy layer for NEAR agents: a vault that authorizes trade signatures against owner-defined rules, with a separate delayed owner withdrawal path. The Rust reference agent accepts manual plans, deterministically rebalances two assets, or validates a configured model decision against a public snapshot. TEE execution and live model provenance remain unverified. Permitted trades can still lose money, and custody depends on the sealed deployment, NEAR Intents and MPC trust assumptions.
 
 ## 2. Problem
 
@@ -41,7 +41,7 @@ In scope:
 - Signing through NEAR Chain Signatures (`v1.signer`, Ed25519) for the vault's own NEAR Intents account.
 - Settlement through NEAR Intents `token_diff` intents with V1 expirable nonces.
 - A stable contract interface and reference Rust clients; a separate SDK is planned.
-- Manual-plan and deterministic two-asset Rust agents; an OutLayer-hosted agent and inference are planned.
+- Manual-plan, deterministic two-asset and optional strict model Rust decision sources; OutLayer execution and live provider provenance remain unverified.
 - A permissionless Rust keeper with execution/public outbox by default and explicit quote-bound Message Bus publication.
 - `simulate_mandate_change` for rule changes; the pure engine can evaluate trades locally. A general on-chain trade-simulation view is not implemented.
 - A 24-hour delay on mandate changes that loosen limits.
@@ -246,9 +246,12 @@ current `mt_supply` is not lifetime issuance.
 
 Upgrading an existing Borsh state requires the private `migrate` method for a
 known legacy layout, called by the vault account in an authorized deployment
-transaction. Exactly four layouts are supported: `77ebc0c` pre-sequence,
+transaction. Exactly five layouts are supported: `77ebc0c` pre-sequence,
 `0de5c48` sequence-enabled, pre-provider remediation and provider-enabled
-pre-voucher. The last preserves its provider. Owner must be distinct, the vault
+pre-voucher, and voucher-enabled pre-source-admission at `b43569d`. The last two
+preserve their provider. Active and queued source lists migrate empty, including
+reserved manual/rebalance IDs; first admission requires a new 24-hour delay.
+Unresolved voucher stage or retry authorization also blocks migration. Owner must be distinct, the vault
 paused, no execution/pending proposal/queued withdrawal/active withdrawal guard
 present, and signed deadlines expired. Queued mandate/agent controls are preserved;
 mandates are revalidated. An active guard is never discarded. Legacy state cannot prove no withdrawal was
@@ -292,6 +295,12 @@ The contract must not assume the owner is an individual. [PLANNED: one sandbox t
 - Quotes must exceed configured validity, whose minimum is 450 seconds. Every gate is previewed with the shared engine; a fresh snapshot repeats readiness/strategy/gates before proposal. On-chain state races remain subject to authoritative vault checks.
 - Executing mode writes public quote/proposal/vault/verifier/exact-amount metadata for later explicit keeper publication. `--loop` repeats after completed decisions with a 30-second pause; errors can terminate the process. Live strategy and relay operation remain unverified.
 - Existing manual-client tests: `contracts/vault/tests/agent.rs`. Historical testnet: proposal reached the vault, execution refused without a registered identity ([TESTNET.md](TESTNET.md)). See current [agent usage](../agent/examples/README.md).
+
+### 12.3 Optional model decision source [IMPLEMENTED LOCALLY; live provider unverified]
+- `--model` reads a bounded final-block public snapshot and accepts the strict seven-field output. Its dry-run calls the configured model provider with authentication but sends no NEAR transaction; the autonomous dry-run rule above applies to `--auto`.
+- The model path commits to `mandate-response-json-v1` canonical response bytes while retaining distinct raw request/response hashes for provenance. Manual/rebalance paths preserve `SHA256(rationale UTF-8)`.
+- The contract stores the declared `model_id` in the proposal and enforces `allowed_model_ids` at proposal and execution. The list allows at most 8 unique nonblank IDs of at most 64 UTF-8 bytes; empty denies all. Additions wait 24 hours, removals apply immediately. Reserved non-model IDs are `manual-v1` and `rebalance-v1`.
+- Invalid or unsupported supplied signatures refuse a model trade before proposal. Unsigned records remain UNVERIFIED. Declared IDs and pinned signer verification do not prove authenticated model origin or TEE identity. Native checks pass; final sandbox/gas and live provider evidence remain required.
 
 Acceptance for both: each agent makes the same proposals through the same SDK, and the vault treats them identically.
 
@@ -392,7 +401,7 @@ Gates that must pass or the scope is cut:
 ## 21. Hackathon fit
 
 - **Track:** AI Security & Defense (primary). Also Agent Economy, Autonomous Business, and Unstoppable DeFi where the trade flow applies.
-- **Chain use:** NEAR Intents and Chain Signatures wiring (sandbox), mainnet signature simulations, and NEP-330 metadata. OutLayer and optional private NEAR AI inference are planned.
+- **Chain use:** NEAR Intents and Chain Signatures wiring (sandbox), historical mainnet signature simulations, and NEP-330 metadata. Optional model decisions are implemented locally; OutLayer and private live inference remain unverified.
 - **Eligibility:** verify the organizer's official window, publication and submission requirements. Development began 2026-10-31; eligibility is not established by that date alone.
 - **Disclosure:** development is AI-assisted; live and simulated evidence are labelled separately.
 
@@ -411,7 +420,7 @@ superior security claim follows from these short descriptions.
 ## 23. Open decisions
 
 - **Loosening delay:** 24 hours is implemented (`MANDATE_DELAY_SEC`); changing it requires a contract change.
-- **Strategy:** deterministic two-asset target/band rebalancing is implemented. Model-driven regimes and TEE operation remain optional planned work; strategy parameters and live operation need owner selection and evidence.
+- **Strategy:** deterministic two-asset target/band rebalancing and optional strict model decisions are implemented locally. TEE execution, provider provenance, selected strategy parameters and live operation still need evidence.
 - **Funding:** mainnet account and a small amount, to be funded by the owner.
 - **Solver key:** partner approval pending.
 - **SHIELD key:** partner approval pending.

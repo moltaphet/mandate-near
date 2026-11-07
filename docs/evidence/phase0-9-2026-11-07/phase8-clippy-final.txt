@@ -1,0 +1,2 @@
+    Checking mandate-vault v0.1.0 (/Users/ehs4n/mandate-near/contracts/vault)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.89s

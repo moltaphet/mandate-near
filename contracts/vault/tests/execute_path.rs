@@ -101,7 +101,7 @@ async fn an_unfunded_vault_is_rejected_and_three_strikes_halt_the_vault()
                 "asset_out": WNEAR,
                 "amount_in": AMOUNT_IN,
                 "min_amount_out": MIN_OUT,
-                "reason_hash": REASON,
+                "model_id": "manual-v1", "reason_hash": REASON,
             }),
         )
         .transaction()
@@ -247,7 +247,7 @@ async fn a_signed_intent_blocks_the_next_proposal() -> testresult::TestResult<()
                 "asset_out": WNEAR,
                 "amount_in": AMOUNT_IN,
                 "min_amount_out": MIN_OUT,
-                "reason_hash": REASON,
+                "model_id": "manual-v1", "reason_hash": REASON,
             }),
         )
         .transaction()

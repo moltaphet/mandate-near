@@ -20,8 +20,8 @@ chrono.workspace = true
 bs58 = "0.5"
 # NEAR AI Cloud signatures are ECDSA over secp256k1 with Ethereum-style message hashing.
 # Both crates are already in Cargo.lock at these versions; this only makes them direct.
-secp256k1 = { version = "0.27", features = ["recovery"] }
-sha3 = "0.10"
+secp256k1 = { version = "=0.27.0", default-features = false, features = ["std", "recovery"] }
+sha3 = "=0.10.9"
 
 [lints]
 workspace = true

@@ -148,8 +148,14 @@ pub fn create_public_dir(path: &Path) -> Result<std::path::PathBuf, AgentError> 
 }
 
 pub fn write_public(path: &Path, bytes: &[u8]) -> Result<(), AgentError> {
+    write_public_bounded(path, bytes, MAX_PUBLIC_FILE_BYTES)
+}
+
+/// Public evidence may contain several escaped wire bodies. Other callers keep
+/// the original 64 KiB bound; no caller may lift the maximum beyond one MiB.
+pub fn write_public_bounded(path: &Path, bytes: &[u8], max_bytes: usize) -> Result<(), AgentError> {
     validate_public_path(path)?;
-    if bytes.len() > MAX_PUBLIC_FILE_BYTES {
+    if max_bytes == 0 || max_bytes > 1024 * 1024 || bytes.len() > max_bytes {
         return Err("public output exceeds size limit".into());
     }
     if std::fs::symlink_metadata(path).is_ok_and(|metadata| metadata.file_type().is_symlink()) {
@@ -162,19 +168,28 @@ pub fn write_public(path: &Path, bytes: &[u8]) -> Result<(), AgentError> {
 }
 
 pub fn read_public_json<T: DeserializeOwned>(path: &Path) -> Result<T, AgentError> {
+    near_sdk::serde_json::from_slice(&read_public_bytes(path, MAX_PUBLIC_FILE_BYTES)?)
+        .map_err(|_| "public file has invalid JSON".into())
+}
+
+/// Read only an explicitly bounded, allowed public file after resolving its path.
+pub fn read_public_bytes(path: &Path, max_bytes: usize) -> Result<Vec<u8>, AgentError> {
     use std::io::Read;
     validate_public_path(path)?;
+    if max_bytes == 0 || max_bytes > 1024 * 1024 {
+        return Err("invalid public file size limit".into());
+    }
     let resolved = path.canonicalize().map_err(|_| "public file is unavailable")?;
     validate_public_path(&resolved)?;
     let file = std::fs::File::open(&resolved).map_err(|_| "public file could not be opened")?;
     let mut bytes = Vec::new();
-    file.take((MAX_PUBLIC_FILE_BYTES + 1) as u64)
+    file.take((max_bytes + 1) as u64)
         .read_to_end(&mut bytes)
         .map_err(|_| "public file could not be read")?;
-    if bytes.len() > MAX_PUBLIC_FILE_BYTES {
+    if bytes.len() > max_bytes {
         return Err("public file exceeds size limit".into());
     }
-    near_sdk::serde_json::from_slice(&bytes).map_err(|_| "public file has invalid JSON".into())
+    Ok(bytes)
 }
 
 #[derive(Clone)]

@@ -190,6 +190,39 @@ async fn oversized_error_and_mismatched_rpc_envelopes_fail_without_echoing_data(
 }
 
 #[test]
+fn larger_evidence_files_keep_default_limits_and_prohibited_path_guards() {
+    use mandate_agent::transport::{read_public_bytes, write_public, write_public_bounded};
+    let dir = std::env::temp_dir().join(format!("mandate-bounded-fixture-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let path = dir.join("evidence-public.json");
+    let bytes = vec![b' '; 70 * 1024];
+    assert_eq!(
+        write_public(&path, &bytes).unwrap_err().to_string(),
+        "public output exceeds size limit"
+    );
+    write_public_bounded(&path, &bytes, 1024 * 1024).unwrap();
+    assert_eq!(read_public_bytes(&path, 1024 * 1024).unwrap(), bytes);
+    assert_eq!(
+        read_public_json::<Value>(&path).unwrap_err().to_string(),
+        "public file exceeds size limit"
+    );
+    assert_eq!(
+        read_public_bytes(&path, 1024 * 1024 + 1).unwrap_err().to_string(),
+        "invalid public file size limit"
+    );
+    assert_eq!(
+        write_public_bounded(&path, &[], 1024 * 1024 + 1).unwrap_err().to_string(),
+        "public output exceeds size limit"
+    );
+    // This path need not exist: validation must refuse it before opening a file.
+    assert_eq!(
+        read_public_bytes(Path::new(".env"), 1024 * 1024).unwrap_err().to_string(),
+        "refused prohibited public-file path"
+    );
+    std::fs::remove_dir_all(dir).unwrap();
+}
+
+#[test]
 fn prohibited_public_paths_are_refused_before_file_open() {
     for path in [
         ".env",
@@ -215,6 +248,10 @@ fn prohibited_public_paths_are_refused_before_file_open() {
 }
 
 pub fn public_view(request: Value) -> Value {
+    public_view_with_sources(request, &["manual-v1", "rebalance-v1", "fixture-model"])
+}
+
+fn public_view_with_sources(request: Value, allowed_model_ids: &[&str]) -> Value {
     if request["method"] == "status" {
         return result(json!({"chain_id":"fixture"}));
     }
@@ -240,7 +277,8 @@ pub fn public_view(request: Value) -> Value {
         "get_mandate" => {
             json!({"assets":[{"asset_id":A,"decimals":6,"price_feed_id":"usd.near"},{"asset_id":B,"decimals":24,"price_feed_id":"wrap.near"}],
             "stable_assets":[A],"max_trade_usd":"20000000","max_daily_turnover_usd":"200000000","max_position_bps":6000,
-            "max_slippage_bps":100,"max_drawdown_bps":1000,"min_trade_interval_sec":60,"max_price_age_sec":60})
+            "max_slippage_bps":100,"max_drawdown_bps":1000,"min_trade_interval_sec":60,"max_price_age_sec":60,
+            "allowed_model_ids":allowed_model_ids})
         }
         "mt_batch_balance_of" => json!(["100000000", "10000000000000000000000000"]),
         "get_price_data" => {
@@ -256,6 +294,41 @@ pub fn public_view(request: Value) -> Value {
     result(
         json!({"block_hash":block(),"block_height":25,"result":near_sdk::serde_json::to_vec(&value).unwrap()}),
     )
+}
+
+#[tokio::test]
+async fn denied_rebalance_source_makes_public_reads_and_zero_quote_requests() {
+    use mandate_agent::autonomous::{AutonomousConfig, Preparation, prepare};
+    for allowed in [Vec::new(), vec!["manual-v1", "fixture-model"], vec!["unknown-model"]] {
+        let mock = server(move |request| public_view_with_sources(request, &allowed)).await;
+        let config = AutonomousConfig {
+            rpc_url: mock.url.clone(),
+            expected_chain_id: Some("fixture".into()),
+            vault_id: "vault.near".into(),
+            relay_url: mock.url.clone(),
+            asset_a: A.into(),
+            asset_b: B.into(),
+            target_a_bps: 5000,
+            band_bps: 100,
+            minimum_quote_validity_sec: 450,
+            legacy_price_oracle: false,
+        };
+        let Preparation::NoTrade { reason } =
+            prepare(&config, &Relay::new(&mock.url, None).unwrap()).await.unwrap()
+        else {
+            panic!("denied source must never request a trade quote")
+        };
+        assert_eq!(reason, "the rebalance decision source is not allowed");
+        let requests = mock.requests.lock().unwrap();
+        assert!(
+            requests
+                .iter()
+                .all(|request| request["method"] == "query" || request["method"] == "status")
+        );
+        assert_eq!(requests.iter().filter(|request| request["method"] == "quote").count(), 0);
+        drop(requests);
+        mock.task.abort();
+    }
 }
 
 #[tokio::test]

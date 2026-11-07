@@ -1,0 +1,172 @@
+TAP version 13
+# Subtest: atomic final-block snapshot pins every subsequent vault and ledger read
+ok 1 - atomic final-block snapshot pins every subsequent vault and ledger read
+  ---
+  duration_ms: 38.217833
+  type: 'test'
+  ...
+# Subtest: wrong network stops before querying the account
+ok 2 - wrong network stops before querying the account
+  ---
+  duration_ms: 0.410042
+  type: 'test'
+  ...
+# Subtest: wrong code identity stops before reading vault views
+ok 3 - wrong code identity stops before reading vault views
+  ---
+  duration_ms: 0.410375
+  type: 'test'
+  ...
+# Subtest: missing expected code never implies verified identity
+ok 4 - missing expected code never implies verified identity
+  ---
+  duration_ms: 4.141291
+  type: 'test'
+  ...
+# Subtest: oracle provider is observed explicitly and only supported names are accepted
+ok 5 - oracle provider is observed explicitly and only supported names are accepted
+  ---
+  duration_ms: 15.072542
+  type: 'test'
+  ...
+# Subtest: an undeployed account is rejected
+ok 6 - an undeployed account is rejected
+  ---
+  duration_ms: 0.321
+  type: 'test'
+  ...
+# Subtest: a mixed-block view is not combined with the snapshot
+ok 7 - a mixed-block view is not combined with the snapshot
+  ---
+  duration_ms: 1.398917
+  type: 'test'
+  ...
+# Subtest: account metadata and ledger must have the same block height as the anchor
+ok 8 - account metadata and ledger must have the same block height as the anchor
+  ---
+  duration_ms: 1.071708
+  type: 'test'
+  ...
+# Subtest: one failed member invalidates the whole read, never producing partial balances
+ok 9 - one failed member invalidates the whole read, never producing partial balances
+  ---
+  duration_ms: 1.151959
+  type: 'test'
+  ...
+# Subtest: large token values format exactly across 6, 24 and 30 decimals
+ok 10 - large token values format exactly across 6, 24 and 30 decimals
+  ---
+  duration_ms: 0.423125
+  type: 'test'
+  ...
+# Subtest: deadline equality is expired, not open
+ok 11 - deadline equality is expired, not open
+  ---
+  duration_ms: 0.128208
+  type: 'test'
+  ...
+# Subtest: unknown latest history never invents rejection or settlement
+ok 12 - unknown latest history never invents rejection or settlement
+  ---
+  duration_ms: 1.219833
+  type: 'test'
+  ...
+# Subtest: signatures and debit observations remain distinct from settlement and delivery
+ok 13 - signatures and debit observations remain distinct from settlement and delivery
+  ---
+  duration_ms: 1.634334
+  type: 'test'
+  ...
+# Subtest: untrusted RPC strings are literal text and never become markup
+ok 14 - untrusted RPC strings are literal text and never become markup
+  ---
+  duration_ms: 1.220458
+  type: 'test'
+  ...
+# Subtest: declared-source observations distinguish legacy, empty and removed sources
+ok 15 - declared-source observations distinguish legacy, empty and removed sources
+  ---
+  duration_ms: 2.740209
+  type: 'test'
+  ...
+# Subtest: source identifiers use UTF-8 byte bounds and render as literal declarations
+ok 16 - source identifiers use UTF-8 byte bounds and render as literal declarations
+  ---
+  duration_ms: 6.465417
+  type: 'test'
+  ...
+# Subtest: schema refuses malformed balances, unsafe numbers and incoherent outcomes
+ok 17 - schema refuses malformed balances, unsafe numbers and incoherent outcomes
+  ---
+  duration_ms: 8.200625
+  type: 'test'
+  ...
+# Subtest: queued rules are shown separately and do not replace current rules
+ok 18 - queued rules are shown separately and do not replace current rules
+  ---
+  duration_ms: 1.111917
+  type: 'test'
+  ...
+# Subtest: withdrawal phase uses recorded baseline; maturity equality does not bypass guards
+ok 19 - withdrawal phase uses recorded baseline; maturity equality does not bypass guards
+  ---
+  duration_ms: 2.500958
+  type: 'test'
+  ...
+# Subtest: incoherent receipt phase, authority or sink observations are refused
+ok 20 - incoherent receipt phase, authority or sink observations are refused
+  ---
+  duration_ms: 3.875209
+  type: 'test'
+  ...
+# Subtest: a safely requeued withdrawal shows that owner authorization is still required
+ok 21 - a safely requeued withdrawal shows that owner authorization is still required
+  ---
+  duration_ms: 1.277166
+  type: 'test'
+  ...
+# Subtest: account, RPC and receipt links reject executable URLs, credentials and wrong explorers
+ok 22 - account, RPC and receipt links reject executable URLs, credentials and wrong explorers
+  ---
+  duration_ms: 0.348209
+  type: 'test'
+  ...
+# Subtest: receipt references are links with no settlement inference
+ok 23 - receipt references are links with no settlement inference
+  ---
+  duration_ms: 1.472042
+  type: 'test'
+  ...
+# Subtest: RPC transport rejects invalid envelopes, malformed bytes and oversized responses
+ok 24 - RPC transport rejects invalid envelopes, malformed bytes and oversized responses
+  ---
+  duration_ms: 0.727333
+  type: 'test'
+  ...
+# Subtest: timeout aborts the RPC and no snapshot is accepted
+ok 25 - timeout aborts the RPC and no snapshot is accepted
+  ---
+  duration_ms: 4.615209
+  type: 'test'
+  ...
+# Subtest: read-only client cannot request mutation or account access-key lists
+ok 26 - read-only client cannot request mutation or account access-key lists
+  ---
+  duration_ms: 0.171542
+  type: 'test'
+  ...
+# Subtest: out-of-order responses and cancelled reads never replace newer state
+ok 27 - out-of-order responses and cancelled reads never replace newer state
+  ---
+  duration_ms: 0.217209
+  type: 'test'
+  ...
+1..27
+# tests 27
+# suites 0
+# pass 27
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 204.772459

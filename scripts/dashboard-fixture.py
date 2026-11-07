@@ -15,7 +15,8 @@ ASSETS = [
 RULES = {"assets": ASSETS, "stable_assets": ["nep141:usdc.near"],
          "max_trade_usd": "50000000", "max_daily_turnover_usd": "200000000",
          "max_position_bps": 6000, "max_slippage_bps": 100, "max_drawdown_bps": 1500,
-         "min_trade_interval_sec": 300, "max_price_age_sec": 60}
+         "min_trade_interval_sec": 300, "max_price_age_sec": 60,
+         "allowed_model_ids": ["manual-v1", "fixture-model"]}
 REQUEST = {"asset_id": "nep141:usdc.near", "receiver": "owner.near", "amount": "20000000",
            "effective_sec": NOW - 600}
 VIEWS = {

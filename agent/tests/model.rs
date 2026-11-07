@@ -11,8 +11,10 @@ use mandate_agent::autonomous::{self, AutonomousConfig, Snapshot};
 use mandate_agent::decision::{Decision, DecisionSource, ManualDecision, RebalanceDecision};
 use mandate_agent::model::{
     ChatClient, ChatFailure, ChatResponse, MAX_CHAT_RESPONSE_BYTES, ModelDecision,
-    compact_snapshot, response_contains_marker,
+    VerificationPolicy, compact_snapshot, extract_decision, optional_model_setting,
+    response_contains_marker, sha256_hex, signature_lookup_url, validate_public_request_body,
 };
+use mandate_agent::provenance::{VerificationStatus, canonical_response_hash, verify_response};
 use mandate_agent::relay::Relay;
 use mandate_vault::engine::{Market, TradingState};
 use mandate_vault::math::Price;
@@ -40,6 +42,11 @@ fn snapshot() -> Snapshot {
             max_drawdown_bps: 1000,
             min_trade_interval_sec: 60,
             max_price_age_sec: 120,
+            allowed_model_ids: vec![
+                "manual-v1".into(),
+                "rebalance-v1".into(),
+                "fixture-model".into(),
+            ],
         },
         trading: TradingState {
             last_trade_at_sec: None,
@@ -85,25 +92,30 @@ fn response(content: &str) -> ChatResponse {
             "attestation":{"status":"fixture-unverified"}
         }))
         .unwrap(),
-        FIXTURE_REQUEST_SHA256.into(),
+        FIXTURE_REQUEST_BODY.into(),
     )
     .unwrap()
 }
 
-/// A fixed, well-formed request hash for fixtures that do not send a real request.
-const FIXTURE_REQUEST_SHA256: &str =
-    "0000000000000000000000000000000000000000000000000000000000000001";
+/// Exact public request bytes; these fixtures never send this request.
+const FIXTURE_REQUEST_BODY: &str = r#"{"model":"fixture-model","messages":[{"role":"user","content":"Public fixture snapshot."}]}"#;
 
 #[derive(Clone)]
 struct FakeClient {
     answer: Result<ChatResponse, ChatFailure>,
     calls: Arc<AtomicUsize>,
     prompts: Arc<Mutex<Vec<String>>>,
+    policy: VerificationPolicy,
 }
 
 impl FakeClient {
     fn answer(answer: Result<ChatResponse, ChatFailure>) -> Self {
-        Self { answer, calls: Arc::new(AtomicUsize::new(0)), prompts: Arc::new(Mutex::new(vec![])) }
+        Self {
+            answer,
+            calls: Arc::new(AtomicUsize::new(0)),
+            prompts: Arc::new(Mutex::new(vec![])),
+            policy: VerificationPolicy::default(),
+        }
     }
 
     fn content(content: &str) -> Self {
@@ -113,9 +125,20 @@ impl FakeClient {
     fn calls(&self) -> usize {
         self.calls.load(Ordering::SeqCst)
     }
+
+    fn with_policy(mut self, policy: VerificationPolicy) -> Self {
+        self.policy = policy;
+        self
+    }
 }
 
 impl ChatClient for FakeClient {
+    fn requested_model(&self) -> &str {
+        "fixture-model"
+    }
+    fn verification_policy(&self) -> VerificationPolicy {
+        self.policy.clone()
+    }
     async fn complete(&self, prompt: String) -> Result<ChatResponse, ChatFailure> {
         self.calls.fetch_add(1, Ordering::SeqCst);
         self.prompts.lock().unwrap().push(prompt);
@@ -150,6 +173,11 @@ async fn valid_model_json_preserves_exact_plan_and_raw_unverified_response() {
     assert_eq!(captured.model, "fixture-model");
     assert_eq!(captured.raw_body, wire);
     assert_eq!(captured.content, content);
+    assert_eq!(captured.request_body, FIXTURE_REQUEST_BODY);
+    assert_eq!(captured.request_sha256, sha256_hex(FIXTURE_REQUEST_BODY.as_bytes()));
+    assert_eq!(captured.response_sha256, sha256_hex(wire.as_bytes()));
+    assert_eq!(plan.reason_hash(), canonical_response_hash(&wire).unwrap());
+    assert_eq!(verify_response(&captured, None, false).unwrap(), VerificationStatus::Unverified);
     assert_eq!(fake.calls(), 1);
 }
 
@@ -368,7 +396,10 @@ async fn timeout_http_failure_and_missing_configuration_produce_no_trade() {
         ChatFailure::HttpStatus(503),
         ChatFailure::MissingConfiguration,
     ] {
-        let fake = FakeClient::answer(Err(error));
+        let fake = FakeClient::answer(Err(error)).with_policy(VerificationPolicy {
+            required: true,
+            pinned_address: Some("0x0000000000000000000000000000000000000001".into()),
+        });
         assert_eq!(
             refusal(ModelDecision::new(fake.clone()).decide(&snapshot()).await),
             error.to_string()
@@ -381,6 +412,9 @@ async fn timeout_http_failure_and_missing_configuration_produce_no_trade() {
 async fn stalled_fake_client_times_out_once_without_network_or_twenty_second_wait() {
     struct StalledClient(Arc<AtomicUsize>);
     impl ChatClient for StalledClient {
+        fn requested_model(&self) -> &str {
+            "fixture-model"
+        }
         async fn complete(&self, _prompt: String) -> Result<ChatResponse, ChatFailure> {
             self.0.fetch_add(1, Ordering::SeqCst);
             std::future::pending().await
@@ -407,11 +441,349 @@ async fn inconsistent_client_content_is_rejected_without_repairing_the_capture()
 }
 
 #[tokio::test]
+async fn client_hash_and_identity_mutations_never_become_a_trade() {
+    for field in ["request_hash", "response_hash", "id", "model"] {
+        let mut changed = response(&body().to_string());
+        match field {
+            "request_hash" => changed.request_sha256 = "0".repeat(64),
+            "response_hash" => changed.response_sha256 = "0".repeat(64),
+            "id" => changed.id = "fabricated-chat".into(),
+            _ => changed.model = "fabricated-model".into(),
+        }
+        let fake = FakeClient::answer(Ok(changed));
+        assert_eq!(
+            refusal(ModelDecision::new(fake.clone()).decide(&snapshot()).await),
+            "model response envelope is invalid",
+            "mutation: {field}"
+        );
+        assert_eq!(fake.calls(), 1);
+    }
+}
+
+struct RequestedAs(FakeClient, &'static str);
+
+impl ChatClient for RequestedAs {
+    fn requested_model(&self) -> &str {
+        self.1
+    }
+    async fn complete(&self, prompt: String) -> Result<ChatResponse, ChatFailure> {
+        self.0.complete(prompt).await
+    }
+}
+
+fn response_from(model: &str, content: &str) -> ChatResponse {
+    ChatResponse::from_raw(
+        serde_json::to_string(&json!({
+            "id":"fixture-chat-2",
+            "model":model,
+            "choices":[{"message":{"role":"assistant","content":content},"finish_reason":"stop"}],
+        }))
+        .unwrap(),
+        FIXTURE_REQUEST_BODY.into(),
+    )
+    .unwrap()
+}
+
+#[tokio::test]
+async fn a_provider_named_model_cannot_select_an_allowed_source() {
+    let mut source = snapshot();
+    source.mandate.allowed_model_ids.push("second-model".into());
+    // The client requested fixture-model, but the provider replies as an allowed second-model.
+    let fake = FakeClient::answer(Ok(response_from("second-model", &body().to_string())));
+    assert_eq!(
+        refusal(ModelDecision::new(fake.clone()).decide(&source).await),
+        "model response envelope is invalid"
+    );
+    assert_eq!(fake.calls(), 1);
+    // When the requested name is the allowed one, the same reply is accepted with that source.
+    let matching = RequestedAs(
+        FakeClient::answer(Ok(response_from("second-model", &body().to_string()))),
+        "second-model",
+    );
+    let Decision::Trade { response: Some(captured), .. } =
+        ModelDecision::new(matching).decide(&source).await
+    else {
+        panic!("a reply naming the requested allowed model must pass")
+    };
+    assert_eq!(captured.model, "second-model");
+}
+
+fn public_signed_fixture() -> (ChatResponse, String, Value) {
+    let fixture: Value = serde_json::from_str(include_str!("fixtures/provenance-public-v1.json"))
+        .expect("public synthetic fixture");
+    let mut capture = ChatResponse::from_raw(
+        fixture["raw_body"].as_str().unwrap().into(),
+        fixture["request_body"].as_str().unwrap().into(),
+    )
+    .unwrap();
+    capture.signature_proof = Some(fixture["signature_proof"].as_str().unwrap().into());
+    (capture, fixture["pinned_address"].as_str().unwrap().into(), fixture)
+}
+
+#[tokio::test]
+async fn public_signed_fixture_is_verified_before_the_exact_trade_is_returned() {
+    let (capture, pinned, fixture) = public_signed_fixture();
+    let fake = FakeClient::answer(Ok(capture))
+        .with_policy(VerificationPolicy { required: true, pinned_address: Some(pinned.clone()) });
+    let Decision::Trade { plan, response: Some(captured) } =
+        ModelDecision::new(fake.clone()).decide(&snapshot()).await
+    else {
+        panic!("a valid public signature fixture should pass the same trade gates")
+    };
+    assert_eq!(plan.reason_hash(), fixture["canonical_reason_hash"].as_str().unwrap());
+    assert_eq!(captured.response_sha256, fixture["response_sha256"].as_str().unwrap());
+    assert_eq!(captured.request_sha256, fixture["request_sha256"].as_str().unwrap());
+    assert_eq!(
+        verify_response(&captured, Some(&pinned), true).unwrap(),
+        VerificationStatus::VerifiedPinnedSigner
+    );
+    assert_eq!(plan.amount_in.0, 20_000_000);
+    assert_eq!(plan.min_amount_out.0, 4 * NEAR);
+    assert_eq!(fake.calls(), 1);
+}
+
+#[tokio::test]
+async fn returned_invalid_or_unsupported_proofs_refuse_even_with_optional_policy() {
+    let (original, pinned, _) = public_signed_fixture();
+    for mutation in ["signature", "algorithm", "kind", "request", "malformed"] {
+        let mut capture = original.clone();
+        let mut proof: Value =
+            serde_json::from_str(capture.signature_proof.as_ref().unwrap()).unwrap();
+        match mutation {
+            "signature" => proof["signature"] = json!("0x1234"),
+            "algorithm" => proof["signing_algo"] = json!("unsupported"),
+            "kind" => proof["signature_kind"] = json!("unsupported"),
+            "request" => {
+                capture.request_body = FIXTURE_REQUEST_BODY.into();
+                capture.request_sha256 = sha256_hex(FIXTURE_REQUEST_BODY.as_bytes());
+            }
+            _ => {}
+        }
+        capture.signature_proof =
+            Some(if mutation == "malformed" { "not json".into() } else { proof.to_string() });
+        let fake = FakeClient::answer(Ok(capture)).with_policy(VerificationPolicy {
+            required: false,
+            pinned_address: Some(pinned.clone()),
+        });
+        assert_eq!(
+            refusal(ModelDecision::new(fake.clone()).decide(&snapshot()).await),
+            "model response signature verification failed",
+            "mutation: {mutation}"
+        );
+        assert_eq!(fake.calls(), 1);
+    }
+}
+
+#[tokio::test]
+async fn supplied_proof_without_an_external_pin_and_required_missing_proof_refuse() {
+    let (capture, pinned, _) = public_signed_fixture();
+    let fake = FakeClient::answer(Ok(capture));
+    assert_eq!(
+        refusal(ModelDecision::new(fake.clone()).decide(&snapshot()).await),
+        "model response signature verification failed"
+    );
+    assert_eq!(fake.calls(), 1);
+    let missing = FakeClient::content(&body().to_string())
+        .with_policy(VerificationPolicy { required: true, pinned_address: Some(pinned) });
+    assert_eq!(
+        refusal(ModelDecision::new(missing.clone()).decide(&snapshot()).await),
+        "model response signature verification failed"
+    );
+    assert_eq!(missing.calls(), 1);
+}
+
+#[tokio::test]
+async fn canonical_commitment_preserves_equivalent_outer_json_while_raw_hashes_differ() {
+    let first = response(&body().to_string());
+    let envelope: Value = serde_json::from_str(&first.raw_body).unwrap();
+    let second = ChatResponse::from_raw(
+        serde_json::to_string_pretty(&envelope).unwrap(),
+        FIXTURE_REQUEST_BODY.into(),
+    )
+    .unwrap();
+    assert_ne!(first.response_sha256, second.response_sha256);
+    let mut commitments = Vec::new();
+    for capture in [first, second] {
+        let Decision::Trade { plan, .. } =
+            ModelDecision::new(FakeClient::answer(Ok(capture))).decide(&snapshot()).await
+        else {
+            panic!("equivalent valid outer envelopes should remain valid decisions")
+        };
+        commitments.push(plan.reason_hash());
+    }
+    assert_eq!(commitments[0], commitments[1]);
+}
+
+#[tokio::test]
+async fn attestation_address_metadata_is_retained_without_claiming_verified_provenance() {
+    let mut envelope: Value =
+        serde_json::from_str(&response(&body().to_string()).raw_body).unwrap();
+    envelope["attestation"] = json!({
+        "signing_address":"0x0000000000000000000000000000000000000001",
+        "signing_algo":"ecdsa",
+        "signature_kind":"provider_tee",
+        "status":"unverified public metadata"
+    });
+    let raw_body = envelope.to_string();
+    let capture = ChatResponse::from_raw(raw_body.clone(), FIXTURE_REQUEST_BODY.into()).unwrap();
+    assert!(capture.signature_proof.is_none());
+    let Decision::Trade { response: Some(retained), .. } =
+        ModelDecision::new(FakeClient::answer(Ok(capture))).decide(&snapshot()).await
+    else {
+        panic!("unsigned attestation metadata does not constitute a chat signature")
+    };
+    assert_eq!(retained.raw_body, raw_body);
+    assert_eq!(verify_response(&retained, None, false).unwrap(), VerificationStatus::Unverified);
+}
+
+#[tokio::test]
+async fn forged_plan_commitment_and_trade_tuple_do_not_validate_against_the_capture() {
+    use mandate_agent::provenance::ModelRecord;
+    let Decision::Trade { plan, response: Some(capture) } =
+        ModelDecision::new(FakeClient::content(&body().to_string())).decide(&snapshot()).await
+    else {
+        panic!("valid fixture should produce a committed plan")
+    };
+    assert!(ModelRecord::from_response(&capture, &plan).is_ok());
+    let mut changed = plan.clone();
+    changed.response_commitment = Some("0".repeat(64));
+    assert!(ModelRecord::from_response(&capture, &changed).is_err());
+    let mut changed = plan;
+    changed.amount_in = U128(changed.amount_in.0 + 1);
+    assert!(ModelRecord::from_response(&capture, &changed).is_err());
+}
+
+#[test]
+fn inline_unknown_signatures_and_duplicate_capture_fields_are_refused() {
+    for field in ["signature", "signatures", "proof", "signature_response", "chat_signature"] {
+        let mut envelope: Value =
+            serde_json::from_str(&response(&body().to_string()).raw_body).unwrap();
+        envelope[field] = json!({"unsupported":"public fixture"});
+        assert!(
+            matches!(
+                ChatResponse::from_raw(envelope.to_string(), FIXTURE_REQUEST_BODY.into()),
+                Err(ChatFailure::InvalidProof)
+            ),
+            "field: {field}"
+        );
+    }
+    let mut nested: Value = serde_json::from_str(&response(&body().to_string()).raw_body).unwrap();
+    nested["attestation"] = json!({"signature":"unsupported public fixture"});
+    assert!(matches!(
+        ChatResponse::from_raw(nested.to_string(), FIXTURE_REQUEST_BODY.into()),
+        Err(ChatFailure::InvalidProof)
+    ));
+    let valid = response(&body().to_string());
+    let duplicate = format!("{},\"model\":\"other-model\"}}", valid.raw_body.trim_end_matches('}'));
+    assert!(matches!(
+        ChatResponse::from_raw(duplicate, FIXTURE_REQUEST_BODY.into()),
+        Err(ChatFailure::InvalidResponse)
+    ));
+    assert!(matches!(
+        ChatResponse::from_raw(valid.raw_body, "{\"model\":1,\"model\":2}".into()),
+        Err(ChatFailure::InvalidResponse)
+    ));
+}
+
+#[test]
+fn signature_lookup_uses_only_the_configured_https_origin_and_encoded_id() {
+    let endpoint = "https://provider.example/v1/chat/completions";
+    let base = "https://provider.example/v1/signature/";
+    let url = signature_lookup_url(endpoint, base, "chat/a?b", "fixture/model").unwrap();
+    assert_eq!(url.path(), "/v1/signature/chat%2Fa%3Fb");
+    assert_eq!(
+        url.query_pairs()
+            .map(|(name, value)| (name.into_owned(), value.into_owned()))
+            .collect::<Vec<_>>(),
+        vec![
+            ("signing_algo".to_owned(), "ecdsa".to_owned()),
+            ("model".to_owned(), "fixture/model".to_owned()),
+        ]
+    );
+    for invalid in [
+        "http://provider.example/v1/signature/",
+        "https://other.example/v1/signature/",
+        "https://provider.example:444/v1/signature/",
+        "https://user@provider.example/v1/signature/",
+        "https://provider.example/v1/signature",
+        "https://provider.example/v1/signature/?query=public",
+        "https://provider.example/v1/signature/#fragment",
+    ] {
+        assert!(
+            matches!(
+                signature_lookup_url(endpoint, invalid, "chat-1", "fixture-model"),
+                Err(ChatFailure::InvalidConfiguration)
+            ),
+            "URL: {invalid}"
+        );
+    }
+    for id in [".", ".."] {
+        assert!(matches!(
+            signature_lookup_url(endpoint, base, id, "fixture-model"),
+            Err(ChatFailure::InvalidConfiguration)
+        ));
+    }
+    assert_eq!(
+        signature_lookup_url(endpoint, base, "%2E%2E", "fixture-model").unwrap().path(),
+        "/v1/signature/%252E%252E"
+    );
+}
+
+#[test]
+fn pure_decision_extraction_retains_strict_schema_without_a_snapshot() {
+    let parsed = extract_decision(&body().to_string()).unwrap();
+    assert_eq!(parsed.plan.amount_in.0, 20_000_000);
+    assert!(!parsed.no_trade);
+    let mut changed = body();
+    changed["asset_in"] = json!("nep141:outside.testnet");
+    assert!(extract_decision(&changed.to_string()).is_ok());
+    changed["amount_in"] = json!("01");
+    assert_eq!(
+        extract_decision(&changed.to_string()).err(),
+        Some("model amount_in is not an exact positive u128 decimal integer")
+    );
+}
+
+#[test]
+fn malformed_optional_settings_never_downgrade_to_absence() {
+    use std::env::VarError;
+    use std::ffi::OsString;
+    assert_eq!(
+        optional_model_setting(Ok("public fixture".into())),
+        Ok(Some("public fixture".into()))
+    );
+    assert_eq!(optional_model_setting(Err(VarError::NotPresent)), Ok(None));
+    assert_eq!(
+        optional_model_setting(Err(VarError::NotUnicode(OsString::from(
+            "public malformed setting"
+        )))),
+        Err(ChatFailure::InvalidConfiguration)
+    );
+}
+
+#[test]
+fn complete_request_marker_scan_covers_model_metadata_and_system_instructions() {
+    let marker = "public-request-scan-marker";
+    for body in [
+        json!({"model":marker,"messages":[{"role":"user","content":"public snapshot"}]})
+            .to_string(),
+        json!({"model":"fixture-model","messages":[{"role":"system","content":marker}]})
+            .to_string(),
+        "{\"model\":\"public-request-scan-\\u006darker\"}".into(),
+    ] {
+        assert_eq!(validate_public_request_body(&body, marker), Err(ChatFailure::InvalidSnapshot));
+    }
+    assert_eq!(validate_public_request_body(FIXTURE_REQUEST_BODY, marker), Ok(()));
+}
+
+#[tokio::test]
 async fn paused_or_halted_snapshot_makes_zero_model_calls() {
     for reason in ["vault is paused", "vault is halted"] {
         let mut blocked = snapshot();
         blocked.not_ready = Some(reason.into());
-        let fake = FakeClient::content(&body().to_string());
+        let (capture, pinned, _) = public_signed_fixture();
+        let fake = FakeClient::answer(Ok(capture))
+            .with_policy(VerificationPolicy { required: true, pinned_address: Some(pinned) });
         assert_eq!(
             refusal(ModelDecision::new(fake.clone()).decide(&blocked).await),
             "vault is not ready for a model decision"
@@ -419,6 +791,45 @@ async fn paused_or_halted_snapshot_makes_zero_model_calls() {
         assert_eq!(fake.calls(), 0);
         assert!(fake.prompts.lock().unwrap().is_empty());
     }
+}
+
+#[tokio::test]
+async fn empty_source_allowlist_makes_zero_model_calls() {
+    let mut blocked = snapshot();
+    blocked.mandate.allowed_model_ids.clear();
+    let fake = FakeClient::content(&body().to_string());
+    assert_eq!(
+        refusal(ModelDecision::new(fake.clone()).decide(&blocked).await),
+        "no decision sources are allowed"
+    );
+    assert_eq!(fake.calls(), 0);
+    assert!(fake.prompts.lock().unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn an_unlisted_returned_model_id_refuses_after_one_call() {
+    let mut envelope: Value =
+        serde_json::from_str(&response(&body().to_string()).raw_body).unwrap();
+    envelope["model"] = json!("unknown-model");
+    let capture =
+        ChatResponse::from_raw(envelope.to_string(), FIXTURE_REQUEST_BODY.into()).unwrap();
+    let fake = FakeClient::answer(Ok(capture));
+    assert_eq!(
+        refusal(ModelDecision::new(fake.clone()).decide(&snapshot()).await),
+        "the declared model id is not allowed"
+    );
+    assert_eq!(fake.calls(), 1);
+}
+
+#[tokio::test]
+async fn removing_a_previously_allowed_model_refuses_its_next_decision() {
+    let mut snapshot = snapshot();
+    let fake = FakeClient::content(&body().to_string());
+    let source = ModelDecision::new(fake.clone());
+    assert!(matches!(source.decide(&snapshot).await, Decision::Trade { .. }));
+    snapshot.mandate.allowed_model_ids.retain(|id| id != "fixture-model");
+    assert_eq!(refusal(source.decide(&snapshot).await), "the declared model id is not allowed");
+    assert_eq!(fake.calls(), 2, "one request for each independent decision, with no retries");
 }
 
 #[tokio::test]
@@ -463,6 +874,10 @@ fn compact_prompt_preserves_public_integer_prices_balances_and_rules() {
     assert_eq!(input["assets"][1]["oracle_price"]["mantissa"], "500000000");
     assert_eq!(input["assets"][1]["oracle_price"]["publish_time_sec"], NOW);
     assert_eq!(input["mandate"]["max_trade_usd"], "30000000");
+    assert_eq!(
+        input["mandate"]["allowed_model_ids"],
+        json!(["manual-v1", "rebalance-v1", "fixture-model"])
+    );
     assert_eq!(input["trading"]["high_water_mark_usd"], "125000000");
     for prohibited_field in ["MODEL_ENDPOINT_URL", "MODEL_NAME", "MODEL_API_KEY", "authorization"] {
         assert!(!text.contains(prohibited_field));
@@ -474,7 +889,7 @@ fn captured_envelope_rejects_oversize_and_non_model_reserved_ids() {
     assert!(matches!(
         ChatResponse::from_raw(
             "x".repeat(MAX_CHAT_RESPONSE_BYTES + 1),
-            FIXTURE_REQUEST_SHA256.into()
+            FIXTURE_REQUEST_BODY.into()
         ),
         Err(ChatFailure::ResponseTooLarge)
     ));
@@ -483,7 +898,7 @@ fn captured_envelope_rejects_oversize_and_non_model_reserved_ids() {
             serde_json::from_str(&response(&body().to_string()).raw_body).unwrap();
         envelope["model"] = json!(id);
         assert!(matches!(
-            ChatResponse::from_raw(envelope.to_string(), FIXTURE_REQUEST_SHA256.into()),
+            ChatResponse::from_raw(envelope.to_string(), FIXTURE_REQUEST_BODY.into()),
             Err(ChatFailure::InvalidResponse)
         ));
     }

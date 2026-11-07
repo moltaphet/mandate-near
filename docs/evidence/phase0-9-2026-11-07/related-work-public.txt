@@ -1,0 +1,54 @@
+READ-ONLY RELATED-WORK OBSERVATIONS — 2026-11-07
+These are public-source excerpts, not deployment, audit or superiority evidence.
+The sources are mutable main/dev references; no immutable revision is asserted.
+No authenticated requests, environment values or credentials were used.
+
+Command observed with exit code 0:
+curl -fsSL --max-time 20 https://raw.githubusercontent.com/safe-global/safe-modules/main/modules/allowances/README.md
+
+Observed public output excerpts:
+# Allowance module
+This contract is a registry of transfer allowances on a Safe that can be used by specific accounts.
+All transfer allowances are specific to a Safe, token and delegate. A delegate is an account that can authorize transfers (via a signature or `msg.sender`).
+Transfer are authorized by the delegates and must be within their allowance.
+The allowance module signatures are EIP-712 based.
+- `uint16 resetTimeMin`
+  - Time span in **minutes** after which the `spent` amount will automatically reset to `0`.
+- `uint16 nonce`
+  - Increasing nonce that is used to protect transfer confirmations (e.g. signatures) against replay attacks.
+
+Command observed with exit code 0:
+curl -fsSL --max-time 20 https://raw.githubusercontent.com/enzymefinance/protocol/dev/README.md
+
+Observed public output excerpt:
+# Enzyme Blue
+Enzyme Blue is an Ethereum-based protocol for decentralized on-chain asset management.
+
+Command observed with exit code 0:
+curl -fsSL --max-time 20 https://raw.githubusercontent.com/enzymefinance/protocol/dev/contracts/release/extensions/policy-manager/PolicyManager.sol
+
+Observed public output excerpts:
+/// @title PolicyManager Contract
+/// @notice Manages policies for funds
+/// Policies that restrict new investors or asset management actions can be added at any time.
+/// Policies themselves specify whether or not they are allowed to be updated or removed.
+    modifier onlyFundOwner(address _comptrollerProxy) {
+        require(
+            __msgSender() == IVault(getVaultProxyForFund(_comptrollerProxy)).getOwner(),
+            "Only the fund owner can call this function"
+        );
+        _;
+    }
+        for (uint256 i; i < policies.length; i++) {
+            require(
+                IPolicy(policies[i]).validateRule(_comptrollerProxy, _hook, _validationData),
+                string(abi.encodePacked("Rule evaluated to false: ", IPolicy(policies[i]).identifier()))
+            );
+        }
+
+Interpretation:
+Delegated budgets and on-chain asset-management policy enforcement are published
+prior ideas. Mandate's submission can explain its particular NEAR Intents custody,
+pre-MPC trade checks, delayed loosening and captured model commitments. These
+observations do not establish a first/unique feature, superior security, complete
+competitive coverage, any system's current deployed behavior or hackathon rank.

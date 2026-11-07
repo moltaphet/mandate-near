@@ -93,6 +93,12 @@ pub async fn view(
 
 /// The mandate used by every integration test: wNEAR and USDC, USDC stable.
 pub fn mandate() -> Value {
+    let mut policy = mandate_without_sources();
+    policy["allowed_model_ids"] = json!(["manual-v1", "rebalance-v1", "fixture-model"]);
+    policy
+}
+
+fn mandate_without_sources() -> Value {
     mandate_with_extra(0)
 }
 

@@ -10,7 +10,8 @@ const rules = () => ({ assets: [
   { asset_id: "nep141:usdc.near", decimals: 6, price_feed_id: "usdc" },
   { asset_id: "nep141:wrap.near", decimals: 24, price_feed_id: "near" },
 ], stable_assets: ["nep141:usdc.near"], max_trade_usd: "50000000", max_daily_turnover_usd: "200000000",
-  max_position_bps: 6000, max_slippage_bps: 100, max_drawdown_bps: 1500, min_trade_interval_sec: 300, max_price_age_sec: 60 });
+  max_position_bps: 6000, max_slippage_bps: 100, max_drawdown_bps: 1500, min_trade_interval_sec: 300, max_price_age_sec: 60,
+  allowed_model_ids: ["manual-v1", "fixture-model"] });
 function views() {
   return { get_chain_time_sec: NOW, get_owner: "owner.near", get_mandate: rules(), get_agent: "agent.near",
     get_externals: ["v1.signer", "intents.near", "price-oracle.near"], get_oracle_kind: "price_oracle",
@@ -154,6 +155,35 @@ test("untrusted RPC strings are literal text and never become markup", async () 
   const container = new FakeElement("div");
   renderSnapshot(container, await readAuditSnapshot(config, fixture({ values })), fakeDocument);
   assert.ok(container.textContent.includes(hostile)); assert.equal(container.find("img").length, 0); assert.equal(container.find("script").length, 0);
+});
+test("declared-source observations distinguish legacy, empty and removed sources", async () => {
+  const legacy = views(); delete legacy.get_mandate.allowed_model_ids;
+  const old = await readAuditSnapshot(config, fixture({ values: legacy }));
+  assert.equal(old.mandate.allowed_model_ids, null);
+  assert.ok(old.readiness.includes("Declared-source admission unavailable in this contract schema"));
+  const empty = views(); empty.get_mandate.allowed_model_ids = [];
+  const disabled = await readAuditSnapshot(config, fixture({ values: empty }));
+  assert.deepEqual(disabled.mandate.allowed_model_ids, []);
+  assert.ok(disabled.readiness.includes("All declared decision sources disabled"));
+  const removed = views();
+  removed.get_pending_proposal = { id: "3", asset_in: "nep141:usdc.near", asset_out: "nep141:wrap.near",
+    amount_in: "1", min_amount_out: "1", created_sec: NOW, expires_sec: NOW + 60,
+    model_id: "removed-model", reason_hash: "ab".repeat(32) };
+  const snapshot = await readAuditSnapshot(config, fixture({ values: removed }));
+  assert.ok(snapshot.readiness.includes("Pending proposal source no longer allowed"));
+  assert.equal(snapshot.proposal.reason_hash, "ab".repeat(32));
+});
+test("source identifiers use UTF-8 byte bounds and render as literal declarations", async () => {
+  for (const ids of [null, [""], [" \t"], ["é".repeat(33)], ["same", "same"], Array.from({ length: 9 }, (_, i) => `source-${i}`)]) {
+    const values = views(); values.get_mandate.allowed_model_ids = ids;
+    await assert.rejects(readAuditSnapshot(config, fixture({ values })), /Invalid/);
+  }
+  const hostile = '<img src=x onerror="bad()">';
+  const values = views(); values.get_mandate.allowed_model_ids = [hostile, "é".repeat(32)];
+  const container = new FakeElement("div");
+  renderSnapshot(container, await readAuditSnapshot(config, fixture({ values })), fakeDocument);
+  assert.ok(container.textContent.includes(hostile)); assert.equal(container.find("img").length, 0);
+  assert.match(container.textContent, /does not authenticate a model response/);
 });
 test("schema refuses malformed balances, unsafe numbers and incoherent outcomes", async () => {
   const mutations = [
