@@ -177,6 +177,27 @@ async fn gas_at_max_assets_and_last_long_source_id() -> testresult::TestResult<(
     let sandbox_id: near_sdk::AccountId = "gas-max-source.sandbox".parse()?;
     w._sandbox.create_account(sandbox_id).initial_balance(NearToken::from_near(10)).send().await?;
     let vault_id: AccountId = "gas-max-source.sandbox".parse()?;
+    // The signer stand-in accepts exactly one predecessor, fixed at its deployment.
+    // A new vault therefore needs its own stand-in with the same test seed, so the
+    // derived key is unchanged and only the accepted caller is the new vault.
+    let signer_sandbox: near_sdk::AccountId = "gas-max-signer.sandbox".parse()?;
+    w._sandbox
+        .create_account(signer_sandbox)
+        .initial_balance(NearToken::from_near(10))
+        .send()
+        .await?;
+    let signer_id: AccountId = "gas-max-signer.sandbox".parse()?;
+    let mock_wasm = common::build_contract(Some("../mock-externals/Cargo.toml"))?;
+    Contract::deploy(signer_id.clone())
+        .use_code(mock_wasm)
+        .with_init_call(
+            "new",
+            json!({ "seed_hex": common::SIGNER_SEED_HEX, "expected_predecessor": vault_id }),
+        )?
+        .with_signer(w.signer.clone())
+        .send_to(&w.network)
+        .await?
+        .assert_success();
     let code = std::fs::read(cargo_near_build::build_with_cli(Default::default())?)?;
     Contract::deploy(vault_id.clone())
         .use_code(code)
@@ -184,7 +205,7 @@ async fn gas_at_max_assets_and_last_long_source_id() -> testresult::TestResult<(
             "new_with_externals",
             json!({
                 "owner":w.owner, "mandate":configured,
-                "signer":externals[0], "intents":externals[1], "oracle":externals[2]
+                "signer":signer_id, "intents":externals[1], "oracle":externals[2]
             }),
         )?
         .with_signer(w.signer.clone())

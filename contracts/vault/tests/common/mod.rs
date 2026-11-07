@@ -123,12 +123,13 @@ pub fn mandate_with_extra(extra: usize) -> Value {
         "max_drawdown_bps": 1500,
         "min_trade_interval_sec": 300,
         "max_price_age_sec": 60,
+        "allowed_model_ids": ["manual-v1", "rebalance-v1", "fixture-model"],
     })
 }
 
 /// Builds one contract. Tests run in parallel, and concurrent `cargo near`
 /// builds in the same target directory race, so builds take a lock.
-fn build_contract(manifest: Option<&str>) -> testresult::TestResult<Vec<u8>> {
+pub fn build_contract(manifest: Option<&str>) -> testresult::TestResult<Vec<u8>> {
     static BUILD_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
     let _guard = BUILD_LOCK.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
     let opts = match manifest {
@@ -383,6 +384,7 @@ pub async fn propose(w: &World) -> testresult::TestResult<()> {
                 "asset_out": WNEAR,
                 "amount_in": AMOUNT_IN,
                 "min_amount_out": MIN_OUT,
+                "model_id": "manual-v1",
                 "reason_hash": REASON,
             }),
         )
