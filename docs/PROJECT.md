@@ -366,7 +366,7 @@ Each has a method and a target; these targets are not completed measurements.
 
 ## 19. Plan and milestones
 
-Submission target: 2026-11-14 23:59 UTC. The numbered milestones below are planning checkpoints, not current implementation status. Each completed milestone needs dated, revision-bound evidence.
+The numbered milestones below are planning checkpoints, not current implementation status. Each completed milestone needs dated, revision-bound evidence.
 
 | Days | Milestone | Evidence |
 |---|---|---|
@@ -376,13 +376,12 @@ Submission target: 2026-11-14 23:59 UTC. The numbered milestones below are plann
 | 5–6 | Gas measurement on sandbox and mainnet, with a funded account | recorded table |
 | 6–8 | SDK and script agent. OutLayer agent on testnet with attestation | agent runs; attestation linked |
 | 8–9 | Keeper script. First real mainnet trade with a small amount, with the explorer link | explorer link |
-| 9–11 | Dashboard reads real chain data; attack demo on mainnet | live data shown |
-| 11–12 | Threat model, evidence site with real results, README, 90-second video | all links resolve |
+| 9–11 | Dashboard reads real chain data; attack scenarios on testnet | live data shown |
+| 11–12 | Threat model, evidence site with real results, README | all links resolve |
 | 13 | Freeze. Repository public. Branch protection on `main`. Clean-machine rerun | rerun passes |
-| 14 | Submission, after the owner approves the payload | submission record |
 
 Gates that must pass or the scope is cut:
-- End of day 3: the vault wiring works in sandbox with the real defuse contract. If not, cut to a mock-verifier demo and say so.
+- End of day 3: the vault wiring works in sandbox with the real defuse contract. If not, cut to a mock-verifier scope and say so.
 - End of day 6: gas and latency measured. If the mainnet MPC call fails, the mainnet trade is replaced by a recorded failure with the cause.
 - End of day 9: a real mainnet trade exists. If not, the claim "trade executed" is removed.
 
@@ -396,14 +395,7 @@ Gates that must pass or the scope is cut:
 | SHIELD key not approved | High (pending) | Gate absent | Reported as unavailable; not a claim |
 | Scope too large for 13 days | High | Unfinished features | Scope cuts above, decided at gates |
 | A competitor ships the same idea | Unknown | Less novelty | Differentiation in section 22 |
-| Judges read the scope as overclaiming | Medium | Lower score | Claims policy in section 16 |
-
-## 21. Hackathon fit
-
-- **Track:** AI Security & Defense (primary). Also Agent Economy, Autonomous Business, and Unstoppable DeFi where the trade flow applies.
-- **Chain use:** NEAR Intents and Chain Signatures wiring (sandbox), historical mainnet signature simulations, and NEP-330 metadata. Optional model decisions are implemented locally; OutLayer and private live inference remain unverified.
-- **Eligibility:** verify the organizer's official window, publication and submission requirements. Development began 2026-10-31; eligibility is not established by that date alone.
-- **Disclosure:** development is AI-assisted; live and simulated evidence are labelled separately.
+| Reviewers read the scope as overclaiming | Medium | Lower score | Claims policy in section 16 |
 
 ## 22. Related work and differentiation
 

@@ -63,7 +63,6 @@ downloads the sandbox. Later runs are faster.
 - **The agent and keeper binaries against a live chain.** They read keys from
   environment variables. The sandbox tests call the same library code without
   keys. See [TESTNET.md](TESTNET.md) for the testnet run and what it did not reach.
-- **Dashboard and video.** Not built yet.
 
 ## If a step fails
 

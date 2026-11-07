@@ -52,7 +52,7 @@ Mandate limits authorization, rather than guaranteeing profitable decisions.
 - [Website and dashboard](#website-and-dashboard)
 - [Remaining release work](#remaining-release-work)
 - [Repository map](#repository-map)
-- [Hackathon disclosure and license](#hackathon-disclosure-and-license)
+- [Project history and license](#project-history-and-license)
 
 ## Architecture and trade flow
 
@@ -436,7 +436,7 @@ retains the guard, blocking new **withdrawal dispatches and trade authorization*
 A successor withdrawal request can still be queued. Neither elapsed time,
 owner authority nor a larger balance overrides the guard. The original
 withdrawal may already have moved funds. This residual is accepted for the
-hackathon scope; it does not establish real-fund readiness.
+current testnet scope; it does not establish real-fund readiness.
 
 Read `get_withdrawal_status`, `get_last_withdrawal_outcome`,
 `get_pending_withdrawal`, `get_withdrawal_stage`, `is_withdrawal_retry_armed`,
@@ -578,13 +578,8 @@ Complete the funded core flow before treating optional integrations as ready:
 6. **Validate optional provider/TEE features separately.** Live pinned-signature
    compatibility, authenticated model execution, private inference and OutLayer
    deployment remain open; generic model mode is already explicitly unverified.
-7. **Prepare the judge-facing release.** Reproducible demo, accurate evidence
-   links, demo video and submission; verify organizer rules and eligibility.
-
 No current evidence establishes profitable strategy, private model execution,
-a live attack dashboard or safe real-fund operation. The target deadline supplied
-by the author is **14 November 2026, 23:59 UTC**; organizer confirmation remains
-required.
+a live attack dashboard or safe real-fund operation.
 
 ## Repository map
 
@@ -604,12 +599,7 @@ required.
 | [docs/spikes/R1.md](docs/spikes/R1.md) · [docs/evidence/](docs/evidence/) | Historical interoperability report and captured test output |
 | [SECURITY.md](SECURITY.md) · [THREAT_MODEL.md](THREAT_MODEL.md) | Reporting guidance, findings, assumptions and residual risks |
 
-## Hackathon disclosure and license
-
-The proposed primary tracks are **AI Security & Defense** and **Unstoppable
-DeFi**, with adjacent **Agent Economy** and **Privacy & Private AI** interests.
-These are project positioning; organizer track/eligibility rules require
-verification. Privacy-related integrations remain planned.
+## Project history and license
 
 Development began on **31 October 2026**. Development is AI-assisted, including
 Claude Code and Codex, and uses vendored NEAR agent guidance. Dependencies and
