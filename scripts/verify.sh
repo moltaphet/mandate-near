@@ -55,7 +55,9 @@ cargo test -p mandate-withdrawal-journal --locked
 
 step "Pinned source-owned executor preparation (offline, no build)"
 python3 -B integrations/intents-executor/prepare_test.py
-python3 -B integrations/intents-executor/build_test.py
+# CI's rust-cache action exports CARGO_INCREMENTAL=0. The builder refuses any Cargo
+# build override by design, so its tests run with that one variable cleared.
+env -u CARGO_INCREMENTAL python3 -B integrations/intents-executor/build_test.py
 
 step "Autonomous strategy, offline model decisions, model provenance and relay protocol tests"
 cargo test -p mandate-agent --test autonomous --test protocol --test model --test provenance --test provenance_cli --locked
