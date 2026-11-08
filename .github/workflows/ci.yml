@@ -12,7 +12,8 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     env:
-      INTENTS_ARCHIVE: ${{ runner.temp }}/intents-reviewed.tar.gz
+      # The runner context is not available in job-level env, so use a fixed temp path.
+      INTENTS_ARCHIVE: /tmp/intents-reviewed.tar.gz
     steps:
       - uses: actions/checkout@v4
         with:
