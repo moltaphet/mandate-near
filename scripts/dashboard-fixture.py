@@ -3,6 +3,7 @@
 import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from urllib.parse import urlsplit
 
 ROOT = Path(__file__).resolve().parent.parent / "web" / "dashboard"
 SITE = ROOT.parent / "site"
@@ -16,7 +17,8 @@ RULES = {"assets": ASSETS, "stable_assets": ["nep141:usdc.near"],
          "max_trade_usd": "50000000", "max_daily_turnover_usd": "200000000",
          "max_position_bps": 6000, "max_slippage_bps": 100, "max_drawdown_bps": 1500,
          "min_trade_interval_sec": 300, "max_price_age_sec": 60,
-         "allowed_model_ids": ["manual-v1", "fixture-model"]}
+         "allowed_model_ids": ["manual-v1", "fixture-model"],
+         "withdrawal_limits": [{"asset_id": "nep141:usdc.near", "max_per_request": "20000000"}]}
 REQUEST = {"asset_id": "nep141:usdc.near", "receiver": "owner.near", "amount": "20000000",
            "effective_sec": NOW - 600}
 VIEWS = {
@@ -67,10 +69,11 @@ class Handler(BaseHTTPRequestHandler):
                  "/dashboard/index.html": (ROOT / "index.html", "text/html; charset=utf-8"),
                  "/dashboard/live.mjs": (ROOT / "live.mjs", "text/javascript; charset=utf-8"),
                  "/live.mjs": (ROOT / "live.mjs", "text/javascript; charset=utf-8")}
-        if self.path not in files:
+        pathname = urlsplit(self.path).path
+        if pathname not in files:
             self.reply(b"Not available", 404, "text/plain")
             return
-        path, content_type = files[self.path]
+        path, content_type = files[pathname]
         self.reply(path.read_bytes(), content_type=content_type)
 
     def do_POST(self):

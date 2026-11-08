@@ -1,0 +1,23 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.39s
+     Running tests/journal_withdrawal.rs (target/debug/deps/journal_withdrawal-a739236b98731b19)
+
+running 1 test
+test journal_wasm_delivers_exactly_once_and_persists_the_bound_terminal_record ... ARTIFACT | actual modified Defuse | 1366277 bytes | sha256 5cf002b7f3b79e992517d03ffaa2801c43ff142a368867c93b4e5ee04ef5cbb2
+BUILD | explicit MANDATE_SANDBOX_NO_ABI=1 | cargo-near --no-abi, WASM optimization enabled
+BUILD | explicit MANDATE_SANDBOX_NO_ABI=1 | cargo-near --no-abi, WASM optimization enabled
+BUILD | explicit MANDATE_SANDBOX_NO_ABI=1 | cargo-near --no-abi, WASM optimization enabled
+BUILD | explicit MANDATE_SANDBOX_NO_ABI=1 | cargo-near --no-abi, WASM optimization enabled
+
+thread 'journal_wasm_delivers_exactly_once_and_persists_the_bound_terminal_record' (6251435) panicked at contracts/vault/tests/common/journal.rs:127:19:
+error: near_sandbox::error_kind::SandboxError - Error while binding socket to a port 0: Operation not permitted (os error 1)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+FAILED
+
+failures:
+
+failures:
+    journal_wasm_delivers_exactly_once_and_persists_the_bound_terminal_record
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 7 filtered out; finished in 7.22s
+
+error: test failed, to rerun pass `-p mandate-vault --test journal_withdrawal`

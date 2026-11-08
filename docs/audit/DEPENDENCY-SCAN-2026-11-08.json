@@ -1,0 +1,29 @@
+{
+  "lock_sha256": "e53712759c0f89ce98a86aa7569b0b0ab6dcb55c752e9465635844c51ca7e287",
+  "queried_packages": 491,
+  "matches": [
+    {
+      "name": "crypto-bigint",
+      "version": "0.5.5",
+      "vulns": [
+        {
+          "id": "RUSTSEC-2026-0387",
+          "modified": "2026-10-24T03:45:02.365137Z"
+        }
+      ]
+    },
+    {
+      "name": "unsafe-libyaml",
+      "version": "0.2.11",
+      "vulns": [
+        {
+          "id": "RUSTSEC-2024-0449",
+          "modified": "2026-10-12T11:45:02.518189Z"
+        }
+      ]
+    }
+  ],
+  "scan_date": "2026-11-08",
+  "execution": "user terminal; local result lock hash verified against current Cargo.lock",
+  "service": "https://api.osv.dev/v1/querybatch"
+}

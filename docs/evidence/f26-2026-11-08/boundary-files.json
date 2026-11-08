@@ -1,0 +1,36 @@
+{
+  "artifact_only_native": {
+    "failed": 0,
+    "filtered_async_cases": 11,
+    "passed": 1,
+    "sandbox_started": false
+  },
+  "clippy": {
+    "exit_code": 0,
+    "scope": "locked offline workspace all-targets with warnings denied",
+    "seconds": 2.77
+  },
+  "compile": {
+    "exit_code": 0,
+    "runtime_execution": false,
+    "seconds": 5.88
+  },
+  "files": {
+    "contracts/vault/tests/common/journal.rs": {
+      "bytes": 23771,
+      "sha256": "d66a2ba1f70e14ea040d94cf252fdf1706414ad13e8595b584bbc2f7b0884728"
+    },
+    "contracts/vault/tests/journal_withdrawal.rs": {
+      "bytes": 39570,
+      "sha256": "0852410737fb31f9e62d1a3bc75464af8ca51dcab58d194a9eb2ef0eb53a7793"
+    }
+  },
+  "production_source_and_artifacts": "UNCHANGED",
+  "recorded_utc": "2026-11-08T16:04:52.772611+00:00",
+  "runtime_scope": {
+    "added_grouped_cases": 2,
+    "current_source_v4": 11,
+    "executed_current_async_cases": 0,
+    "previous_source_v4": 9
+  }
+}

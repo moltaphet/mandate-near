@@ -1,0 +1,3 @@
+   Compiling mandate-vault v0.1.0 (/Users/ehs4n/mandate-near/contracts/vault)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 5.88s
+  Executable tests/journal_withdrawal.rs (target/debug/deps/journal_withdrawal-a739236b98731b19)

@@ -1,0 +1,187 @@
+{
+  "ci_verification": "YAML, inline Python, Bash syntax, explicit toolchain and native-test/Clippy order validated; no external CI/network run.",
+  "ci_workflow_sha256": "f00f9fa241bdf71a87b705ce5e04310944355c31ebfe53e1881c4d4f574c5464",
+  "evidence_files": {
+    "agent-targets.txt": {
+      "bytes": 10107,
+      "sha256": "652f5e32258b6b07bd533a7f11d5466804c7ddba18505efb29e17734401e191f"
+    },
+    "artifact-binding.txt": {
+      "bytes": 355,
+      "sha256": "fcad3fb65ade19586c86a6d9a5728b1708752df3ba6d2d5edb917847ba0555d4"
+    },
+    "boundary-artifact-binding.txt": {
+      "bytes": 356,
+      "sha256": "e430415a63000a9db2753dd37aac783c350a72fa1aeae9959c9fb5d9774bb9d2"
+    },
+    "boundary-clippy.txt": {
+      "bytes": 150,
+      "sha256": "c68d2c1e51415a055eb5dc87067d3a0d75c6d442b7ba0eeadfde64cf0d0dec04"
+    },
+    "boundary-compile.txt": {
+      "bytes": 248,
+      "sha256": "aa8b5d61fdc3dc8e9df56dccc94d0e2f6ee4b04d3ad121997abde6bbb6f3592b"
+    },
+    "boundary-docs-check.txt": {
+      "bytes": 392,
+      "sha256": "35f2768680879098dea50de29a79708780b410d33cd1cf28846d52d90c43cc4e"
+    },
+    "boundary-files.json": {
+      "bytes": 955,
+      "sha256": "2c6e771bd751894fba732ffb8c3b465086f7a6187a022860664d5d4ac3761e43"
+    },
+    "builder.txt": {
+      "bytes": 901,
+      "sha256": "3447b7585efc3548a831b75bf299208b8af7539e62d47036e4678f1d08bd06ea"
+    },
+    "executor-build-manifest.json": {
+      "bytes": 5086,
+      "sha256": "b6e3a4b68c3d5de292f47b027f6aea02786403482bdca6134d947e66c4c14ed0"
+    },
+    "executor-build.txt": {
+      "bytes": 2168,
+      "sha256": "784bd0d8bd4d2c5bd060ce389cb8428a7750a9afb4c6d34eaae8aff0b5b7b440"
+    },
+    "executor-clippy.txt": {
+      "bytes": 3992,
+      "sha256": "a801037ac08f3569fbd92f9b0ffbffd787a530f64e456185d2a765e838778604"
+    },
+    "executor-native.txt": {
+      "bytes": 9246,
+      "sha256": "68f60c5fa20a05e060d8f4faedde0ba9f50242e22bfc3bda30895b54660c2593"
+    },
+    "executor-preparation.json": {
+      "bytes": 90683,
+      "sha256": "153c68bd4710c5e80dc25926575e4922b5c465a0f3d6e6b35ba8875bb22722d9"
+    },
+    "executor-source-manifest.json": {
+      "bytes": 4533,
+      "sha256": "150183a7d722294849e8cf7fc57901c9ebeb1642c9c2f9edefbe63d992de84a1"
+    },
+    "final-docs-ci-check.txt": {
+      "bytes": 706,
+      "sha256": "125d9c4c6a56f95d063cf92cb2ad1139d19bbd95630d641825bc071d3f2886c8"
+    },
+    "fixture-identity.txt": {
+      "bytes": 701,
+      "sha256": "30c82b801597a5f69b0d204c655ebd557d6d796a304ea41608b308275f0ffa81"
+    },
+    "format-references.txt": {
+      "bytes": 387,
+      "sha256": "86251ef157f1cde19502d6310f78def7fb0822a0dabd58e1b2c5d27552ce02d9"
+    },
+    "full-verification-review-failure.txt": {
+      "bytes": 705,
+      "sha256": "c6a339e61bfa7a025d502abd8a1274bd93b319d4a58f80db0d31d6d21be45232"
+    },
+    "normal-sandbox.txt": {
+      "bytes": 1400,
+      "sha256": "0215de2680ce8bb6130eb00cbcd1140b93666ff6a80a397fe83599f38d7e2af4"
+    },
+    "preparation.txt": {
+      "bytes": 686,
+      "sha256": "5baaf34c61b1000086c5037f8b3bbc650f2642cb6bfa7106f3dd2ee3bb56442f"
+    },
+    "provenance.txt": {
+      "bytes": 2280,
+      "sha256": "1b3bdccadab68b49428e0e2792222135288000f246fc6a9e2509e6bb38aac713"
+    },
+    "review-failure-docs-check.txt": {
+      "bytes": 232,
+      "sha256": "df409ac36e143c644ad48a96e5da81d881547a92c29eca0d06c2bf80355f6112"
+    },
+    "workspace-clippy.txt": {
+      "bytes": 126,
+      "sha256": "950fd127267abd2f028a4340c1a988821e3407d3d975aa2fb11ca91fe62bc235"
+    },
+    "workspace-native.txt": {
+      "bytes": 25373,
+      "sha256": "39ff3d0051e2e075b39e44e2f6621e8db83086e4436dc0d0d105dad280e64d84"
+    }
+  },
+  "executor_artifact": {
+    "bytes": 1366237,
+    "path": "artifact/defuse.wasm",
+    "sha256": "b0f39b46f0b8174986957db4329084121fde8c853ec1537dcad8b8ae916420fb"
+  },
+  "executor_build_manifest_sha256": "b6e3a4b68c3d5de292f47b027f6aea02786403482bdca6134d947e66c4c14ed0",
+  "executor_lock_sha256": "adad54d489e681229757b069e9da48f24ded2b075e2d79d05f1b4d53f21a2102",
+  "executor_source_manifest_sha256": "150183a7d722294849e8cf7fc57901c9ebeb1642c9c2f9edefbe63d992de84a1",
+  "full_verification_escalation_retry": {
+    "bypass_attempted": false,
+    "classification": "approval-review infrastructure failure; no unsafe-action determination stated",
+    "error": "Automatic approval review failed: stream disconnected before completion: Incomplete response returned, reason: content_filter.",
+    "execution": "NOT_STARTED",
+    "log": "/private/tmp/f26-verification-agent.log",
+    "log_present": false,
+    "test_result": "NOT_RECORDED"
+  },
+  "integration_boundary_evidence": {
+    "artifact_only_native": {
+      "failed": 0,
+      "filtered_async_cases": 11,
+      "passed": 1,
+      "sandbox_started": false
+    },
+    "clippy": {
+      "exit_code": 0,
+      "scope": "locked offline workspace all-targets with warnings denied",
+      "seconds": 2.77
+    },
+    "compile": {
+      "exit_code": 0,
+      "runtime_execution": false,
+      "seconds": 5.88
+    },
+    "files": {
+      "contracts/vault/tests/common/journal.rs": {
+        "bytes": 23771,
+        "sha256": "d66a2ba1f70e14ea040d94cf252fdf1706414ad13e8595b584bbc2f7b0884728"
+      },
+      "contracts/vault/tests/journal_withdrawal.rs": {
+        "bytes": 39570,
+        "sha256": "0852410737fb31f9e62d1a3bc75464af8ca51dcab58d194a9eb2ef0eb53a7793"
+      }
+    },
+    "production_source_and_artifacts": "UNCHANGED",
+    "recorded_utc": "2026-11-08T16:04:52.772611+00:00",
+    "runtime_scope": {
+      "added_grouped_cases": 2,
+      "current_source_v4": 11,
+      "executed_current_async_cases": 0,
+      "previous_source_v4": 9
+    }
+  },
+  "pending_full_verification": {
+    "log": "/private/tmp/f26-verification.log",
+    "log_present": false,
+    "result": "NOT_RECORDED"
+  },
+  "prepared_files": 493,
+  "recorded_utc": "2026-11-08T15:28:55.080986+00:00",
+  "root_lock_sha256": "f5feb16c6e6783ddcc79aa7bf858826df551a3333da0f07d0b52fded930c891e",
+  "root_reported_results": {
+    "agent_batch": "autonomous 7 passed; model 39 passed; protocol 3 passed, 11 localhost-startup failures; later targets not reached",
+    "artifact_binding": "exit 0; 1 native metadata test passed, 0 failed, 11 async cases filtered out; no sandbox started",
+    "boundary_clippy": "exit 0; 2.77 seconds; final locked/offline workspace all-targets with warnings denied",
+    "boundary_compile": "exit 0; 5.88 seconds; no-run compilation, no warnings; no runtime execution",
+    "browser_logic": "dashboard 34 passed; site 6 passed",
+    "current_journal_sandbox": "11 asynchronous cases unexecuted, including two new grouped boundary cases; original nine preserved; historical source-v3 startup failure separate",
+    "earlier_source_v4_artifact_binding": "exit 0; 1 native metadata test passed, 0 failed, 9 async cases filtered out; no sandbox started",
+    "executor_clippy": "exit 0; two inherited near-plugins dead-code warnings",
+    "executor_native": "37 passed after checked-conversion fixes",
+    "fixture_identity": "3 passed",
+    "provenance": "15 passed; provenance_cli 7 passed in a separate rerun",
+    "python_focused": "inspector 15, fixture 4, routing 3, preparation 23, builder 25 passed",
+    "shared_protocol": "16 passed",
+    "workspace_clippy": "exit 0",
+    "workspace_native": "301 passed (agent 8, keeper 8, vault 285)"
+  },
+  "source_root": "/Users/ehs4n/mandate-near/target/intents-executor/source-v4",
+  "vault_artifact": {
+    "bytes": 459584,
+    "path": "target/near/mandate_vault/mandate_vault.wasm",
+    "sha256": "a7dec54d8f5687db29b903e2f12c91e0d5eb5b3294d9487d178be37b4cbe6fe9"
+  },
+  "verification": "All current prepared files, pin bindings, locks and artifact bytes independently rehashed; no runtime execution performed by this check."
+}

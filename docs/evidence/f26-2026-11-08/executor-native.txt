@@ -1,0 +1,101 @@
+   Compiling defuse-digest v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/crates/digest)
+   Compiling defuse-crypto v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/crates/crypto)
+   Compiling defuse-serde-utils v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/crates/serde-utils)
+   Compiling defuse-io-utils v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/crates/io-utils)
+   Compiling defuse-num-utils v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/crates/num-utils)
+   Compiling defuse-near-utils v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/crates/near/utils)
+   Compiling defuse-token-id v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/crates/primitives/token-id)
+   Compiling defuse-map-utils v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/crates/map-utils)
+   Compiling defuse-nep461 v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/crates/signatures/nep461)
+   Compiling near-plugins v0.5.3 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/crates/mandate-near-plugins)
+   Compiling defuse-admin-utils v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/crates/near/admin-utils)
+   Compiling defuse-auth-call v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/crates/near/auth-call)
+   Compiling defuse-borsh-utils v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/crates/borsh-utils)
+   Compiling defuse-fees v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/crates/primitives/fees)
+   Compiling defuse-poa-factory v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/contracts/poa/factory)
+   Compiling defuse-wnear v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/crates/near/wnear)
+   Compiling defuse-near-promise v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/crates/near/promise)
+   Compiling defuse-time v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/crates/primitives/time)
+   Compiling defuse-nep245 v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/crates/near/nep245)
+   Compiling defuse-bitmap v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/crates/bitmap)
+   Compiling mandate-withdrawal-journal v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/crates/mandate-withdrawal-journal)
+   Compiling defuse-controller v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/crates/near/controller)
+   Compiling defuse-decimal v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/crates/primitives/decimal)
+   Compiling defuse-randomness v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/crates/testing/randomness)
+warning: struct `StageCode` is never constructed
+   --> crates/mandate-near-plugins/src/upgradable.rs:225:8
+    |
+225 | struct StageCode {
+    |        ^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: struct `DeployCode` is never constructed
+   --> crates/mandate-near-plugins/src/upgradable.rs:245:8
+    |
+245 | struct DeployCode {
+    |        ^^^^^^^^^^
+
+   Compiling defuse-tip191 v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/crates/signatures/tip191)
+   Compiling defuse-ton-connect v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/crates/signatures/ton-connect)
+   Compiling defuse-webauthn v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/crates/signatures/webauthn)
+   Compiling defuse-erc191 v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/crates/signatures/erc191)
+   Compiling defuse-sep53 v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/crates/signatures/sep53)
+   Compiling defuse-nep413 v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/crates/signatures/nep413)
+   Compiling defuse-global-deployer v0.2.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/contracts/global-deployer)
+   Compiling defuse-outlayer-app v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/contracts/outlayer/app)
+   Compiling defuse-core v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/contracts/defuse/core)
+warning: `near-plugins` (lib) generated 2 warnings
+   Compiling defuse-poa-token v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/contracts/poa/token)
+   Compiling defuse-escrow-swap v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/contracts/escrow-swap)
+warning: defuse-poa-factory@0.1.0: sub-contract empty stub is `/Users/ehs4n/mandate-near/target/intents-executor/build/debug/build/defuse-poa-factory-1ef221b1f02920a9/out/target-product-for-factory/empty_subcontract_stub.wasm`
+warning: defuse-poa-factory@0.1.0: RESULT: path to wasm file of built or empty-stubbed sub-contract exported to `POA_TOKEN_WASM` env variable
+   Compiling defuse-test-utils v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/crates/testing/utils)
+   Compiling defuse v0.4.5 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/contracts/defuse)
+   Compiling defuse-sandbox v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/crates/testing/sandbox)
+   Compiling multi-token-receiver-stub v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/tests/contracts/multi-token-receiver-stub)
+   Compiling defuse-tests v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/tests)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 15.57s
+     Running unittests src/lib.rs (/Users/ehs4n/mandate-near/target/intents-executor/build/debug/deps/defuse-b4967c1d9a884926)
+
+running 37 tests
+test contract::accounts::account::tests::near_deterministic_account_has_no_implicit_public_key ... ok
+test contract::accounts::account::tests::near_implicit_account_has_implicit_public_key ... ok
+test contract::accounts::account::tests::named_account_has_no_implicit_public_key ... ok
+test contract::accounts::account::tests::eth_implicit_account_has_implicit_public_key ... ok
+test contract::accounts::account::tests::universal_account_has_no_implicit_public_key ... ok
+test contract::accounts::account::tests::upgrade_to_flags::implicit_public_key_removed_1_true ... ok
+test contract::accounts::account::tests::upgrade_to_flags::implicit_public_key_removed_2_false ... ok
+test contract::accounts::account::entry::tests::legacy::legacy_upgrade ... ok
+test contract::accounts::account::entry::tests::legacy::versioned_upgrade::case_1_v0 ... ok
+test contract::state::salt_registry::tests::contains_salt_test ... ok
+test contract::state::salt_registry::tests::derive_next_test ... ok
+test contract::state::salt_registry::tests::update_current_salt_test ... ok
+test contract::tokens::nep141::journal::tests::journal_absent_cancellation_irrevocably_fences_a_late_original ... ok
+test contract::state::salt_registry::tests::reset_salt_test ... ok
+test contract::tokens::nep141::journal::tests::journal_domain_and_admission_are_fresh_only_and_do_not_change_root_layout ... ok
+test contract::accounts::account::nonces::tests::commit_duplicate_nonce ... ok
+test contract::tokens::nep141::journal::tests::journal_dispatch_is_once_and_changed_request_cannot_reuse_an_id ... ok
+test contract::tokens::nep141::journal::tests::journal_initializer_refuses_an_existing_plain_executor_without_adding_metadata ... ok
+test tokens::tests::test_builder_methods ... ok
+test tokens::tests::test_deserialize_simple ... ok
+test tokens::tests::test_deserialize_with_execute ... ok
+test tokens::tests::test_display_simple ... ok
+test tokens::tests::test_from_str_json_with_execute ... ok
+test tokens::tests::test_from_str_simple ... ok
+test tokens::tests::test_serialize_simple ... ok
+test tokens::tests::test_serialize_with_execute ... ok
+test contract::accounts::account::nonces::tests::legacy_nonces_cant_be_cleared ... ok
+test contract::tokens::nep141::journal::tests::journal_explicit_ft_failure_refunds_once_and_persists_terminal_status ... ok
+test contract::tokens::nep141::journal::tests::journal_empty_ft_success_is_terminal_and_reuses_the_prepaid_record_slot ... ok
+test contract::tokens::nep141::journal::tests::journal_admission_is_bounded_unique_and_canonicalized_once_at_initialization ... ok
+test contract::tokens::nep141::journal::tests::journal_unauthorized_predecessor_cannot_debit_or_allocate_cancelled_tombstones ... ok
+test contract::tokens::nep141::journal::tests::journal_underfunded_gas_or_storage_refuses_before_debit_and_dispatch ... ok
+test contract::tokens::nep141::journal::tests::journal_missing_multiple_nonempty_and_oversized_success_keep_pending_without_refund ... ok
+test contract::accounts::account::nonces::tests::commit_new_nonce ... ok
+test contract::accounts::account::nonces::tests::commit_existing_legacy_nonce ... ok
+test contract::accounts::account::nonces::tests::new_from_legacy ... ok
+test contract::accounts::account::nonces::tests::check_used_nonces ... ok
+
+test result: ok. 37 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.23s
+

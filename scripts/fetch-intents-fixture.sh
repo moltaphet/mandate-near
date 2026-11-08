@@ -1,12 +1,16 @@
 #!/usr/bin/env bash
-# Re-download the real intents.near contract from NEAR mainnet and check it
-# against the on-chain code hash. The sandbox tests deploy this exact wasm.
+# Download intents.near for comparison and check its RPC-reported code hash.
+# The reviewed sandbox fixture is preserved unless its path is passed explicitly.
 #
 # Usage: scripts/fetch-intents-fixture.sh [output-file]
 # Needs: curl, python3. Read-only: one public RPC call, no keys.
 set -euo pipefail
 
-out="${1:-$(cd "$(dirname "$0")/.." && pwd)/contracts/vault/tests/fixtures/intents-near-mainnet.wasm}"
+if [[ $# -gt 1 ]]; then
+  printf '%s\n' 'Usage: scripts/fetch-intents-fixture.sh [output-file]' >&2
+  exit 2
+fi
+out="${1:-$(mktemp "${TMPDIR:-/tmp}/mandate-intents-comparison.XXXXXX")}"
 rpc="${NEAR_RPC:-https://free.rpc.fastnear.com}"
 
 tmp="$(mktemp)"
@@ -32,7 +36,7 @@ def base58(raw: bytes) -> str:
 
 with open(sys.argv[1], encoding="utf-8") as f:
     result = json.load(f)["result"]
-code = base64.b64decode(result["code_base64"])
+code = base64.b64decode(result["code_base64"], validate=True)
 digest = hashlib.sha256(code).digest()
 local, onchain = base58(digest), result["hash"]
 if local != onchain:
@@ -41,4 +45,5 @@ with open(sys.argv[2], "wb") as f:
     f.write(code)
 print(f"ok  {len(code)} bytes  sha256 {digest.hex()}")
 print(f"    on-chain code hash {onchain}  at block {result['block_height']}")
+print(f"    comparison output {sys.argv[2]}")
 PY

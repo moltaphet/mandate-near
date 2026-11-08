@@ -1,0 +1,2526 @@
+{
+  "files": {
+    ".agents/AGENTS.md": {
+      "bytes": 2910,
+      "mode": 436,
+      "sha256": "3711a288e325413357d0d0f34e3d5179a71105b188e040154de4c181a31f54ed"
+    },
+    ".cargo/audit.toml": {
+      "bytes": 429,
+      "mode": 436,
+      "sha256": "9af6250c3765d53c924cd2f594e1f2b1340483e7db4bd81e718d637602905568"
+    },
+    ".cargo/config.toml": {
+      "bytes": 405,
+      "mode": 436,
+      "sha256": "891609fd5a2ea444da457f1b02310b02918861f7aacc3ffeee2ece8333e5179e"
+    },
+    ".catalog-info.yaml": {
+      "bytes": 183,
+      "mode": 436,
+      "sha256": "1fe5d643cc214bea2e5547f1276c29faa66a86b1df94236786b9a26237213204"
+    },
+    ".claude/settings.json": {
+      "bytes": 319,
+      "mode": 436,
+      "sha256": "f8298eb95e1a72b0e76cd4d6cf4ee169786738bc2eb6bc166aa0799e8df10f6a"
+    },
+    ".github/workflows/ci.yml": {
+      "bytes": 6629,
+      "mode": 436,
+      "sha256": "57f7a077e9e2f6998f4636b1e8da6032e1bc90aa49de2c84d0ec1abc26eeee5e"
+    },
+    ".github/workflows/publish-docs-page.yml": {
+      "bytes": 1786,
+      "mode": 436,
+      "sha256": "552cec4e97cd55d2572de06dcfd7f21179dfa650f83eb55074e27957bab8e9f3"
+    },
+    ".github/workflows/release.yml": {
+      "bytes": 933,
+      "mode": 436,
+      "sha256": "a9a0577767eb78ef4c2edb0309b4c87b3836cfb292ad1043752dfcd34584455f"
+    },
+    ".github/workflows/security-audit.yml": {
+      "bytes": 961,
+      "mode": 436,
+      "sha256": "581ae9f04ac4cf2fb32636be5da465158b8283d7f44b90f4df0d5528f8ff13b7"
+    },
+    ".gitignore": {
+      "bytes": 13,
+      "mode": 436,
+      "sha256": "83da649bf1dda32b48c33799972d4b1f335014afac6369e7ae83bdc1e9bb42a1"
+    },
+    "Cargo.lock": {
+      "bytes": 160058,
+      "mode": 436,
+      "sha256": "adad54d489e681229757b069e9da48f24ded2b075e2d79d05f1b4d53f21a2102"
+    },
+    "Cargo.toml": {
+      "bytes": 7337,
+      "mode": 436,
+      "sha256": "012dc2c89a4b1c2b389e05fdab397b851bea97c36a147c8a00bcc2464dfccd99"
+    },
+    "LICENSE": {
+      "bytes": 1072,
+      "mode": 436,
+      "sha256": "283bd1412bb1870793ebac5b4a6eceef1d40651894ffe634b0cf360564fe0f45"
+    },
+    "Makefile": {
+      "bytes": 5112,
+      "mode": 436,
+      "sha256": "1abf4a27572e109a26c0149abf424ffb8c659c7953a4dcf3e28dcaa48a2719b6"
+    },
+    "README.md": {
+      "bytes": 4280,
+      "mode": 436,
+      "sha256": "d5be87c4c0bee064ecbb560bc7d017528fd4a18ee8cefb02372f7276354a8f4c"
+    },
+    "contracts/README.md": {
+      "bytes": 36,
+      "mode": 436,
+      "sha256": "17e362f79c729774c28be9bd0d0c0c4f85870b741d622bc8c36ef0379b630625"
+    },
+    "contracts/defuse/.catalog-info.yaml": {
+      "bytes": 415,
+      "mode": 436,
+      "sha256": "41100cfe453e945dc1dd5b463558cf726ea1f8e0ce0dc28a4bbdb433fd5bf11e"
+    },
+    "contracts/defuse/CHANGELOG.md": {
+      "bytes": 1148,
+      "mode": 436,
+      "sha256": "0ce49dd2a053b5c499e7ca16b16ebf2e6dfd0ecd3ad84f28363f700beaa25c04"
+    },
+    "contracts/defuse/Cargo.toml": {
+      "bytes": 3380,
+      "mode": 436,
+      "sha256": "f06392e0f21b494a4edc2ad8d08baf525ecd79e31eed768a0a9cd9015d492021"
+    },
+    "contracts/defuse/README.md": {
+      "bytes": 3929,
+      "mode": 436,
+      "sha256": "8512090124b2c76cb0c8af4de1da40e436a966ed71ca4206313f01ad6b9f9630"
+    },
+    "contracts/defuse/core/Cargo.toml": {
+      "bytes": 3451,
+      "mode": 436,
+      "sha256": "25627b5f4b0ce09f0cf13dace99b4814e02b992c608753ec908736aca65d9d7f"
+    },
+    "contracts/defuse/core/src/accounts.rs": {
+      "bytes": 1761,
+      "mode": 436,
+      "sha256": "44da0e97433665d1e2d64952e7b1ee22c70eaf66003a20e8703637a7898f36b2"
+    },
+    "contracts/defuse/core/src/amounts.rs": {
+      "bytes": 7277,
+      "mode": 436,
+      "sha256": "8d128eebb31f809942259db56813f7e801601a075d8e46a145ef15517a420979"
+    },
+    "contracts/defuse/core/src/engine/inspector.rs": {
+      "bytes": 369,
+      "mode": 436,
+      "sha256": "28abd201e3f90aa15bf85093227e0eb878b23b7a4bb48dc4295380da65fdcb1d"
+    },
+    "contracts/defuse/core/src/engine/mod.rs": {
+      "bytes": 3285,
+      "mode": 436,
+      "sha256": "d1518444bc637686df75a5ff4f537fd110b622aeeda063ddb24d4ee14375f402"
+    },
+    "contracts/defuse/core/src/engine/state/cached.rs": {
+      "bytes": 14260,
+      "mode": 436,
+      "sha256": "d7a14ace48bc132f2f585cf4154d1f5bb0c728dd8db48b27878b507574917241"
+    },
+    "contracts/defuse/core/src/engine/state/deltas.rs": {
+      "bytes": 18531,
+      "mode": 436,
+      "sha256": "7083b1b732f3ad6ad71f769193950788227c0224a5ab0076b1900b557dad0d19"
+    },
+    "contracts/defuse/core/src/engine/state/mod.rs": {
+      "bytes": 5749,
+      "mode": 436,
+      "sha256": "469a815e95c67de0ebadbcc639c13be1c5f2a01e4bf2d02ff86ef12fabfac3c4"
+    },
+    "contracts/defuse/core/src/error.rs": {
+      "bytes": 2373,
+      "mode": 436,
+      "sha256": "a9b015f3cb2668158ef6efddfc0ab251439e09fa1ac4514f419801bce2b9831b"
+    },
+    "contracts/defuse/core/src/events/mod.rs": {
+      "bytes": 3951,
+      "mode": 436,
+      "sha256": "87db0e5af5d800545157a0aa47b62fad1bf060f7f5c487dad19736f9b3bdb095"
+    },
+    "contracts/defuse/core/src/events/tests/mod.rs": {
+      "bytes": 11884,
+      "mode": 436,
+      "sha256": "7e28b8545e45b04d540440d48cd2229126eb8f05289093593918108d52f7db20"
+    },
+    "contracts/defuse/core/src/events/tests/v0_4_1.rs": {
+      "bytes": 3440,
+      "mode": 436,
+      "sha256": "13745a8c2970cae30287b8aead61a56244dee7e39ad931fa16404a40a443d3ca"
+    },
+    "contracts/defuse/core/src/fees.rs": {
+      "bytes": 1054,
+      "mode": 436,
+      "sha256": "6d58d1ef6f7668fa5a2db1bd61a4381ddb81aced59c8811a469d10512af83df3"
+    },
+    "contracts/defuse/core/src/intents/account.rs": {
+      "bytes": 3722,
+      "mode": 436,
+      "sha256": "cb3397e03726b7990e17b3d04bfa8f9c526bec4aab2fa639fbacea67cd3fb490"
+    },
+    "contracts/defuse/core/src/intents/auth.rs": {
+      "bytes": 2151,
+      "mode": 436,
+      "sha256": "1979aaaf500613f679dcd52378756854d0f4badabd51a81bd2b00ba1bbffb2ed"
+    },
+    "contracts/defuse/core/src/intents/imt.rs": {
+      "bytes": 3605,
+      "mode": 436,
+      "sha256": "c11124afcbe6e0cd97bc1cfcec8c70b165abf7d7083f7dffd2f08c0129eb4a2d"
+    },
+    "contracts/defuse/core/src/intents/mod.rs": {
+      "bytes": 5472,
+      "mode": 436,
+      "sha256": "47d9a5711e596373cc0b7c45f2b0416df0396ae016c98eaf0e923a1c5b597241"
+    },
+    "contracts/defuse/core/src/intents/token_diff.rs": {
+      "bytes": 12211,
+      "mode": 436,
+      "sha256": "94b9fce9429fed24ad6619f45c5d386505326514a7773c28f8e8085d4c6a6591"
+    },
+    "contracts/defuse/core/src/intents/tokens.rs": {
+      "bytes": 18120,
+      "mode": 436,
+      "sha256": "65cf4f8cb6f09b295415c387a20bfbbf4ee17e40fdf6287a161fbdecfbb2c88b"
+    },
+    "contracts/defuse/core/src/lib.rs": {
+      "bytes": 782,
+      "mode": 436,
+      "sha256": "7980f482ab74852c8088ee89b8eb0d0ef1b91381986ddf17b822a171032edaf0"
+    },
+    "contracts/defuse/core/src/lock.rs": {
+      "bytes": 6263,
+      "mode": 436,
+      "sha256": "cb34ff1e1fc8179c70f7ecfa6198aaef69d404df8fdf3ac0292aa622362c9aaa"
+    },
+    "contracts/defuse/core/src/nonce/expirable.rs": {
+      "bytes": 1484,
+      "mode": 436,
+      "sha256": "1efdb44204ec62eeba00c5f95b41a962900ffb81c515f0e91c30aeb39dae4bc2"
+    },
+    "contracts/defuse/core/src/nonce/mod.rs": {
+      "bytes": 1468,
+      "mode": 436,
+      "sha256": "e653c1da5fa177ffae01f73cd34966b393187174f1d81137298125e2c57a351b"
+    },
+    "contracts/defuse/core/src/nonce/salted.rs": {
+      "bytes": 2121,
+      "mode": 436,
+      "sha256": "27daf2c04f02665f4d7fb67b74287f299727a77e27e41dee3017800b8bdcdc7f"
+    },
+    "contracts/defuse/core/src/nonce/versioned.rs": {
+      "bytes": 2457,
+      "mode": 436,
+      "sha256": "56f3b1b5271207e6b6a917d720ad0a0362fa2adf1ae96a3b2d61359dba9f994b"
+    },
+    "contracts/defuse/core/src/payload/erc191.rs": {
+      "bytes": 1417,
+      "mode": 436,
+      "sha256": "0296011a7b913eaebb48a06f4e5eac2b6ae702be9263c9a0dbc65652e1d201cb"
+    },
+    "contracts/defuse/core/src/payload/mod.rs": {
+      "bytes": 2127,
+      "mode": 436,
+      "sha256": "2c8821d9704f6fac3827070c68a1d7c5f891f90ef1eaa1c5ee4756ff9e7026b5"
+    },
+    "contracts/defuse/core/src/payload/multi.rs": {
+      "bytes": 6139,
+      "mode": 436,
+      "sha256": "1a84de51cc02eb69e3097a82bb670e95ad0254436bd535332b595ded601c6763"
+    },
+    "contracts/defuse/core/src/payload/nep413.rs": {
+      "bytes": 2472,
+      "mode": 436,
+      "sha256": "719427aceb87924417a903dcc37d955875822c8201924dc02124c524ce6c2ecb"
+    },
+    "contracts/defuse/core/src/payload/raw.rs": {
+      "bytes": 1333,
+      "mode": 436,
+      "sha256": "761cbdd1390a4cf2ae2175151030961eff2ff2bf883dcecce900a9f34bcfefb3"
+    },
+    "contracts/defuse/core/src/payload/sep53.rs": {
+      "bytes": 1248,
+      "mode": 436,
+      "sha256": "3a34b4064133c9634a32f090fe49a3d1a07956c015cb4f373a90ff32fa8ecb60"
+    },
+    "contracts/defuse/core/src/payload/tip191.rs": {
+      "bytes": 1380,
+      "mode": 436,
+      "sha256": "097c052295b192ea55777fa3b1e0f23c775a958a46d81fb9f59e51e1d0a1e3d0"
+    },
+    "contracts/defuse/core/src/payload/ton_connect.rs": {
+      "bytes": 2570,
+      "mode": 436,
+      "sha256": "e92cc408249ea5478dfa45f2bb1c9cc66ba4a75a89c5ced1c62ffc22bc5707fb"
+    },
+    "contracts/defuse/core/src/payload/webauthn.rs": {
+      "bytes": 5507,
+      "mode": 436,
+      "sha256": "3b5dc3ee37432549316ae5db1865f186dff101911e29774edcb1303c7a465dbf"
+    },
+    "contracts/defuse/core/src/public_key.rs": {
+      "bytes": 8115,
+      "mode": 436,
+      "sha256": "7923c63cb5fcdcba411bfc4de391a1aea368a02c75b8c503565daa50be8917a8"
+    },
+    "contracts/defuse/core/src/signature.rs": {
+      "bytes": 4983,
+      "mode": 436,
+      "sha256": "85d2994ec70d5a9b983e4f46b16287637bedbf44813c1235c3928940f5b4aaac"
+    },
+    "contracts/defuse/core/src/tokens.rs": {
+      "bytes": 3044,
+      "mode": 436,
+      "sha256": "1322d00dc45519714eb3243eba37a06abda1e9bc27e1f5c90ab7c090bcd00c16"
+    },
+    "contracts/defuse/src/accounts.rs": {
+      "bytes": 3619,
+      "mode": 436,
+      "sha256": "d23da2535b754bfe7fb8e76f9a24033b35fc1009e23a7fc0add6a78b72ac105f"
+    },
+    "contracts/defuse/src/admin_call.rs": {
+      "bytes": 274,
+      "mode": 436,
+      "sha256": "5f2c1876a30842333fc199cfa0736cacca1df39e30762306f64b174b98ff1ebf"
+    },
+    "contracts/defuse/src/contract/abi.rs": {
+      "bytes": 736,
+      "mode": 436,
+      "sha256": "446853c50d30309be63c5fbd80ec3cadf66fdda24e6f5a47e52c4abf2b27ab4f"
+    },
+    "contracts/defuse/src/contract/accounts/account/entry/mod.rs": {
+      "bytes": 5122,
+      "mode": 436,
+      "sha256": "1ea61e25301bd317ee6ec80d51a2a7d58a7d68fe529eb756ddaa819d302cc2f4"
+    },
+    "contracts/defuse/src/contract/accounts/account/entry/tests/legacy.rs": {
+      "bytes": 7098,
+      "mode": 436,
+      "sha256": "8b0e25e0955c143b23b5e53bca5c6d571acf01183c8ae2f9af6b6e0e96ecd23b"
+    },
+    "contracts/defuse/src/contract/accounts/account/entry/tests/mod.rs": {
+      "bytes": 12,
+      "mode": 436,
+      "sha256": "ccc9ca050bf6909380ab7a19a9ac8476ee9c01c92bbaa159fe3eb2bd63969738"
+    },
+    "contracts/defuse/src/contract/accounts/account/entry/v0.rs": {
+      "bytes": 4796,
+      "mode": 436,
+      "sha256": "22f6bde4beaacb129f28361106266fd0bc21db504bd8d4c8b7782d6420936708"
+    },
+    "contracts/defuse/src/contract/accounts/account/entry/v1.rs": {
+      "bytes": 6962,
+      "mode": 436,
+      "sha256": "4a27c435b542f8ddfc9c9c04ce718e06dbaeede1e89375a76c2823f6630d6099"
+    },
+    "contracts/defuse/src/contract/accounts/account/mod.rs": {
+      "bytes": 8409,
+      "mode": 436,
+      "sha256": "c148ec8dc78df4bcc6c1d94d5d56f5bb5c0cd7c0adb01250998ed99f006bed24"
+    },
+    "contracts/defuse/src/contract/accounts/account/nonces.rs": {
+      "bytes": 6565,
+      "mode": 436,
+      "sha256": "09f5a940f3e62ae736b5a5a05b4d6f5d0d509a0e227a731b6adf36760c07ccfb"
+    },
+    "contracts/defuse/src/contract/accounts/force.rs": {
+      "bytes": 3606,
+      "mode": 436,
+      "sha256": "01ca8430b3b215082467f8404d8557dd9d60ba46f931dd807cd92c218df504f1"
+    },
+    "contracts/defuse/src/contract/accounts/mod.rs": {
+      "bytes": 6869,
+      "mode": 436,
+      "sha256": "d049db18e45ee395541ace6e5889f7fd57af472b80c82382d2c73d2277195176"
+    },
+    "contracts/defuse/src/contract/accounts/state.rs": {
+      "bytes": 915,
+      "mode": 436,
+      "sha256": "ed31cd4bcef65b001b63b3b91affa5fc79286b9cc3feac36d3cd9476baa61006"
+    },
+    "contracts/defuse/src/contract/admin.rs": {
+      "bytes": 749,
+      "mode": 436,
+      "sha256": "b171af34825bd93e8cdeacc2f147db230bfa3474e6003f708104b16e4b966340"
+    },
+    "contracts/defuse/src/contract/admin_call.rs": {
+      "bytes": 930,
+      "mode": 436,
+      "sha256": "5a3e9df63bfbd7cb117893e1fb9d535ddd9f93df23a23620617093d969228a8d"
+    },
+    "contracts/defuse/src/contract/config.rs": {
+      "bytes": 759,
+      "mode": 436,
+      "sha256": "6f383bad170128389390ef1aeef64808f295a8634a706b2ae33a97e1c5d3b347"
+    },
+    "contracts/defuse/src/contract/events.rs": {
+      "bytes": 875,
+      "mode": 436,
+      "sha256": "05539e59aa513137ae9736b8eb69cae5c995122501b1d63b2aeda7db74162918"
+    },
+    "contracts/defuse/src/contract/fees.rs": {
+      "bytes": 1530,
+      "mode": 436,
+      "sha256": "89e48a014c40deaec693687b6117726000fd06e30eceac8992fd2efe92fd3868"
+    },
+    "contracts/defuse/src/contract/garbage_collector.rs": {
+      "bytes": 1484,
+      "mode": 436,
+      "sha256": "59d878bc29930d1c9ec345eb34ff36711ab4fc37997ed4aec33f560d8bda3a3c"
+    },
+    "contracts/defuse/src/contract/intents/auth_call.rs": {
+      "bytes": 1386,
+      "mode": 436,
+      "sha256": "7d346d6ba8e36718c174b717eb8df910bcc255d996cb9f5e922ae88ce289b280"
+    },
+    "contracts/defuse/src/contract/intents/execute.rs": {
+      "bytes": 1134,
+      "mode": 436,
+      "sha256": "248d680e36fe8a6e7a9680206c845e8c163512f4e8d705a3b1fafa749ca40247"
+    },
+    "contracts/defuse/src/contract/intents/mod.rs": {
+      "bytes": 2008,
+      "mode": 436,
+      "sha256": "95d9ae3f8f99e6d1d78976f25ffbcefa8973cffa2a375fb4bbfc27806b9823df"
+    },
+    "contracts/defuse/src/contract/intents/relayer.rs": {
+      "bytes": 1467,
+      "mode": 436,
+      "sha256": "c6e8e218e6636408af906726b2aaab7366e04d3370c6f076d7fd820fdeb545f9"
+    },
+    "contracts/defuse/src/contract/intents/simulate.rs": {
+      "bytes": 2033,
+      "mode": 436,
+      "sha256": "4a34d6563900d559af55e558c9f8a59383d738c98971c7cbdd916a09d2705168"
+    },
+    "contracts/defuse/src/contract/intents/state.rs": {
+      "bytes": 12106,
+      "mode": 436,
+      "sha256": "9fc716d06ad496cf1a487c586091b04a5cf663293807d972b146db61db55b15a"
+    },
+    "contracts/defuse/src/contract/mod.rs": {
+      "bytes": 4271,
+      "mode": 436,
+      "sha256": "e159255c353fd34e7fcd94fd1af2a71f6f2871a3d5b0c322aca978084f4e07a0"
+    },
+    "contracts/defuse/src/contract/prefix.rs": {
+      "bytes": 562,
+      "mode": 436,
+      "sha256": "20263d4d18756db93f7b5f0a31438c0a6fdce6fb1bf6b819eca2f45d9aeff5e0"
+    },
+    "contracts/defuse/src/contract/salts.rs": {
+      "bytes": 1430,
+      "mode": 436,
+      "sha256": "8a39d00fbcb4f9b9ceed8c3bcc6766be0258dce38ec41ef26e55cef4d51c9c0d"
+    },
+    "contracts/defuse/src/contract/state/mod.rs": {
+      "bytes": 1294,
+      "mode": 436,
+      "sha256": "9fbebb780386b7e65ce4d02f97c974b4f8536e6bedd6004cc9d402e4d33b38e6"
+    },
+    "contracts/defuse/src/contract/state/salt_registry.rs": {
+      "bytes": 5309,
+      "mode": 436,
+      "sha256": "1a2f6765f8840e8c1da214579fee8680a8a42093b914a7cc11a86d92301d1c81"
+    },
+    "contracts/defuse/src/contract/state/v0.rs": {
+      "bytes": 1641,
+      "mode": 436,
+      "sha256": "77b24a79d2ba3db67c2ed2be64597c1b31d853bd16c3a44f702d7affa6b35ee5"
+    },
+    "contracts/defuse/src/contract/tokens/imt.rs": {
+      "bytes": 1110,
+      "mode": 436,
+      "sha256": "b971c8370f6486772916dc77963db283b63d5b3c182950a9370db4a162559d11"
+    },
+    "contracts/defuse/src/contract/tokens/mod.rs": {
+      "bytes": 7648,
+      "mode": 436,
+      "sha256": "49e905115f416697a407303e3a0369a682e625628050487485c07fd8892a6c99"
+    },
+    "contracts/defuse/src/contract/tokens/nep141/deposit.rs": {
+      "bytes": 3126,
+      "mode": 436,
+      "sha256": "28af339956c7e083e70e31fb6cca5085f78ecd70707e7e040c87691cb7e09f4c"
+    },
+    "contracts/defuse/src/contract/tokens/nep141/journal.rs": {
+      "bytes": 28638,
+      "mode": 420,
+      "sha256": "3f9965b6a4eb20611e8eec68416e8a83900a463bc41d63c135ca196cf59f93d7"
+    },
+    "contracts/defuse/src/contract/tokens/nep141/mod.rs": {
+      "bytes": 73,
+      "mode": 436,
+      "sha256": "7a48e264576ec15271f9de4d98e336f3fd2d12ec29ca53c5f32f06caf0245a36"
+    },
+    "contracts/defuse/src/contract/tokens/nep141/native.rs": {
+      "bytes": 570,
+      "mode": 436,
+      "sha256": "e1215d650924bb11469194f31da948534c1d017e02f43cc264583bce02960c7b"
+    },
+    "contracts/defuse/src/contract/tokens/nep141/storage_deposit.rs": {
+      "bytes": 999,
+      "mode": 436,
+      "sha256": "4b716a52a1783b175a0485a360f203c785d15e4e83114c7c0266ba9459fd0487"
+    },
+    "contracts/defuse/src/contract/tokens/nep141/withdraw.rs": {
+      "bytes": 7405,
+      "mode": 436,
+      "sha256": "c2ae9d5ec4731408e7535f2a6840977e6690abdac6dc47e1a262497dc4aba4c8"
+    },
+    "contracts/defuse/src/contract/tokens/nep171/deposit.rs": {
+      "bytes": 3476,
+      "mode": 436,
+      "sha256": "0599e967e653d2adf4486b01ed6502c1e8b12f7ec7030dd896550b55483c8ffa"
+    },
+    "contracts/defuse/src/contract/tokens/nep171/mod.rs": {
+      "bytes": 27,
+      "mode": 436,
+      "sha256": "5e7d8b6f37779d00cd283cbf92250be66fc3496adec899e837d85067773a0482"
+    },
+    "contracts/defuse/src/contract/tokens/nep171/withdraw.rs": {
+      "bytes": 7441,
+      "mode": 436,
+      "sha256": "ac98981db5d1495f8236cf0e96a0c0ac7b7916571e653ba540ea32943b279ff5"
+    },
+    "contracts/defuse/src/contract/tokens/nep245/core.rs": {
+      "bytes": 10573,
+      "mode": 436,
+      "sha256": "af114330859102e21f2f4207af3cd02121a1929453c47d0397a2af7b06f5f2d2"
+    },
+    "contracts/defuse/src/contract/tokens/nep245/deposit.rs": {
+      "bytes": 4476,
+      "mode": 436,
+      "sha256": "d6a3fb5ce9a88b8d9d164e85878db5630c81c65ae3a13d95ed3b5cfd2a710080"
+    },
+    "contracts/defuse/src/contract/tokens/nep245/enumeration.rs": {
+      "bytes": 2193,
+      "mode": 436,
+      "sha256": "aa2cf541bda18ecf258125dccd127298e7de15dc1d92748fc7891f33b8603116"
+    },
+    "contracts/defuse/src/contract/tokens/nep245/force.rs": {
+      "bytes": 3051,
+      "mode": 436,
+      "sha256": "0061244ef535758fba804dcc3d3184e834ca6ba29eb6708b1270db94c5823642"
+    },
+    "contracts/defuse/src/contract/tokens/nep245/mod.rs": {
+      "bytes": 79,
+      "mode": 436,
+      "sha256": "0056641603b44ec0635c73f975d649df35ba817e9b125c9efebfa88b5557598e"
+    },
+    "contracts/defuse/src/contract/tokens/nep245/resolver.rs": {
+      "bytes": 4651,
+      "mode": 436,
+      "sha256": "97ce70527334331ad04d527b7eb172ae19bc3e1b98b27b37fc77912aca37d153"
+    },
+    "contracts/defuse/src/contract/tokens/nep245/withdraw.rs": {
+      "bytes": 9998,
+      "mode": 436,
+      "sha256": "80116fab61190c1448e68f1108c1ba5db786c3ab9aa80297f7c0b1a4ee4e1d8b"
+    },
+    "contracts/defuse/src/contract/upgrade.rs": {
+      "bytes": 860,
+      "mode": 436,
+      "sha256": "bde68ecc9dd92a2e54fcfa117eae20b2d37e9b5b95b20de85ddb92a637dd7188"
+    },
+    "contracts/defuse/src/contract/versioned/mod.rs": {
+      "bytes": 4101,
+      "mode": 436,
+      "sha256": "a84ef1581fe5c79751824550c14eef0235638b8c02376a829fec78238403df72"
+    },
+    "contracts/defuse/src/contract/versioned/v0.rs": {
+      "bytes": 931,
+      "mode": 436,
+      "sha256": "93136459c77b7e5f4b258d30bea70c8c82aa1fafde075cefef439fece10f45bc"
+    },
+    "contracts/defuse/src/far.rs": {
+      "bytes": 938,
+      "mode": 436,
+      "sha256": "e22156f7498db144d59370de6884769cd8c7f5e597320901b9314adcf9a30204"
+    },
+    "contracts/defuse/src/fees.rs": {
+      "bytes": 456,
+      "mode": 436,
+      "sha256": "b87dc085f176bdc100ae9b06cb78a7680aacd43d13ed2180553c77213fd69871"
+    },
+    "contracts/defuse/src/garbage_collector.rs": {
+      "bytes": 512,
+      "mode": 436,
+      "sha256": "4dfb9332d5e6148d0ff3f4fc3a3276b9a891cfd05a5b71761c5f44520fc5d78f"
+    },
+    "contracts/defuse/src/intents.rs": {
+      "bytes": 989,
+      "mode": 436,
+      "sha256": "82fbcbe0beebc514519bfa78828313d075a5dc4df57ae392e989c004499448fa"
+    },
+    "contracts/defuse/src/lib.rs": {
+      "bytes": 1880,
+      "mode": 436,
+      "sha256": "c19ef27fa41f7ae569cfc10821e247d653b24099e310843e2c1a81214cf36812"
+    },
+    "contracts/defuse/src/salts.rs": {
+      "bytes": 693,
+      "mode": 436,
+      "sha256": "e600804c11295e0c4370a2795eaf80d4ca86d85adde61328ffa4f771b62eb46d"
+    },
+    "contracts/defuse/src/simulation_output.rs": {
+      "bytes": 1453,
+      "mode": 436,
+      "sha256": "45458db1b1ad6ed0326b93490e084849bd44498816981dcb2d938f1420aaa454"
+    },
+    "contracts/defuse/src/tokens/imt.rs": {
+      "bytes": 354,
+      "mode": 436,
+      "sha256": "63aaedc628825aa67e52be3dc811e8603a9849a58a2f8450532446b3d9c380e4"
+    },
+    "contracts/defuse/src/tokens/mod.rs": {
+      "bytes": 10126,
+      "mode": 436,
+      "sha256": "40d3ef8306af70f02d1b76c7947a97f3f3ae406ccb6abd7274f9f8f42e636966"
+    },
+    "contracts/defuse/src/tokens/nep141.rs": {
+      "bytes": 1438,
+      "mode": 436,
+      "sha256": "5218a44cdd451e38ab87b4ce6fd2e71ef3bd65f45cbc06e7eeed784875082787"
+    },
+    "contracts/defuse/src/tokens/nep171.rs": {
+      "bytes": 1476,
+      "mode": 436,
+      "sha256": "5e720afa14e2035a26ba814e0a7b1c43975e5a849794e67d268a082c2a0d9279"
+    },
+    "contracts/defuse/src/tokens/nep245.rs": {
+      "bytes": 2940,
+      "mode": 436,
+      "sha256": "cf9d6ba28206f8827c2a3d1279c0db22568d2efecfc2bbb5902126f154008c1d"
+    },
+    "contracts/escrow-swap/Cargo.toml": {
+      "bytes": 2139,
+      "mode": 436,
+      "sha256": "84d12567bbd3c8978b3e1cf8fe60bc9684bbb2568f57dc7f8d1f6bcb3984e6d3"
+    },
+    "contracts/escrow-swap/README.md": {
+      "bytes": 18312,
+      "mode": 436,
+      "sha256": "74307e3ad45e1f0c5fdcf6431a2f319f35f4467a8350ab8b098298a5e3ef1d46"
+    },
+    "contracts/escrow-swap/src/action.rs": {
+      "bytes": 1015,
+      "mode": 436,
+      "sha256": "22c06c8cc0bd2958510e9e7bba3c60869678c116e323e287ab481f88f8027ebe"
+    },
+    "contracts/escrow-swap/src/auth_call.rs": {
+      "bytes": 449,
+      "mode": 436,
+      "sha256": "c9a055a39319dd74803cdad8a2730ce6762d38339e094ab6cdc087c1b54a8155"
+    },
+    "contracts/escrow-swap/src/contract/auth_call.rs": {
+      "bytes": 1212,
+      "mode": 436,
+      "sha256": "9ef49697e6b9e5e9b5dd744128cb380db33365e3fa833f348790e05b0dc104be"
+    },
+    "contracts/escrow-swap/src/contract/cleanup.rs": {
+      "bytes": 2763,
+      "mode": 436,
+      "sha256": "e706f62cae96edeaffcae05ca9909947fcb766ce290f9b4d59e2a40a46375c15"
+    },
+    "contracts/escrow-swap/src/contract/close.rs": {
+      "bytes": 1426,
+      "mode": 436,
+      "sha256": "9104e7d896bbb6d72b070a54ae27d20822023bf58bc11fbb216c92dac838b6b1"
+    },
+    "contracts/escrow-swap/src/contract/fill.rs": {
+      "bytes": 7057,
+      "mode": 436,
+      "sha256": "0d835d47bc053a881c276464ae81423f7e779e4ee116dfce82e0aad10e7cc94e"
+    },
+    "contracts/escrow-swap/src/contract/fund.rs": {
+      "bytes": 814,
+      "mode": 436,
+      "sha256": "a85b825359e49363dc0613e7ae13122f08871b5cd552be399f2d8f7417c4b427"
+    },
+    "contracts/escrow-swap/src/contract/lost_found.rs": {
+      "bytes": 2232,
+      "mode": 436,
+      "sha256": "fdd13d288b9f452c02e39cdba2885d3de4599b6908c86220d7cfe49b520c7681"
+    },
+    "contracts/escrow-swap/src/contract/mod.rs": {
+      "bytes": 1380,
+      "mode": 436,
+      "sha256": "fa5836f70326b229ae102784a35edbedc939f8fdc798ac4cac67cc2acf2edad9"
+    },
+    "contracts/escrow-swap/src/contract/resolve.rs": {
+      "bytes": 2307,
+      "mode": 436,
+      "sha256": "8bfc89fcb486692d7c74ef46d6886e9e517f798f51d6df7d9fde2123c9e08c3a"
+    },
+    "contracts/escrow-swap/src/contract/return_value.rs": {
+      "bytes": 745,
+      "mode": 436,
+      "sha256": "efe83ecb712b7d5ac230043d07c58646a75af7771505495ff8e9a729483138a3"
+    },
+    "contracts/escrow-swap/src/contract/tokens/mod.rs": {
+      "bytes": 5797,
+      "mode": 436,
+      "sha256": "3316a62c36d2cf59f2bbfe9912800c99f07d697c7735dce89d41bbfa047cb23c"
+    },
+    "contracts/escrow-swap/src/contract/tokens/nep141.rs": {
+      "bytes": 2129,
+      "mode": 436,
+      "sha256": "3c5107d35d34e2274e64e49d38bd16edaf23de0c15cba560c5d0c6186ce06960"
+    },
+    "contracts/escrow-swap/src/contract/tokens/nep245.rs": {
+      "bytes": 2910,
+      "mode": 436,
+      "sha256": "35335fe3a225a4848b7ff70526a7f285ebc95e82d1e317ef128382374bd24451"
+    },
+    "contracts/escrow-swap/src/error.rs": {
+      "bytes": 1026,
+      "mode": 436,
+      "sha256": "a4bc79d5bc927c785d219dbecc98b3e7c5bad7df1685de60d045b16e6962f643"
+    },
+    "contracts/escrow-swap/src/event.rs": {
+      "bytes": 3911,
+      "mode": 436,
+      "sha256": "6326cf8319ae86fcb8143b460852197d38efd10010d8551c671bc919a690f155"
+    },
+    "contracts/escrow-swap/src/lib.rs": {
+      "bytes": 2536,
+      "mode": 436,
+      "sha256": "6371c377eafebd390369b5163c300dc98ba435806ae333d640fbe0066d68c27d"
+    },
+    "contracts/escrow-swap/src/state.rs": {
+      "bytes": 9049,
+      "mode": 436,
+      "sha256": "86b3a72b5f113b7e1013f54189395097a3613016dd25cc620bf9d99d04f8bc9c"
+    },
+    "contracts/escrow-swap/src/utils.rs": {
+      "bytes": 107,
+      "mode": 436,
+      "sha256": "542c21113a57cc2fdf723bd537dda30a639ad4b805a3e2d6229d62832a1bf98a"
+    },
+    "contracts/global-deployer/Cargo.toml": {
+      "bytes": 2568,
+      "mode": 436,
+      "sha256": "d65fec1ddc55fddeb9181564bcc5a73d5b9732cb438dfb26406948b3b90058a8"
+    },
+    "contracts/global-deployer/README.md": {
+      "bytes": 13085,
+      "mode": 436,
+      "sha256": "7fd2fb5fece48a162c4f22c71e841b66f2d0e381385bab40b39372a709e0efe2"
+    },
+    "contracts/global-deployer/near-gds/Cargo.toml": {
+      "bytes": 543,
+      "mode": 436,
+      "sha256": "5bb68d3b1c4a2a33f60fb9531e5d02282b97876855a212ef01b0ef8b85760b0a"
+    },
+    "contracts/global-deployer/near-gds/src/main.rs": {
+      "bytes": 1993,
+      "mode": 436,
+      "sha256": "76ac935b98670d1bb8f4dc9c61d0a4ef322822cd9e8192bc119a3f52fc50b4e3"
+    },
+    "contracts/global-deployer/src/client.rs": {
+      "bytes": 1865,
+      "mode": 436,
+      "sha256": "a05fb60cef0aa95403d9c3ee2186398d29ad884b6f2b2b987e132b552f68729b"
+    },
+    "contracts/global-deployer/src/contract.rs": {
+      "bytes": 10857,
+      "mode": 436,
+      "sha256": "07a33d67552571afbfd619ce146df6848f2f5a4c96979ca00f40b95aa4bc34cd"
+    },
+    "contracts/global-deployer/src/error.rs": {
+      "bytes": 432,
+      "mode": 436,
+      "sha256": "1c4c7e862484e0602bb23b03f49b9a7bff09ff537423e90fc06bd141d40b6da4"
+    },
+    "contracts/global-deployer/src/events.rs": {
+      "bytes": 1903,
+      "mode": 436,
+      "sha256": "9ea6bf91597657178ab56201fc2ac771aa31783c019a3370064d67868fd72933"
+    },
+    "contracts/global-deployer/src/lib.rs": {
+      "bytes": 377,
+      "mode": 436,
+      "sha256": "eda948b308fec496ec8100c72be9fac61a6cafd558c19cf3873c24b85d24d1ff"
+    },
+    "contracts/global-deployer/src/state.rs": {
+      "bytes": 3270,
+      "mode": 436,
+      "sha256": "dc6aaeef4cedb80e5671547fc4a91c0838ef811924ffb9d87388f5fbd6ef9faf"
+    },
+    "contracts/outlayer/app/Cargo.toml": {
+      "bytes": 2312,
+      "mode": 436,
+      "sha256": "25b76ac97638e9c8ade3c6a18299ee1612ae0f799f0fe5fbd7d9d0c6e5653700"
+    },
+    "contracts/outlayer/app/README.md": {
+      "bytes": 5191,
+      "mode": 436,
+      "sha256": "c71b0ce2aef8cf7a69e9422bba472fe72f226fc5d175240d0b3af23915952d6a"
+    },
+    "contracts/outlayer/app/near-oa/Cargo.toml": {
+      "bytes": 549,
+      "mode": 436,
+      "sha256": "6f553e30fce03708be2659ef3d6a6c8cfa08ce29cb90711b751d6a669aa17a93"
+    },
+    "contracts/outlayer/app/near-oa/src/main.rs": {
+      "bytes": 1861,
+      "mode": 436,
+      "sha256": "8706ba651e388d1b24c3ef2363591e5204b5d618f818985e64d1b36c4acfac82"
+    },
+    "contracts/outlayer/app/src/client.rs": {
+      "bytes": 1712,
+      "mode": 436,
+      "sha256": "a5610a5477240b66654cbb2fc305d6572a3f5eac2f9ad9024072d8b285843a45"
+    },
+    "contracts/outlayer/app/src/contract.rs": {
+      "bytes": 5173,
+      "mode": 436,
+      "sha256": "5b366cdee3873a3200bf4cf05d446f0f7b237aec01a4eb8287ccc8dcd3434523"
+    },
+    "contracts/outlayer/app/src/error.rs": {
+      "bytes": 495,
+      "mode": 436,
+      "sha256": "8e1b26808b9cadef690dc6aab025046499e7da8520bbe5263b1c32c64626a77d"
+    },
+    "contracts/outlayer/app/src/events.rs": {
+      "bytes": 1129,
+      "mode": 436,
+      "sha256": "4b19eed32741b047c3f50df7d908842c8e398423119e4bd67012c420229b7fff"
+    },
+    "contracts/outlayer/app/src/lib.rs": {
+      "bytes": 179,
+      "mode": 436,
+      "sha256": "d5a5b8462ad51ba97491892158d8b038fb43937aa048f90633ba6db595be1b65"
+    },
+    "contracts/outlayer/app/src/state.rs": {
+      "bytes": 3822,
+      "mode": 436,
+      "sha256": "2066878e8cf3b5470e96981c22fb5ca5af80ba08aaa3ddb7b29e8942ee0f95da"
+    },
+    "contracts/poa/factory/.catalog-info.yaml": {
+      "bytes": 335,
+      "mode": 436,
+      "sha256": "ab166e2d0ee406de9b69a03e3839be06b7f006cc8e03d70caf4baae4ca04bbe2"
+    },
+    "contracts/poa/factory/Cargo.toml": {
+      "bytes": 1222,
+      "mode": 436,
+      "sha256": "8fd92357b94633934fc9797c861d9fe3458825e451592a2e45ac61f0b942b12d"
+    },
+    "contracts/poa/factory/build.rs": {
+      "bytes": 791,
+      "mode": 436,
+      "sha256": "a0359cb2c19a261003a98a74ca3c17db3ccdd66fd876f3ab4d2f22845a7dad4e"
+    },
+    "contracts/poa/factory/src/contract.rs": {
+      "bytes": 15231,
+      "mode": 436,
+      "sha256": "7cf0f9f3a01b05369886273e19394907a33c966752bb43bc2bd1e219d80516a6"
+    },
+    "contracts/poa/factory/src/lib.rs": {
+      "bytes": 5645,
+      "mode": 436,
+      "sha256": "e4ad9d4012c413a2b9120822171343fe2eed4f6b64a7da0837249ca5c97816ac"
+    },
+    "contracts/poa/factory/src/types.rs": {
+      "bytes": 2386,
+      "mode": 436,
+      "sha256": "5dca7a9edeee3ca1b1becf437c1b7b8730648b8d81a507f6f89ee4c5ba1757bf"
+    },
+    "contracts/poa/token/.catalog-info.yaml": {
+      "bytes": 281,
+      "mode": 436,
+      "sha256": "98eb1fb3e6f4ed2a2758a4075d2607c95c7dd4a08e87beb1254504c0ec23260a"
+    },
+    "contracts/poa/token/Cargo.toml": {
+      "bytes": 1108,
+      "mode": 436,
+      "sha256": "67c9f1a70d6975dd2708759c72e866ca708257af9fc771e390d2435d1ff2a094"
+    },
+    "contracts/poa/token/src/contract.rs": {
+      "bytes": 6402,
+      "mode": 436,
+      "sha256": "4c6046aabad2a195578f17a0c7a0e093b4efd6c7826a1c1c329c90dea48d8739"
+    },
+    "contracts/poa/token/src/lib.rs": {
+      "bytes": 1454,
+      "mode": 436,
+      "sha256": "8db0a7631a179567b4b99e3ba0cf8f528b0b86bdffa968760946cfad7feedb74"
+    },
+    "contracts/treasury-logger/Cargo.toml": {
+      "bytes": 1359,
+      "mode": 436,
+      "sha256": "ac2e33760fd980bb23dd2788734a88b245ef70f6c7077dece9b1f988bf045f34"
+    },
+    "contracts/treasury-logger/README.md": {
+      "bytes": 3396,
+      "mode": 436,
+      "sha256": "adfd22951152e1456ec1343b56b5b64a5521bc6d6d3e200c909d1dd1fee2c460"
+    },
+    "contracts/treasury-logger/src/event.rs": {
+      "bytes": 825,
+      "mode": 436,
+      "sha256": "23e550d7b01688eb850dce0a190ad0951c7a76da88e8bb09b1c119a2afb162b4"
+    },
+    "contracts/treasury-logger/src/lib.rs": {
+      "bytes": 5842,
+      "mode": 436,
+      "sha256": "a6ae5c961f9f07f0d40c20bdab6e829d5af86b79ffed866112f44db2133310f9"
+    },
+    "contracts/treasury-logger/src/state.rs": {
+      "bytes": 1328,
+      "mode": 436,
+      "sha256": "32d06fb1fbe30f2231c45efa18091a3fc7867b3003b43fe0e6bd8d2023262068"
+    },
+    "contracts/wallet/Cargo.toml": {
+      "bytes": 2981,
+      "mode": 436,
+      "sha256": "81082bff09fd5b26c34dae38ae255b916d7dbe8b141e539c252958c64110dbc3"
+    },
+    "contracts/wallet/README.md": {
+      "bytes": 8981,
+      "mode": 436,
+      "sha256": "2442b77e02979ca89ce8113b6a8c82fdf14df9b4a2aa1c3114eedd7f600c9e20"
+    },
+    "contracts/wallet/signatures/ed25519/Cargo.toml": {
+      "bytes": 1713,
+      "mode": 436,
+      "sha256": "a3c141d85df2df138991f929de16f9b5a8de4447b82364442035b3fceabf2aa2"
+    },
+    "contracts/wallet/signatures/ed25519/src/contract.rs": {
+      "bytes": 241,
+      "mode": 436,
+      "sha256": "a7a2208fdc94d8dcd0aeb0c1e21d058ef6abdff02fa1945157180e169987de0d"
+    },
+    "contracts/wallet/signatures/ed25519/src/lib.rs": {
+      "bytes": 3658,
+      "mode": 436,
+      "sha256": "49aa158ab3d6baf0a5cb885da9c36a213c33803e574ef2ed099ba7a9d8598c54"
+    },
+    "contracts/wallet/signatures/ed25519/src/signer.rs": {
+      "bytes": 3349,
+      "mode": 436,
+      "sha256": "494f147bdb74bbb8ae299a04ecb011ef78e87298035b2b39fdc3580ee77f3f15"
+    },
+    "contracts/wallet/signatures/no-sign/Cargo.toml": {
+      "bytes": 1703,
+      "mode": 436,
+      "sha256": "ed17278f7e2a2f2a2f73e623f4a67ddeacfe1d1d9de90785727c1bd1f6761468"
+    },
+    "contracts/wallet/signatures/no-sign/src/contract.rs": {
+      "bytes": 1504,
+      "mode": 436,
+      "sha256": "321a56750a90393fdde01fa8d660514df3773bfb2f46543b8d63e653ea09adc8"
+    },
+    "contracts/wallet/signatures/no-sign/src/lib.rs": {
+      "bytes": 1856,
+      "mode": 436,
+      "sha256": "aaa329685572f251c01f3ab8313d9b5cb15a65d4da53a8cb8d2c634f7dbce0c0"
+    },
+    "contracts/wallet/signatures/webauthn/Cargo.toml": {
+      "bytes": 1929,
+      "mode": 436,
+      "sha256": "28469e1c6b4a452edd909c8e5db92f985cd95cb117a6aac2e974d6d571580186"
+    },
+    "contracts/wallet/signatures/webauthn/ed25519/Cargo.toml": {
+      "bytes": 1158,
+      "mode": 436,
+      "sha256": "a8c2847f755e6903674a5c7c5efe93e9db13d512084f5106953fec968e576079"
+    },
+    "contracts/wallet/signatures/webauthn/ed25519/src/lib.rs": {
+      "bytes": 721,
+      "mode": 436,
+      "sha256": "f92fbca877636c76cc1a531a1a5d9c1fa365aee32d42f5538bd4ffca4c7c19c3"
+    },
+    "contracts/wallet/signatures/webauthn/p256/Cargo.toml": {
+      "bytes": 1149,
+      "mode": 436,
+      "sha256": "5a0ce31bf6422af6356b0ae563096825c0a98301442f7f068c95b73e70b21d75"
+    },
+    "contracts/wallet/signatures/webauthn/p256/src/lib.rs": {
+      "bytes": 709,
+      "mode": 436,
+      "sha256": "93ef2cfd1ed9ab4b044cb3319e14d56aa82ff2e575bc3f07fd7cb65a8c07b334"
+    },
+    "contracts/wallet/signatures/webauthn/src/ed25519.rs": {
+      "bytes": 1476,
+      "mode": 436,
+      "sha256": "7ea1c015ae8bcee97e65fb2c416e23ad326be449d5b951695d316c7901a5504d"
+    },
+    "contracts/wallet/signatures/webauthn/src/lib.rs": {
+      "bytes": 3455,
+      "mode": 436,
+      "sha256": "2fda556802cc1814445a9667fb024e97e3d472067330db488b6b62e0f335db45"
+    },
+    "contracts/wallet/signatures/webauthn/src/mock.rs": {
+      "bytes": 2207,
+      "mode": 436,
+      "sha256": "16443be50511bde446445c87ed02d23c9b41aa721b606b2d11155c911c22c0ee"
+    },
+    "contracts/wallet/signatures/webauthn/src/p256.rs": {
+      "bytes": 3506,
+      "mode": 436,
+      "sha256": "cfa5d0bca1703b723b6f4db9c8c2b4bb17d5a36e137f2d1e62daf6d367465146"
+    },
+    "contracts/wallet/src/contract.rs": {
+      "bytes": 19246,
+      "mode": 436,
+      "sha256": "5ad6a73ec820e0ea6a36c68f9f5f41ae83140a616e190353fb34a0c0946547cc"
+    },
+    "contracts/wallet/src/error.rs": {
+      "bytes": 1397,
+      "mode": 436,
+      "sha256": "396357722905ae22544ee3df6276332988038dc53f0eadad977b8e57f6698479"
+    },
+    "contracts/wallet/src/events.rs": {
+      "bytes": 2842,
+      "mode": 436,
+      "sha256": "6e336eb8a95f3a0c6342f6c430008fa68b260ddc57e10f15ba20bb2c4f904cc2"
+    },
+    "contracts/wallet/src/lib.rs": {
+      "bytes": 483,
+      "mode": 436,
+      "sha256": "12ee56ad041c3e7e33342741287be3aa3ed985deca80438209d89b60db5dffc5"
+    },
+    "contracts/wallet/src/message.rs": {
+      "bytes": 10813,
+      "mode": 436,
+      "sha256": "2624951ae8d1ac9b6a4d1db2bc8cdef0e32da10d3faf97e699e37d8c87002a89"
+    },
+    "contracts/wallet/src/nonces.rs": {
+      "bytes": 5315,
+      "mode": 436,
+      "sha256": "71ed650380b298d1c7e46573115dc0a29a9f1fa09fcb0a0413098c26427ff11d"
+    },
+    "contracts/wallet/src/request/mod.rs": {
+      "bytes": 3852,
+      "mode": 436,
+      "sha256": "14e121563491dc9a06918f51e69111f2f127d802a920f713acbbe8e6ce1ac8df"
+    },
+    "contracts/wallet/src/request/ops.rs": {
+      "bytes": 1961,
+      "mode": 436,
+      "sha256": "35711df58794ef54dddd0e5104bb50b99a3b5a4d181fca086f4ed7d23b84921b"
+    },
+    "contracts/wallet/src/schema.rs": {
+      "bytes": 1432,
+      "mode": 436,
+      "sha256": "ca42650ed72e4ca41a4aff966b0007c8bb075dc15c05fbdc0c8025515decf27d"
+    },
+    "contracts/wallet/src/state.rs": {
+      "bytes": 4711,
+      "mode": 436,
+      "sha256": "fa360fd77ac04fb1a475aa4a72c46372ff214d825dc8776405111490df71c50c"
+    },
+    "crates/bitmap/Cargo.toml": {
+      "bytes": 620,
+      "mode": 436,
+      "sha256": "3d8c171e8010f134a3d931861ae62422d718ef5cc6257f1eacf6defed1f9fc42"
+    },
+    "crates/bitmap/src/b256.rs": {
+      "bytes": 4822,
+      "mode": 436,
+      "sha256": "c471818b2e3cc03be365e14f3e1e38bfccc9e208719e67add79bb137fa482c5c"
+    },
+    "crates/bitmap/src/lib.rs": {
+      "bytes": 6147,
+      "mode": 436,
+      "sha256": "a0f71cd050fcaf7e1a20740eb0c0cf9ce2564fa3d8ddeba308ee3d0d6cfbe455"
+    },
+    "crates/borsh-utils/Cargo.toml": {
+      "bytes": 419,
+      "mode": 436,
+      "sha256": "ab439fd4cec64504223d44aeb5465f7cfb83855bbd34c3e5be4bfa64abbb1411"
+    },
+    "crates/borsh-utils/examples/with.rs": {
+      "bytes": 561,
+      "mode": 436,
+      "sha256": "9ae3a40ad52ea4ceca5047ab0ca6375d0bfce8dcd5ef6d64f1dfca38cacaf603"
+    },
+    "crates/borsh-utils/src/duration.rs": {
+      "bytes": 3909,
+      "mode": 436,
+      "sha256": "3cdd3fcb47873b341d627bba92b4a576dcba8833ee0399da224aacc0bbecb5a1"
+    },
+    "crates/borsh-utils/src/lib.rs": {
+      "bytes": 14061,
+      "mode": 436,
+      "sha256": "85faf712f915181a957e508bfe83642f22f3f1d8862f7d54a10c0d2a2f7be21f"
+    },
+    "crates/borsh-utils/src/schema.rs": {
+      "bytes": 1371,
+      "mode": 436,
+      "sha256": "9c87a478eaedef7c888a90cae79a1e44013187b91a7fc7a84d9a98d428ad3458"
+    },
+    "crates/borsh-utils/src/tests.rs": {
+      "bytes": 712,
+      "mode": 436,
+      "sha256": "09bb8d532add0a8c8e87b491980d8bc57a9eeca8cde5a962541ed31035456129"
+    },
+    "crates/cli-utils/Cargo.toml": {
+      "bytes": 684,
+      "mode": 436,
+      "sha256": "c2fe02057deeff94202c076cf85dbe9ba419e46f4307c26b78b6540778b1d247"
+    },
+    "crates/cli-utils/src/hash.rs": {
+      "bytes": 2861,
+      "mode": 436,
+      "sha256": "367f8fef7cc108eb4e679908099992e9064bfa7ce6fcedccc65ca57c66b8d560"
+    },
+    "crates/cli-utils/src/lib.rs": {
+      "bytes": 39,
+      "mode": 436,
+      "sha256": "6fa8b0051c90bfd7939a7971c0ade3b75f28766bf758719d586297f362a60e0c"
+    },
+    "crates/crypto/Cargo.toml": {
+      "bytes": 2223,
+      "mode": 436,
+      "sha256": "da3eb2be8fe61cdb6990009e1cbb94bfe8f07e788019f1a2ff66d6bdbac40aae"
+    },
+    "crates/crypto/src/curve.rs": {
+      "bytes": 1373,
+      "mode": 436,
+      "sha256": "f231bd0ea08c8c6121007967df0d1894568b4c36cd80d50b1375bbe4c24e8888"
+    },
+    "crates/crypto/src/ed25519.rs": {
+      "bytes": 10001,
+      "mode": 436,
+      "sha256": "f32ef1cae98ff767e3c421d99f8a2e3ca4caf6116ac3b9e5552c058aed5c50db"
+    },
+    "crates/crypto/src/fmt.rs": {
+      "bytes": 2279,
+      "mode": 436,
+      "sha256": "0221609b5057e5f3c38618d87195bf0b3cbe0d4ee7495af62513e87eee73b9c1"
+    },
+    "crates/crypto/src/lib.rs": {
+      "bytes": 331,
+      "mode": 436,
+      "sha256": "1604b4050235e9f6e023180848a038215b131bd8bed589aef2cd195eab848644"
+    },
+    "crates/crypto/src/p256.rs": {
+      "bytes": 15564,
+      "mode": 436,
+      "sha256": "2f3782f8fc2b4f0f5d61143dafdbbd9087c262cdc7ff925e73bbf113c1b91373"
+    },
+    "crates/crypto/src/secp256k1.rs": {
+      "bytes": 24045,
+      "mode": 436,
+      "sha256": "19dce60f776ff452d79e1d70e8c2c754b4869a6fe2bf7432e1dbee9cfa743ca9"
+    },
+    "crates/crypto/src/signer.rs": {
+      "bytes": 8162,
+      "mode": 436,
+      "sha256": "94710e5b79e4881a3e3c34beb43a9c026105867b6c429f9541347e810d7ef1b5"
+    },
+    "crates/digest/Cargo.toml": {
+      "bytes": 989,
+      "mode": 436,
+      "sha256": "16a700e07881ab4ef81adad230a3e93b17713d30afd1e0c95306ebf6a7cbde3e"
+    },
+    "crates/digest/src/lib.rs": {
+      "bytes": 1337,
+      "mode": 436,
+      "sha256": "044dd460e31d13739791f4e85c4d5aad8df3b847276f382ec3c38b968c6f1b43"
+    },
+    "crates/digest/src/ripemd/mod.rs": {
+      "bytes": 645,
+      "mode": 436,
+      "sha256": "7e3b89eb63128b7016d952b1a5af6895a63dafcca6b79f2ac2c42dad1f828f4d"
+    },
+    "crates/digest/src/ripemd/near.rs": {
+      "bytes": 382,
+      "mode": 436,
+      "sha256": "ac289b46fc8c0633a07214b8d4c49dbab6863c94e407eedab92c299f81406c0c"
+    },
+    "crates/digest/src/sha2/mod.rs": {
+      "bytes": 676,
+      "mode": 436,
+      "sha256": "7ca956a71dadae110995a9abe1cafa5bd013c26a24780015d5165d4163ab8cb2"
+    },
+    "crates/digest/src/sha2/near.rs": {
+      "bytes": 364,
+      "mode": 436,
+      "sha256": "a1fb9fc2102429cb658dceb7b219ff8dd0965dfe726ea730ac1f3edf6845f965"
+    },
+    "crates/digest/src/sha3/mod.rs": {
+      "bytes": 2484,
+      "mode": 436,
+      "sha256": "1edb4d3a475ec301baf154a6f5aefe0475840c6c414f79569223cb18e642f0a3"
+    },
+    "crates/digest/src/sha3/near.rs": {
+      "bytes": 683,
+      "mode": 436,
+      "sha256": "4c4c402d9cddb025ea92c2c3f9cf41adf781a1dfec8da26be2c1b91e242f1c43"
+    },
+    "crates/digest/src/utils.rs": {
+      "bytes": 867,
+      "mode": 436,
+      "sha256": "0a2936c1d484b6a434f5b0d81ff5c93fbcb45943ab4a1a355dd000af3d5b812c"
+    },
+    "crates/io-utils/Cargo.toml": {
+      "bytes": 167,
+      "mode": 436,
+      "sha256": "a6492866324a3d3eef25c5a582c01ad4d6fa9c9ef16938e6a8d94c0256365e89"
+    },
+    "crates/io-utils/src/lib.rs": {
+      "bytes": 2501,
+      "mode": 436,
+      "sha256": "7c93e2c8c92fca5ea16d75b4018b9aa7452a7136c230f9370f702e6dbb52b473"
+    },
+    "crates/kdf/Cargo.toml": {
+      "bytes": 1566,
+      "mode": 436,
+      "sha256": "2b9bb842f0b4f9d476ef57e3e9f15f5fb37313dca6677bb388ea42610c825ae9"
+    },
+    "crates/kdf/src/ed25519.rs": {
+      "bytes": 5459,
+      "mode": 436,
+      "sha256": "1dc32547dc80a011b805da9d9e4affe97b6989f23701c18d660f32c59a458e52"
+    },
+    "crates/kdf/src/ext.rs": {
+      "bytes": 12269,
+      "mode": 436,
+      "sha256": "95f8488f1d13b40cc473681c6a0495b3ec3d96757d7abb6a8ab8384544c2bf7e"
+    },
+    "crates/kdf/src/lib.rs": {
+      "bytes": 246,
+      "mode": 436,
+      "sha256": "481c7a67b03d039a88a22a710f50044c7ea7d2147c2b39c59a782def04d48779"
+    },
+    "crates/kdf/src/schema/additive.rs": {
+      "bytes": 1707,
+      "mode": 436,
+      "sha256": "bd1d26ca14d6f82f6b657d806c6845cd589e705b4fd24c3b79c47fdd78abf9d6"
+    },
+    "crates/kdf/src/schema/borsh.rs": {
+      "bytes": 2807,
+      "mode": 436,
+      "sha256": "c84f5002bc02fcfc054a99edb151f27151478b42d9d3f1db598157e4051ded8a"
+    },
+    "crates/kdf/src/schema/digest.rs": {
+      "bytes": 1526,
+      "mode": 436,
+      "sha256": "0e0e71fed1b45e3861a7626d4594b503bb3175cb77fba5eb9125867ccd88603e"
+    },
+    "crates/kdf/src/schema/hex.rs": {
+      "bytes": 446,
+      "mode": 436,
+      "sha256": "1b7f11117cd65cfc6e71149b4713e0617a96574f8b942a14e0158a644614d101"
+    },
+    "crates/kdf/src/schema/mod.rs": {
+      "bytes": 3076,
+      "mode": 436,
+      "sha256": "b1db4141969c04cc2c22ce543cf34eac711d333128bb950a488689a34bb04294"
+    },
+    "crates/kdf/src/schema/reduce.rs": {
+      "bytes": 881,
+      "mode": 436,
+      "sha256": "57d9fbcad1000f39264976f28b46d8a7b2b4eeaf528c34f86353e5b6bb8a746b"
+    },
+    "crates/kdf/src/secp256k1.rs": {
+      "bytes": 5639,
+      "mode": 436,
+      "sha256": "75f36baa530fe2bf13e7cd1263db4d33e83d2f6c0c831b8f26fd9d4e6dcd6248"
+    },
+    "crates/kdf/src/signer.rs": {
+      "bytes": 5730,
+      "mode": 436,
+      "sha256": "5bfd8d6365d9f6a9c96aca7db0dba5e5d78c3a295c4f24eaedebfd5142259288"
+    },
+    "crates/mandate-near-plugins/Cargo.toml": {
+      "bytes": 1376,
+      "mode": 420,
+      "sha256": "23473189f13f1655e15278b18e68b988705e6b8a7281de4a72660c651c413270"
+    },
+    "crates/mandate-near-plugins/README.md": {
+      "bytes": 7951,
+      "mode": 420,
+      "sha256": "d73f0ca82a43810760258b874bbb59c1c962c33a83154193b411ffe219b0ffb1"
+    },
+    "crates/mandate-near-plugins/src/access_control_role.rs": {
+      "bytes": 571,
+      "mode": 420,
+      "sha256": "84bf26f17fac123a47d810ee85bf714d7f9a41c75ea9d7a68c07d4ff309c0a5d"
+    },
+    "crates/mandate-near-plugins/src/access_controllable.rs": {
+      "bytes": 21599,
+      "mode": 420,
+      "sha256": "4f46de063678eee0288d33601ab776c83f0a879626876f26ebc92daeaadf5a5b"
+    },
+    "crates/mandate-near-plugins/src/events.rs": {
+      "bytes": 3139,
+      "mode": 420,
+      "sha256": "31d67b482d5a81eba739dc9d0738f96e0845d4164f694dda5196ae56e624ffa0"
+    },
+    "crates/mandate-near-plugins/src/lib.rs": {
+      "bytes": 810,
+      "mode": 420,
+      "sha256": "3b416c5a461e8e44d6723ab2ab878670ebda080f403a0b852612636abcebdad3"
+    },
+    "crates/mandate-near-plugins/src/ownable.rs": {
+      "bytes": 3148,
+      "mode": 420,
+      "sha256": "66a889409fb416faf20061480199ef60c7512b5c65c54e87e51f42302dd8d4f3"
+    },
+    "crates/mandate-near-plugins/src/pausable.rs": {
+      "bytes": 5007,
+      "mode": 420,
+      "sha256": "9afc33e4ad4c3e3f0060e624b1659f667b958b0ae84329b6765433d852e7cb7b"
+    },
+    "crates/mandate-near-plugins/src/upgradable.rs": {
+      "bytes": 13631,
+      "mode": 420,
+      "sha256": "086771c452d637195b69a38a55659e4698a759d400c2c710a6ab237d628fb7b7"
+    },
+    "crates/mandate-withdrawal-journal/Cargo.toml": {
+      "bytes": 514,
+      "mode": 420,
+      "sha256": "d3dc6fdc031ff1abe050f18f3d524b1ac46bbe6693c2fb2ef9788fe2a601e26d"
+    },
+    "crates/mandate-withdrawal-journal/src/lib.rs": {
+      "bytes": 10869,
+      "mode": 420,
+      "sha256": "472cd1930c647ad7aca4ae565be0508a026f45b21b05eafcdc8d22e9cfcef829"
+    },
+    "crates/mandate-withdrawal-journal/tests/generate_golden.py": {
+      "bytes": 1220,
+      "mode": 420,
+      "sha256": "5d48559f1c65fa5de390130e93e516e9b448612194eba5cc6eb208a6befe572d"
+    },
+    "crates/mandate-withdrawal-journal/tests/protocol.rs": {
+      "bytes": 13151,
+      "mode": 420,
+      "sha256": "1702e6bc82d8add1f26f92cf81adbb6c5d041bd993369d9d633d90e5517f8152"
+    },
+    "crates/map-utils/Cargo.toml": {
+      "bytes": 319,
+      "mode": 436,
+      "sha256": "705d5259897527b983d7eaab2e26f1ee2a4b2742867a929f0ff54b654acd15dc"
+    },
+    "crates/map-utils/src/btree_map.rs": {
+      "bytes": 3597,
+      "mode": 436,
+      "sha256": "c5c661a80238763ea87d25ab3e9f89870368a7616e4da19190d3d31338352ee7"
+    },
+    "crates/map-utils/src/cleanup.rs": {
+      "bytes": 6940,
+      "mode": 436,
+      "sha256": "3fadf4d04221787bebe96351205ba8c88e4bd9ad2a053d44b298f60a05cef0bb"
+    },
+    "crates/map-utils/src/hash_map.rs": {
+      "bytes": 3618,
+      "mode": 436,
+      "sha256": "fd0065f2346ec15b1adec601c5d6604342bf9273c94bfcf892f31cf1fcbc9c02"
+    },
+    "crates/map-utils/src/iter.rs": {
+      "bytes": 948,
+      "mode": 436,
+      "sha256": "0a462dedda1e9e223f48bedc1bdb9bc5a00921bb12884151547fc17e811cd022"
+    },
+    "crates/map-utils/src/lib.rs": {
+      "bytes": 2529,
+      "mode": 436,
+      "sha256": "1d9329bb799cbf785f5ea6a9fe41ff4bd46c67fbba0d6315c155643021059345"
+    },
+    "crates/map-utils/src/near.rs": {
+      "bytes": 6368,
+      "mode": 436,
+      "sha256": "2c37fc80f09d3f5a7d26a8461e57a38b1ea3ea96b48b84574f3aa4fa54ad963f"
+    },
+    "crates/mpc/ckd/Cargo.toml": {
+      "bytes": 1564,
+      "mode": 436,
+      "sha256": "e8cab3b6ef4170f1afee69864bc92c14f5fd5482c416825dae29169ef3525165"
+    },
+    "crates/mpc/ckd/src/lib.rs": {
+      "bytes": 20801,
+      "mode": 436,
+      "sha256": "a113d87710eed07869ebc339e0de9a4802c07cd9fe5aa079b48944e7388027ea"
+    },
+    "crates/mpc/ckd/src/types.rs": {
+      "bytes": 7129,
+      "mode": 436,
+      "sha256": "06db68f1e9a8da0afcacc369ee9a7f530bd4140a379d4900cb4235e6a3467cbe"
+    },
+    "crates/mpc/kdf/Cargo.toml": {
+      "bytes": 650,
+      "mode": 436,
+      "sha256": "2dad43ea1d24f079f90f4695881c671fa5ac241264a6796e1a212ade22a9b758"
+    },
+    "crates/mpc/kdf/src/ckd.rs": {
+      "bytes": 4134,
+      "mode": 436,
+      "sha256": "89509c1b6b0469815bb469a0d60d6ab8fd73af741f6df7ec59e0e911c6c9bad3"
+    },
+    "crates/mpc/kdf/src/lib.rs": {
+      "bytes": 588,
+      "mode": 436,
+      "sha256": "c38abc11518b35a3a754ee2022deba89b39a905d554ea88204136a2374162fd0"
+    },
+    "crates/mpc/kdf/src/tweak/ed25519.rs": {
+      "bytes": 1998,
+      "mode": 436,
+      "sha256": "3131ee17dda08af3a4fcf1c547b464e701c4f66705b5918755fefe37add326b6"
+    },
+    "crates/mpc/kdf/src/tweak/mod.rs": {
+      "bytes": 4782,
+      "mode": 436,
+      "sha256": "6440e6ae2d7277e75d1c89f27f0b1f58665d1e8af55083fd91584fe79f314f9b"
+    },
+    "crates/mpc/kdf/src/tweak/secp256k1.rs": {
+      "bytes": 2436,
+      "mode": 436,
+      "sha256": "261a1c8e897c2609af67acc6332ff5690bad2c6594b576c65c54ca5618d4dad7"
+    },
+    "crates/mpc/signer/Cargo.toml": {
+      "bytes": 933,
+      "mode": 436,
+      "sha256": "6214b69658d24e6a36d2461d6acfe956d99bc2c41722d8a7c8d331b3c430d14c"
+    },
+    "crates/mpc/signer/src/contract.rs": {
+      "bytes": 1675,
+      "mode": 436,
+      "sha256": "9815cab12fd1783efd2fad57c345abada3ac47630decc7fb5256838f43728d8d"
+    },
+    "crates/mpc/signer/src/convert.rs": {
+      "bytes": 1151,
+      "mode": 436,
+      "sha256": "3df40c678cfb1e64f177eaae91f38f5c99fc01cb1a913a9cb644927dc108c19c"
+    },
+    "crates/mpc/signer/src/ed25519.rs": {
+      "bytes": 784,
+      "mode": 436,
+      "sha256": "4ba77086575b2fa4ba22d170b84d94ebeb5d4fb4db03feccc084b3c6658469a4"
+    },
+    "crates/mpc/signer/src/lib.rs": {
+      "bytes": 7470,
+      "mode": 436,
+      "sha256": "371097b19cff1a0421e900aa15ad88de6bb06ed7f8aea674c945803dca561567"
+    },
+    "crates/mpc/signer/src/secp256k1.rs": {
+      "bytes": 1459,
+      "mode": 436,
+      "sha256": "e5f780261a6e7f4977037ff3e954689d78c9467d30f8f478f82a80e5e5819956"
+    },
+    "crates/near/admin-utils/Cargo.toml": {
+      "bytes": 212,
+      "mode": 436,
+      "sha256": "59b40a44dde8df935650ae95e27a1f708ac7b36ed8694609b078edda992fafa3"
+    },
+    "crates/near/admin-utils/src/full_access_keys.rs": {
+      "bytes": 313,
+      "mode": 436,
+      "sha256": "4301e4d6f33e7973f19dc4ac5e9491e0e8e33d1f55e5a8e9f85cb80ffe000743"
+    },
+    "crates/near/admin-utils/src/lib.rs": {
+      "bytes": 26,
+      "mode": 436,
+      "sha256": "5ada5225423d2b285d32b508fb034692150a63e2ff84eef2c927371aa47a0639"
+    },
+    "crates/near/auth-call/Cargo.toml": {
+      "bytes": 180,
+      "mode": 436,
+      "sha256": "6aa8c267986ed5fb959b830c5335159a7aadd250aaa9f1950fb1b940961b304d"
+    },
+    "crates/near/auth-call/src/lib.rs": {
+      "bytes": 518,
+      "mode": 436,
+      "sha256": "1fc4c180944a5f21117e5d47a1e5d54c9d666094571f094c6208947653425ffd"
+    },
+    "crates/near/controller/Cargo.toml": {
+      "bytes": 211,
+      "mode": 436,
+      "sha256": "667b4c25350811c4b811925ed8091e5b1d506db6600f41ca1e2c675692d68721"
+    },
+    "crates/near/controller/README.md": {
+      "bytes": 85,
+      "mode": 436,
+      "sha256": "972d39fc2898e72a752d98b6997157b8f51a96ea1ca893b4659e07c1235b371e"
+    },
+    "crates/near/controller/src/lib.rs": {
+      "bytes": 398,
+      "mode": 436,
+      "sha256": "366ece6ec3243c490a3b21a8d8dacabac4143d4a4ed599f0deec9dfb5c09f8e5"
+    },
+    "crates/near/nep245/Cargo.toml": {
+      "bytes": 1244,
+      "mode": 436,
+      "sha256": "cd317b1e1c99ed62684030ff4cbef2b367c73b4030cbaf44d0a72218509ed513"
+    },
+    "crates/near/nep245/src/checked.rs": {
+      "bytes": 10180,
+      "mode": 436,
+      "sha256": "5323bd3b7761240a26325a4848e336fc8a83503e21580f8fd62f4d0cbedd327f"
+    },
+    "crates/near/nep245/src/core.rs": {
+      "bytes": 1583,
+      "mode": 436,
+      "sha256": "1202d5a7a8a34cf53069341ff5b9385c69b584ac08a417b47c46f88d3e12350f"
+    },
+    "crates/near/nep245/src/enumeration.rs": {
+      "bytes": 1366,
+      "mode": 436,
+      "sha256": "703a5f03375ffd266026058fb16773091c63e7d42837db0073682b5a00d0e9af"
+    },
+    "crates/near/nep245/src/errors.rs": {
+      "bytes": 206,
+      "mode": 436,
+      "sha256": "417a6f89e260f4a5a21a4627bb0670ec77fee09f3b4428912a67061eb8c6c31f"
+    },
+    "crates/near/nep245/src/events.rs": {
+      "bytes": 3452,
+      "mode": 436,
+      "sha256": "63589dab3993ea2b37da0b54becc91b6a681522ff18a5dd068f4451ae99204bb"
+    },
+    "crates/near/nep245/src/lib.rs": {
+      "bytes": 419,
+      "mode": 436,
+      "sha256": "bb63ffa156871c4d65ecce17fe8c72a160251bd75ac1c6116e78562dcd5918b2"
+    },
+    "crates/near/nep245/src/receiver.rs": {
+      "bytes": 397,
+      "mode": 436,
+      "sha256": "7547f6df0f28261694b1ae57bddde4c86d83ac14affed8e893c7f74c87eceb86"
+    },
+    "crates/near/nep245/src/resolver.rs": {
+      "bytes": 437,
+      "mode": 436,
+      "sha256": "1748215b0fa08e4d420ae0e2d7ccc2aed63b11ceaf4830035c8ea59c74236e3a"
+    },
+    "crates/near/nep245/src/token.rs": {
+      "bytes": 463,
+      "mode": 436,
+      "sha256": "5e439cf4f75ee257de7dc9659396dad550117e5fc533f57299f6be6edbfcaf26"
+    },
+    "crates/near/promise/Cargo.toml": {
+      "bytes": 2168,
+      "mode": 436,
+      "sha256": "5c73e7743f4296f5371820041a32ae1aea29c84a14a9a16ba97460b19955b7a5"
+    },
+    "crates/near/promise/src/actions/function_call.rs": {
+      "bytes": 8377,
+      "mode": 436,
+      "sha256": "1d999ddda20f3979eb89d2a56f41eb34fb0f49c5f646f01952638f62eb8b3f0b"
+    },
+    "crates/near/promise/src/actions/mod.rs": {
+      "bytes": 3498,
+      "mode": 436,
+      "sha256": "35faa11aa63d61032036b325daeb5a88e45361bce654a791daa97728ac22f5ac"
+    },
+    "crates/near/promise/src/actions/state_init.rs": {
+      "bytes": 4136,
+      "mode": 436,
+      "sha256": "45d1a70ac007a0b25071ac1a5ea4ec6b709ca8ac287b867e4167ad829315f37b"
+    },
+    "crates/near/promise/src/actions/transfer.rs": {
+      "bytes": 1301,
+      "mode": 436,
+      "sha256": "2c7ed498c7ca9e294dd5656483e4701f44c135795684a722a24fa8b0c77b4447"
+    },
+    "crates/near/promise/src/lib.rs": {
+      "bytes": 8802,
+      "mode": 436,
+      "sha256": "34b2f46a7df3e74c17aac671f4889b6dea8979b04ed3706290764c9896af233d"
+    },
+    "crates/near/sender/Cargo.toml": {
+      "bytes": 949,
+      "mode": 436,
+      "sha256": "e41e0e651921655a7cfc52059d37fd0ba64305f7a5d34096a03ff33463c1ccb4"
+    },
+    "crates/near/sender/src/lib.rs": {
+      "bytes": 5473,
+      "mode": 436,
+      "sha256": "1b55f726cde8d84cc38f8270eebe2d6e3073a2cbc903bb834d8a171a22e058b0"
+    },
+    "crates/near/utils/Cargo.toml": {
+      "bytes": 558,
+      "mode": 436,
+      "sha256": "71db069ab74e04413c5134af76d55c53614828fe185399a839b05039dd4ee702"
+    },
+    "crates/near/utils/src/event.rs": {
+      "bytes": 283,
+      "mode": 436,
+      "sha256": "3529d78317ce6f3f2b0c4c4571b015f7a9e812b5829b91e0b522066b491725b5"
+    },
+    "crates/near/utils/src/lib.rs": {
+      "bytes": 423,
+      "mode": 436,
+      "sha256": "4401a2798d70768de000ca36d098c7f5ca99f49d608bb87ec582f2a5b5fdfc0d"
+    },
+    "crates/near/utils/src/panic_on_clone.rs": {
+      "bytes": 1954,
+      "mode": 436,
+      "sha256": "9ae091d00c5b5dc84af77aef208cd531d08c12665d433ac9c52e0fa8ea5c8478"
+    },
+    "crates/near/utils/src/promise.rs": {
+      "bytes": 6761,
+      "mode": 436,
+      "sha256": "0791c2a6951bca2ad66590dfd3831a3883398346c7f6ec428c03df95c5c30f83"
+    },
+    "crates/near/wnear/Cargo.toml": {
+      "bytes": 247,
+      "mode": 436,
+      "sha256": "c261d0ca93e18afdff9afbba8756ac050af4ceba24b270b75b719420e97c8e85"
+    },
+    "crates/near/wnear/src/lib.rs": {
+      "bytes": 460,
+      "mode": 436,
+      "sha256": "320993f516cfe5404335340d1a527a7c6a19e97ba0aa72f8c28691974174cc56"
+    },
+    "crates/num-utils/Cargo.toml": {
+      "bytes": 206,
+      "mode": 436,
+      "sha256": "9c35edec1b875d6d130692a6edfb7b81097f8dc8f24c6ef981fc7bb6c1388969"
+    },
+    "crates/num-utils/src/add_sub.rs": {
+      "bytes": 2010,
+      "mode": 436,
+      "sha256": "f891e98f76e50bcd5ad2ccf312d80d2e283837f5a1163ebf1b6c53a1f6367055"
+    },
+    "crates/num-utils/src/div.rs": {
+      "bytes": 749,
+      "mode": 436,
+      "sha256": "891524a6c12595330a1c8d8a2e34807f3737126b659c179b86c13271324983a6"
+    },
+    "crates/num-utils/src/lib.rs": {
+      "bytes": 134,
+      "mode": 436,
+      "sha256": "5918e22cee1db6b751a8dfbcd28e99cd1d45c5c025497587e5fe9061e598adce"
+    },
+    "crates/num-utils/src/mul.rs": {
+      "bytes": 521,
+      "mode": 436,
+      "sha256": "0d510456321279d3a07fbf1f9df3756bd263aba8711debe8126c60c5982da0ee"
+    },
+    "crates/num-utils/src/mul_div.rs": {
+      "bytes": 1938,
+      "mode": 436,
+      "sha256": "306e84261b5b6727f93c877f3743f871e276f3ac72047e44a9cc9ba161df7fbb"
+    },
+    "crates/primitives/decimal/Cargo.toml": {
+      "bytes": 781,
+      "mode": 436,
+      "sha256": "26f4a62365ac0625a3093c95f8756ac1aea6f8ad346827e830dbd9720605aec5"
+    },
+    "crates/primitives/decimal/fuzz/.gitignore": {
+      "bytes": 33,
+      "mode": 436,
+      "sha256": "a24ed50fc1f28dcafa5d4f9eac712faf4b1ffd7910177f5ce30289197a7a2484"
+    },
+    "crates/primitives/decimal/fuzz/Cargo.toml": {
+      "bytes": 428,
+      "mode": 436,
+      "sha256": "8df0b00512da2a19594297590f919a9285d68cfa8fd6cbb416f547a6a4f5a09f"
+    },
+    "crates/primitives/decimal/fuzz/README.md": {
+      "bytes": 149,
+      "mode": 436,
+      "sha256": "c03b24d22faae136ed30f1685956ab35577a38c859baee0bba0c9eb765c72ec9"
+    },
+    "crates/primitives/decimal/fuzz/fuzz_targets/parse.rs": {
+      "bytes": 134,
+      "mode": 436,
+      "sha256": "6f69e2d42ca69f5a428cadbcac2dc62d761090e22a23f92da941b26b83c7ac38"
+    },
+    "crates/primitives/decimal/fuzz/fuzz_targets/roundtrip.rs": {
+      "bytes": 163,
+      "mode": 436,
+      "sha256": "8f50a783b29a671d53d0b4e9ec6f187567dd47975839b88b4b607e9eeb75e894"
+    },
+    "crates/primitives/decimal/src/arbitrary.rs": {
+      "bytes": 507,
+      "mode": 436,
+      "sha256": "2c94755ee6a19e9f868d844fc77f5092ed857eb047afdc12814f05d2679c9590"
+    },
+    "crates/primitives/decimal/src/lib.rs": {
+      "bytes": 2779,
+      "mode": 436,
+      "sha256": "7b8e83fc75ae2cb37ec3b1858b5090f5702d9fcc32924b95807508f8d66e7be9"
+    },
+    "crates/primitives/decimal/src/ops.rs": {
+      "bytes": 2827,
+      "mode": 436,
+      "sha256": "b42ff60b0207e5c34e2e1c9e0793da89094b115cd26fb064e71701a76dbfb204"
+    },
+    "crates/primitives/decimal/src/str.rs": {
+      "bytes": 4955,
+      "mode": 436,
+      "sha256": "4656e44c90bf7a1d5a5433f38dd1ec98b14f0236db1268820b91096e4a4d55d6"
+    },
+    "crates/primitives/fees/Cargo.toml": {
+      "bytes": 631,
+      "mode": 436,
+      "sha256": "0be201c410e05cb2cfb35ab1bcd868e380723bb73ddf0d96c2bfac9d31dfc919"
+    },
+    "crates/primitives/fees/src/lib.rs": {
+      "bytes": 5141,
+      "mode": 436,
+      "sha256": "0fc1709660f2a5134efbd2cce86b033a7779f5de50aafada1c7a71ce96f3abd7"
+    },
+    "crates/primitives/time/Cargo.toml": {
+      "bytes": 1542,
+      "mode": 436,
+      "sha256": "aa51162d04150f25769c02fb74e194297b4bbaf86c1982a3defe3e956ebea711"
+    },
+    "crates/primitives/time/src/arbitrary.rs": {
+      "bytes": 777,
+      "mode": 436,
+      "sha256": "a3930cb27ce8352d16b005f00b0611cc88196c61bb7dea3e8c12f0422b747fd3"
+    },
+    "crates/primitives/time/src/borsh.rs": {
+      "bytes": 7056,
+      "mode": 436,
+      "sha256": "8099b2dbaec8218cd08f7a08b9e5e227cdb82bd0f6454ac9fc96488ac5025995"
+    },
+    "crates/primitives/time/src/error.rs": {
+      "bytes": 77,
+      "mode": 436,
+      "sha256": "64df09e5ee48ac876d2a8cceeebc8b6fc2029819285761024f284f3367640d64"
+    },
+    "crates/primitives/time/src/lib.rs": {
+      "bytes": 7943,
+      "mode": 436,
+      "sha256": "cd73d8ddf0f31f0e9bdc86c1dcd8932606f0e663c5ab11fe2446490f4f410045"
+    },
+    "crates/primitives/time/src/serde.rs": {
+      "bytes": 5663,
+      "mode": 436,
+      "sha256": "bf3f0eadff67c4b37fadfface5ee68efd1e1071fa7fbfa1b5185ed1839680a56"
+    },
+    "crates/primitives/token-id/Cargo.toml": {
+      "bytes": 1256,
+      "mode": 436,
+      "sha256": "63b8616204cd0d9f2e894d69197834568fdd5f0a5b65c343bc093e9e8a9f079b"
+    },
+    "crates/primitives/token-id/src/error.rs": {
+      "bytes": 244,
+      "mode": 436,
+      "sha256": "76dfcca9d5ef6c115f9b1b524ac83ef2455bb5edcb093ba07f14370856b22a6d"
+    },
+    "crates/primitives/token-id/src/imt.rs": {
+      "bytes": 1926,
+      "mode": 436,
+      "sha256": "0f48b9bcdd539c9a8c0c97d5342986dec8b65e3ba24115582651dd3fcd0ac005"
+    },
+    "crates/primitives/token-id/src/lib.rs": {
+      "bytes": 6152,
+      "mode": 436,
+      "sha256": "cc0d7ed6398ff235b1bcf21a66fb5b0c49eb538aec1535d9db8afef92affeca6"
+    },
+    "crates/primitives/token-id/src/nep141.rs": {
+      "bytes": 1663,
+      "mode": 436,
+      "sha256": "f5fbb144a22d4baf5356557025731f287dfbeca3ce1d8a538a469b9c418c3ddd"
+    },
+    "crates/primitives/token-id/src/nep171.rs": {
+      "bytes": 1945,
+      "mode": 436,
+      "sha256": "4f40b0a4bf7ff99ad0afb12f1db2782ca59ffcb6afbe454fba18bbf775c67447"
+    },
+    "crates/primitives/token-id/src/nep245.rs": {
+      "bytes": 1918,
+      "mode": 436,
+      "sha256": "036e10deaf8a7118c7d1de03f02c46bb7a4da0bd72f8235caa58e16f21abe9fc"
+    },
+    "crates/rand-compat/Cargo.toml": {
+      "bytes": 593,
+      "mode": 436,
+      "sha256": "7aff11b759291380331a521e66424e0a73c7d3debef166f1c4c8e15142f7dc6e"
+    },
+    "crates/rand-compat/src/lib.rs": {
+      "bytes": 738,
+      "mode": 436,
+      "sha256": "fb5a09ad81759ef30a1f82ed8222ee1d48f877dead7b90fb8927848ba66f48be"
+    },
+    "crates/rand-compat/src/v0_10.rs": {
+      "bytes": 2497,
+      "mode": 436,
+      "sha256": "c206c40d8b43db910d2c94846c657d91c613623d38c705253f7225885433a45f"
+    },
+    "crates/rand-compat/src/v0_6.rs": {
+      "bytes": 2751,
+      "mode": 436,
+      "sha256": "7e6a1f8803dc5f197933afac923d4ad463f34867c05e0836c755c6cff4d338f9"
+    },
+    "crates/rand-compat/src/v0_9.rs": {
+      "bytes": 2615,
+      "mode": 436,
+      "sha256": "e969420c18b6c5c1939585b07b222c54d74986b333b0934c43e04dfabd0884c3"
+    },
+    "crates/serde-utils/Cargo.toml": {
+      "bytes": 699,
+      "mode": 436,
+      "sha256": "0f02b1f7f5300c653dc6df5f4ba4527e42fb2881dfabf7855046931ffa85c9b0"
+    },
+    "crates/serde-utils/src/base64.rs": {
+      "bytes": 705,
+      "mode": 436,
+      "sha256": "d89711ae05862962e67cffd370b8809124c7fd2f2063e40e23b304c4da9cc2ed"
+    },
+    "crates/serde-utils/src/cow.rs": {
+      "bytes": 2617,
+      "mode": 436,
+      "sha256": "8bbe1dd7a3214971470aaecd980ff1a3053556acacecd2185284ddedba75aa10"
+    },
+    "crates/serde-utils/src/hex.rs": {
+      "bytes": 3423,
+      "mode": 436,
+      "sha256": "e572c0858f9dc32a0e752be98a0b6ba02e21e603b1f8d197cafb4ffa2e3dae30"
+    },
+    "crates/serde-utils/src/lib.rs": {
+      "bytes": 183,
+      "mode": 436,
+      "sha256": "16415b804ad2e069719881b8456fe977ff6290eedc2bb03ebc05d73c984f7f0d"
+    },
+    "crates/serde-utils/src/seq.rs": {
+      "bytes": 864,
+      "mode": 436,
+      "sha256": "85daadb950801935864d7aa8e12339feb68e783dbbef1a52c1cb1331904e5972"
+    },
+    "crates/serde-utils/src/tlb.rs": {
+      "bytes": 2334,
+      "mode": 436,
+      "sha256": "8fbfed5078a732144b68bffe03c4193f418d31483aea7c25e250903feb2b99dd"
+    },
+    "crates/signatures/README.md": {
+      "bytes": 41,
+      "mode": 436,
+      "sha256": "910a2fbff32fcbb526dcc77cf090d5240693f1ed244826f2b2d2c5944a20f531"
+    },
+    "crates/signatures/erc191/Cargo.toml": {
+      "bytes": 375,
+      "mode": 436,
+      "sha256": "502c846f792f595665afcb038756bc12670821d8dd670da5dd23d069bb050b27"
+    },
+    "crates/signatures/erc191/src/lib.rs": {
+      "bytes": 2507,
+      "mode": 436,
+      "sha256": "edfe5a40ff14ac672f124c8d4c5adfb0c9df7520913346bbe6dfe6b6cf2d36a2"
+    },
+    "crates/signatures/nep413/Cargo.toml": {
+      "bytes": 1280,
+      "mode": 436,
+      "sha256": "4e45c2c7dcf1e53594a061654c48d5975ea4b89c8d72e17e120de848755fb098"
+    },
+    "crates/signatures/nep413/src/lib.rs": {
+      "bytes": 4782,
+      "mode": 436,
+      "sha256": "8ddd3fef0cf5c07be8a0fdd8406708098524b02ff1ae2b642a0fe2edea9619e6"
+    },
+    "crates/signatures/nep461/Cargo.toml": {
+      "bytes": 165,
+      "mode": 436,
+      "sha256": "e01f5bd52f06233cb8879ffb6ab6f998852121096cf6169de7bd6a0d2a9a9789"
+    },
+    "crates/signatures/nep461/src/lib.rs": {
+      "bytes": 543,
+      "mode": 436,
+      "sha256": "44b4aa09d264ab0a702b89df59292aaaef6dc9530f08f2b0b2ba9a8702278a49"
+    },
+    "crates/signatures/nep641/Cargo.toml": {
+      "bytes": 3273,
+      "mode": 436,
+      "sha256": "271fae219435861ffab4a19dbb2472e76e26af5024d2b3e7a78ad6678d657a3e"
+    },
+    "crates/signatures/nep641/src/access_keys.rs": {
+      "bytes": 12995,
+      "mode": 436,
+      "sha256": "faf764d7e2227ce9d460e7c3903bbed9116ecacefda961fef542025e1ec52ef0"
+    },
+    "crates/signatures/nep641/src/client.rs": {
+      "bytes": 866,
+      "mode": 436,
+      "sha256": "e403969c35b228584513c5da6bec919cb65a044ae32500a79bb7bab5b6f73e11"
+    },
+    "crates/signatures/nep641/src/lib.rs": {
+      "bytes": 9595,
+      "mode": 436,
+      "sha256": "1d3894298c0a241a53fec4f497f3bcac8106f5e8ce266a4ec20d081565270580"
+    },
+    "crates/signatures/nep641/src/message.rs": {
+      "bytes": 12533,
+      "mode": 436,
+      "sha256": "17a6f6796e5cd9b20abbfcd2ecb59212a73b0962ec3cefc523bbadcdf869d5a7"
+    },
+    "crates/signatures/nep641/src/resolver/access_keys.rs": {
+      "bytes": 7768,
+      "mode": 436,
+      "sha256": "f3eba6c7c4d818c0a1a073ea3fee5a03f6ada52685dc2d444ada8505c080d18b"
+    },
+    "crates/signatures/nep641/src/resolver/contract.rs": {
+      "bytes": 2168,
+      "mode": 436,
+      "sha256": "836e26a241ec4992de1b3aadf66dd086b9cbd15b320387ec9a401e4d26800929"
+    },
+    "crates/signatures/nep641/src/resolver/error.rs": {
+      "bytes": 1652,
+      "mode": 436,
+      "sha256": "36b133e414b4a81df79b7db314e59be6d11c435e60e8105449771e449e006289"
+    },
+    "crates/signatures/nep641/src/resolver/mod.rs": {
+      "bytes": 15398,
+      "mode": 436,
+      "sha256": "7ad6b9fe0d3f3a43d19d83403bdfd41bf8991e52ab28dedc397336065f07f2ca"
+    },
+    "crates/signatures/sep53/Cargo.toml": {
+      "bytes": 404,
+      "mode": 436,
+      "sha256": "1abc0a68ea137bb273746af47daf6859e6379a06bd8c7efb7ffc6162c4cc752d"
+    },
+    "crates/signatures/sep53/src/lib.rs": {
+      "bytes": 3056,
+      "mode": 436,
+      "sha256": "535ddf4e3b438ab3a6c5d488b0aa73f4b26854fbf0739a9e83dadc9490b3cc8f"
+    },
+    "crates/signatures/tip191/Cargo.toml": {
+      "bytes": 375,
+      "mode": 436,
+      "sha256": "44b7ad63f3585aa01ef70acc344549b09724cf5699073814da3cf6304162facd"
+    },
+    "crates/signatures/tip191/src/lib.rs": {
+      "bytes": 2578,
+      "mode": 436,
+      "sha256": "d681a0ee7b101324c795886c38020e4d5768c0983791e36e13150712ecab3802"
+    },
+    "crates/signatures/ton-connect/Cargo.toml": {
+      "bytes": 1638,
+      "mode": 436,
+      "sha256": "73370481bc87421d9f36dc838ac604fa9c270e95a62c2eb6f1b4d971d65ee433"
+    },
+    "crates/signatures/ton-connect/README.md": {
+      "bytes": 113,
+      "mode": 436,
+      "sha256": "18ba52b1d7ccb47dde88fc0e8490948b39816e732b874da51c07601eaaf2a390"
+    },
+    "crates/signatures/ton-connect/src/cell.rs": {
+      "bytes": 1711,
+      "mode": 436,
+      "sha256": "596450648a00e0c9b89d0263cacf4a83a3d19557cc81e7f29b1a57a93bf56caa"
+    },
+    "crates/signatures/ton-connect/src/lib.rs": {
+      "bytes": 8709,
+      "mode": 436,
+      "sha256": "48b81b1c82f87aef14cedff99be4e8a4a067ff3240c1b82966d5955933e0232a"
+    },
+    "crates/signatures/webauthn/Cargo.toml": {
+      "bytes": 1543,
+      "mode": 436,
+      "sha256": "ee98d0b6a36967e82d41d697d91eac01464fa25548c368dab768113dbd4fc48a"
+    },
+    "crates/signatures/webauthn/src/ed25519.rs": {
+      "bytes": 2757,
+      "mode": 436,
+      "sha256": "1548f3778f9d948d672e28a1031d73e171b8773d293e6dc1e8e2cf95e7f835d3"
+    },
+    "crates/signatures/webauthn/src/lib.rs": {
+      "bytes": 8948,
+      "mode": 436,
+      "sha256": "d6c89f595863a6837d78b1517219a36f12578139b682111f468c820b11441adc"
+    },
+    "crates/signatures/webauthn/src/mock.rs": {
+      "bytes": 2712,
+      "mode": 436,
+      "sha256": "bb781a31c1545d9a8e2587cfdb4d467af2587f75ea771c44d304bc0653018516"
+    },
+    "crates/signatures/webauthn/src/p256.rs": {
+      "bytes": 2871,
+      "mode": 436,
+      "sha256": "4c82da8ecee411927741c30997d7c61608929927ccb9f238194b9bbf282df3b2"
+    },
+    "crates/testing/randomness/Cargo.toml": {
+      "bytes": 236,
+      "mode": 436,
+      "sha256": "38df108c79c8e5c49cc43ab7d6b1a7d54d3765cb636b870071d71c2e7d56b48e"
+    },
+    "crates/testing/randomness/src/lib.rs": {
+      "bytes": 189,
+      "mode": 436,
+      "sha256": "710b8bb23d4d96d4d79edd9bda1b65927bea861af8788394d42bb01fb6c10959"
+    },
+    "crates/testing/sandbox/Cargo.toml": {
+      "bytes": 1687,
+      "mode": 436,
+      "sha256": "b7061933b85af49ed3555b4f6ce473ea132f61b566905d44b17a65aced4e9568"
+    },
+    "crates/testing/sandbox/src/account.rs": {
+      "bytes": 3453,
+      "mode": 436,
+      "sha256": "89da6ffb62055581f4dbd4c34eb86cf5df70a082e6610dd25a799b1251f8bf47"
+    },
+    "crates/testing/sandbox/src/extensions/acl.rs": {
+      "bytes": 1270,
+      "mode": 436,
+      "sha256": "38fe8689c1d0521c7cb569f4e01fa5e746ded86907ab9ed20133ffa7d252d2ec"
+    },
+    "crates/testing/sandbox/src/extensions/defuse/event.rs": {
+      "bytes": 10569,
+      "mode": 436,
+      "sha256": "c7fd4053445158888d3b8d2bb373c84a9b892466bcc2bb9bc3b2c932ae8632a2"
+    },
+    "crates/testing/sandbox/src/extensions/defuse/imt.rs": {
+      "bytes": 1755,
+      "mode": 436,
+      "sha256": "c2d3b0cc885a83cb689f2098210693347cb35b8daf89366e4bb8ad05d4b70d29"
+    },
+    "crates/testing/sandbox/src/extensions/defuse/mod.rs": {
+      "bytes": 26895,
+      "mode": 436,
+      "sha256": "a8f6e9bca4a58830cf37a1b8f2373cf9004c87d708f1a4321f0e446c27fac1a0"
+    },
+    "crates/testing/sandbox/src/extensions/defuse/nonce.rs": {
+      "bytes": 1316,
+      "mode": 436,
+      "sha256": "b0bf13dc190a01e9c73bf86b9e860d621ee120defbcc05424276857f46ff1fe1"
+    },
+    "crates/testing/sandbox/src/extensions/defuse/signer.rs": {
+      "bytes": 2416,
+      "mode": 436,
+      "sha256": "aa2ff1708f2b7f76097278f1e107134a693100a6f7da7f59c26836238a2df5b3"
+    },
+    "crates/testing/sandbox/src/extensions/escrow.rs": {
+      "bytes": 1678,
+      "mode": 436,
+      "sha256": "fcc5ab27c3954b15f31485ffa129a031fc0a78266715302f4b3378a939c1c3bb"
+    },
+    "crates/testing/sandbox/src/extensions/global_deployer.rs": {
+      "bytes": 4689,
+      "mode": 436,
+      "sha256": "f6551d784a04b7e82cbaaf0e158a08e266450268e9d77fbd45ba20bb1137cef1"
+    },
+    "crates/testing/sandbox/src/extensions/mod.rs": {
+      "bytes": 1089,
+      "mode": 436,
+      "sha256": "60eb87f4955c9e5384746ce58e71f4712e5a58ffbb8f053a4ce37653f4b6d5b9"
+    },
+    "crates/testing/sandbox/src/extensions/mt.rs": {
+      "bytes": 11629,
+      "mode": 436,
+      "sha256": "0473913ad57e30db65b3aa638c6fe0331f70819917a297dad55bf6e4d212e503"
+    },
+    "crates/testing/sandbox/src/extensions/mt_receiver.rs": {
+      "bytes": 858,
+      "mode": 436,
+      "sha256": "acb32bceed93ade4cbcab8b89a32986486876bab4117f711c8cd90c8f7e94d84"
+    },
+    "crates/testing/sandbox/src/extensions/nft.rs": {
+      "bytes": 2931,
+      "mode": 436,
+      "sha256": "8f4dcf7cb4a40c1385caaf70e7fc035164193410b10aa0c94bf85643f5cab5dd"
+    },
+    "crates/testing/sandbox/src/extensions/outlayer_app.rs": {
+      "bytes": 2892,
+      "mode": 436,
+      "sha256": "10bc7c622aeb24d917bf86f1984e5ba0dd4f278b0668452d2bc0c9d2075b3378"
+    },
+    "crates/testing/sandbox/src/extensions/poa.rs": {
+      "bytes": 10456,
+      "mode": 436,
+      "sha256": "e504063d3cf80971fcba6183c76631484010c57ca708059e35c33a661c357d94"
+    },
+    "crates/testing/sandbox/src/extensions/wallet.rs": {
+      "bytes": 2274,
+      "mode": 436,
+      "sha256": "4e623787bdc0bad59905d16c6c4745090308f53035d1a948ab31d5c490fde1ca"
+    },
+    "crates/testing/sandbox/src/extensions/wnear.rs": {
+      "bytes": 2060,
+      "mode": 436,
+      "sha256": "5cb602ea00a0992b4777a935ba94014ab8103fff9e5c7e954cf0b9ad50029531"
+    },
+    "crates/testing/sandbox/src/global_contract.rs": {
+      "bytes": 1900,
+      "mode": 436,
+      "sha256": "fb033fa9d9a42ff2c5dbfe43498204ea13c2c9e3ebbd4de9ef37512454165fdc"
+    },
+    "crates/testing/sandbox/src/lib.rs": {
+      "bytes": 767,
+      "mode": 436,
+      "sha256": "e2126bf60cb7ce1e037f09dcaf6b7ca7a44194d3ca3f929c11ba44098aa45dae"
+    },
+    "crates/testing/sandbox/src/nep616.rs": {
+      "bytes": 1114,
+      "mode": 436,
+      "sha256": "993e7adff7756f2a61686bda3068cac357a90236384a512077470ef8de134904"
+    },
+    "crates/testing/sandbox/src/outcome.rs": {
+      "bytes": 977,
+      "mode": 436,
+      "sha256": "43240264f3bc84b52e011963e375132e9779e88bbdae3b17eab4cf6a35b193ab"
+    },
+    "crates/testing/utils/Cargo.toml": {
+      "bytes": 599,
+      "mode": 436,
+      "sha256": "dd4601cc741c7a326bfab2477b83121cdbf3c4c0eeaed6a144f3999337fd6cb4"
+    },
+    "crates/testing/utils/src/asserts.rs": {
+      "bytes": 1486,
+      "mode": 436,
+      "sha256": "c46e4ffb08ae5d4e83f5b42c1bfd37dec4f8403f22183b1b00048cb232d34b4b"
+    },
+    "crates/testing/utils/src/fixtures.rs": {
+      "bytes": 819,
+      "mode": 436,
+      "sha256": "c650dcae0b51466286944bac8f1dea317df99de71702e58ba54a1f27f964c7b5"
+    },
+    "crates/testing/utils/src/lib.rs": {
+      "bytes": 116,
+      "mode": 436,
+      "sha256": "b57c58baef7755af1ca58dec48122c517c2dd60829ca0976b3cacfe5e177db9a"
+    },
+    "crates/testing/utils/src/random.rs": {
+      "bytes": 4088,
+      "mode": 436,
+      "sha256": "994e51d1ecc5233ae7a0026df61b0bc9b254f7116798b7e92dfccc165f1a4ddd"
+    },
+    "crates/testing/utils/src/tamper.rs": {
+      "bytes": 1813,
+      "mode": 436,
+      "sha256": "df4870f561ce7292a31620213a92dec0478671150f35f8f2a874cac8b79f7aac"
+    },
+    "crates/testing/utils/src/wasms.rs": {
+      "bytes": 2995,
+      "mode": 436,
+      "sha256": "ac6a6e149e871c2f59edcd58e37f6047558d8a3ee35e4afbc090b59a0d356d9a"
+    },
+    "crates/wallet/sdk/Cargo.toml": {
+      "bytes": 1895,
+      "mode": 436,
+      "sha256": "3683295d854299fda7347412a39fab1a2748616e447029c90824590d9b8a0d4a"
+    },
+    "crates/wallet/sdk/examples/mpc_sign.rs": {
+      "bytes": 2014,
+      "mode": 436,
+      "sha256": "a2cd10fd16396634fe2bd74e20d8adeaaa7f08bd3eeb98e64f841817b1e539d5"
+    },
+    "crates/wallet/sdk/src/client.rs": {
+      "bytes": 2365,
+      "mode": 436,
+      "sha256": "0fe2591b5f6e6f34cb517468573512f4ee5b66cd06d23f8194d61a17299a830e"
+    },
+    "crates/wallet/sdk/src/lib.rs": {
+      "bytes": 31169,
+      "mode": 436,
+      "sha256": "d325ea80a334da869011d7b25328ecb279393b8ce5e448235bbc4cf337fa227a"
+    },
+    "crates/wallet/sdk/src/nonces.rs": {
+      "bytes": 3373,
+      "mode": 436,
+      "sha256": "d27d64c4996e87aba34f2f601812676f6a6267cbaa704be7f83a2d972e3d0a08"
+    },
+    "crates/wallet/sdk/src/relayer/mod.rs": {
+      "bytes": 1717,
+      "mode": 436,
+      "sha256": "0fc420103ab7b3ed72eb16e2b0e16964d9839391369d815ca2ba981df5528669"
+    },
+    "crates/wallet/sdk/src/relayer/near_kit.rs": {
+      "bytes": 2787,
+      "mode": 436,
+      "sha256": "1ff663ca32832c8d7286d89031207a1eb6167401b91ae449d8d673ccf7c2d157"
+    },
+    "crates/wallet/sdk/src/relayer/request.rs": {
+      "bytes": 1447,
+      "mode": 436,
+      "sha256": "d7288ed0f993a5948e459457a3e63f42367cf3a04d53805ffd988058fa0dc8b7"
+    },
+    "crates/wallet/sdk/src/signer.rs": {
+      "bytes": 2792,
+      "mode": 436,
+      "sha256": "5412bd05e9fcc5522b2a1fb3290fbed03e1cb332aef7c676f111c2a7ed61d7d2"
+    },
+    "crates/wallet/sdk/tests/test.rs": {
+      "bytes": 9771,
+      "mode": 436,
+      "sha256": "30c059e76c530b0a5f080f42362a0f9bbc0432d3d0149a89d35654346d2b126e"
+    },
+    "releases/defuse-0.2.10.wasm": {
+      "bytes": 1274464,
+      "mode": 436,
+      "sha256": "b76ee5e4d64646586bee19c346b269a18c1abdf5ac15990614d28eaa5ead8cec"
+    },
+    "releases/defuse_poa_factory.wasm": {
+      "bytes": 589627,
+      "mode": 436,
+      "sha256": "a81e9c8f059164faef5e9c5e7642d059c6ae70adbd0629d5dbbd380f08be6c63"
+    },
+    "releases/fungible-token.wasm": {
+      "bytes": 201535,
+      "mode": 436,
+      "sha256": "12c5f9bd9136b4396823478281a61368b4c74cdaf35ab5743b302c3aac55a354"
+    },
+    "releases/non-fungible-token.wasm": {
+      "bytes": 310996,
+      "mode": 436,
+      "sha256": "38cfeef995845b9846ea323f94d44745dd9480857919bff1e41e72335354abbc"
+    },
+    "releases/wnear.wasm": {
+      "bytes": 185625,
+      "mode": 436,
+      "sha256": "b72c26d390b23f4517d091a8aab06b0369d465356ec5fb337d5fda076da38ac0"
+    },
+    "rust-toolchain": {
+      "bytes": 103,
+      "mode": 436,
+      "sha256": "eb74525e1acb5d1d3b13c2813ce459e0bb3025212255be4fc0e0fd1dfc5a054c"
+    },
+    "scripts/get_metadata.sh": {
+      "bytes": 2434,
+      "mode": 509,
+      "sha256": "ccad605420b9220db1eb3a5d4d44d81567811913d97a64b27732ee3165a78ee6"
+    },
+    "scripts/list_nep245_tokens.sh": {
+      "bytes": 2348,
+      "mode": 509,
+      "sha256": "29e1857dcc609b3866d718ba6e72c388104c9e3c9251a54d3eaaab24c3e68699"
+    },
+    "taplo.toml": {
+      "bytes": 887,
+      "mode": 436,
+      "sha256": "f7f8fae9ccdfa80caaf9db792edd6f964609c50ed391fb82f83d283196b9a82f"
+    },
+    "tests/Cargo.toml": {
+      "bytes": 1579,
+      "mode": 436,
+      "sha256": "3c5ba66a61bac78da351a2c1ba3255ea8381a0d77ac252fbcd7970ecaca25a46"
+    },
+    "tests/contracts/README.md": {
+      "bytes": 535,
+      "mode": 436,
+      "sha256": "89adc3b40292699b2df23cd82bb88618608fb8f086413a1e639bd76a2e6e53f7"
+    },
+    "tests/contracts/multi-token-receiver-stub/Cargo.toml": {
+      "bytes": 1185,
+      "mode": 436,
+      "sha256": "bc41e847fd715d3977e0e0cb1e3513de39ec3e62b37cf6577ef69e7cdc9186ec"
+    },
+    "tests/contracts/multi-token-receiver-stub/src/lib.rs": {
+      "bytes": 7630,
+      "mode": 436,
+      "sha256": "7d88291ad938845470823fe49003b2c061eccf75ff517b4e1dc4f4c33f0e3cc7"
+    },
+    "tests/contracts/multi-token-receiver-stub/src/on_auth.rs": {
+      "bytes": 350,
+      "mode": 436,
+      "sha256": "640c1f958bfdc17ebc46d48b2af5cd408f0f3d22658b72be4648a3e8cc32c240"
+    },
+    "tests/src/lib.rs": {
+      "bytes": 96,
+      "mode": 436,
+      "sha256": "1a9b7229ed3d266e966d036aed625b8c9e4bf7a6bcffd68cc52705a88809c37e"
+    },
+    "tests/src/tests/defuse/accounts/account_sync.rs": {
+      "bytes": 6057,
+      "mode": 436,
+      "sha256": "232c5afe8e33892cea2769f7ab6db9ddab0009252e580223b551581f80a884c5"
+    },
+    "tests/src/tests/defuse/accounts/auth_by_predecessor_id.rs": {
+      "bytes": 7312,
+      "mode": 436,
+      "sha256": "f7290baeb68766784d0629c468e321f726377ac345be7e7a7c00de9eec618090"
+    },
+    "tests/src/tests/defuse/accounts/force.rs": {
+      "bytes": 19199,
+      "mode": 436,
+      "sha256": "06c5b69143aecf9a74fd0c0ce48f0a0a62bdb021fe615f9b26140d3bff2ee2ce"
+    },
+    "tests/src/tests/defuse/accounts/manage_public_keys.rs": {
+      "bytes": 2673,
+      "mode": 436,
+      "sha256": "47e440cafa8ae40cb88c673a25c653d1dc5a61687eea92fff333a7b05953b6b0"
+    },
+    "tests/src/tests/defuse/accounts/mod.rs": {
+      "bytes": 117,
+      "mode": 436,
+      "sha256": "7c846d05fab5dccbe80eb9fe1ede4346f2b2880b9287ff30b51848c887ec4e62"
+    },
+    "tests/src/tests/defuse/accounts/nonces.rs": {
+      "bytes": 14042,
+      "mode": 436,
+      "sha256": "0929a920c8b2af7f327450e1a20b2404fbbfc81c06c81c0cac15cb88f51a8d1c"
+    },
+    "tests/src/tests/defuse/admin_call.rs": {
+      "bytes": 9868,
+      "mode": 436,
+      "sha256": "e25fe3332770d007206f23c2bf821deafee3c88cf0c86b59683168950ea7908a"
+    },
+    "tests/src/tests/defuse/env/builder.rs": {
+      "bytes": 6255,
+      "mode": 436,
+      "sha256": "a1e30669d96472daba611f344228439014eb8b4a2fe889d9ae9bcfd7c8880d07"
+    },
+    "tests/src/tests/defuse/env/mod.rs": {
+      "bytes": 7181,
+      "mode": 436,
+      "sha256": "70362cc6d563128271cd74be3c9f23288388079f5c9b5e57f07b5d35d46d44a2"
+    },
+    "tests/src/tests/defuse/global_deployment.rs": {
+      "bytes": 2853,
+      "mode": 436,
+      "sha256": "18919e8f77ffc67cc9012c0fbeea628f2a5febc59bd4f9e0db018146c7b4b574"
+    },
+    "tests/src/tests/defuse/intents/ft_withdraw.rs": {
+      "bytes": 12327,
+      "mode": 436,
+      "sha256": "9ef72e6d418db60ec75d8ac8659b65fee1e8e8d09c1598716b5cb0b5d5a74093"
+    },
+    "tests/src/tests/defuse/intents/imt_burn.rs": {
+      "bytes": 3152,
+      "mode": 436,
+      "sha256": "648b03ce89ea7b2feb457763b205371d07524f9664a99589c081aec2684aee78"
+    },
+    "tests/src/tests/defuse/intents/imt_mint.rs": {
+      "bytes": 9766,
+      "mode": 436,
+      "sha256": "a96c0de56f058f1fecfcc15458c072c9a113ff1a774e07049af9af4700305728"
+    },
+    "tests/src/tests/defuse/intents/legacy_nonce.rs": {
+      "bytes": 3103,
+      "mode": 436,
+      "sha256": "34fb2278709b07d436b58c4b2285805f11d9676338bbd94b20c1a0574cc6da44"
+    },
+    "tests/src/tests/defuse/intents/mod.rs": {
+      "bytes": 9990,
+      "mode": 436,
+      "sha256": "9d8fc24199842d74b735a6f0abbc78ab5da7857afa0ccf76a381f27ea7b0ab7f"
+    },
+    "tests/src/tests/defuse/intents/native_withdraw.rs": {
+      "bytes": 4052,
+      "mode": 436,
+      "sha256": "51a0bbb63c7e10eecec46fa659ef70b6e2f4cdd9ac9002c91a27b34c86b813ec"
+    },
+    "tests/src/tests/defuse/intents/public_key.rs": {
+      "bytes": 3196,
+      "mode": 436,
+      "sha256": "3d8ea0d865d5c42ca8ac778b595d413a6bc60534eed0acc39f9ba8501aa1718a"
+    },
+    "tests/src/tests/defuse/intents/relayers.rs": {
+      "bytes": 3190,
+      "mode": 436,
+      "sha256": "1bc367de5a8b7344bf6b03e92a6a04af6afeee7a352a2cf36a0e4a1199673ebe"
+    },
+    "tests/src/tests/defuse/intents/simulate.rs": {
+      "bytes": 25542,
+      "mode": 436,
+      "sha256": "27493ec8c30ee75f31d2d999b605bf0ab1002ae4703abab9055a05068bd2f388"
+    },
+    "tests/src/tests/defuse/intents/token_diff.rs": {
+      "bytes": 17281,
+      "mode": 436,
+      "sha256": "5a06a7127a31157d56f64d77e7ed52a748f24e18b071a6b4e7c82f683eeda13e"
+    },
+    "tests/src/tests/defuse/intents/transfer.rs": {
+      "bytes": 12368,
+      "mode": 436,
+      "sha256": "0d9470e4276e285ae835fb90349555dc3a35342bdc60ad23fbc0af20e8302d1f"
+    },
+    "tests/src/tests/defuse/mod.rs": {
+      "bytes": 186,
+      "mode": 436,
+      "sha256": "9d0536afc60c87c2cb7a3718e3bdf64b281f18d6fdc04e6d8e960524457f9816"
+    },
+    "tests/src/tests/defuse/state/fee.rs": {
+      "bytes": 3341,
+      "mode": 436,
+      "sha256": "c254448aba9ebe9049c109f35fc98d253a40d1c7c2d71393978470a6a64f495b"
+    },
+    "tests/src/tests/defuse/state/mod.rs": {
+      "bytes": 32,
+      "mode": 436,
+      "sha256": "a19b2078f1c59ae0950193b61215935f3239e76fab0a252d2326b954cebb728d"
+    },
+    "tests/src/tests/defuse/state/salt.rs": {
+      "bytes": 4559,
+      "mode": 436,
+      "sha256": "c040578f6da36b5cec2774a32d315a6f25c8b4258432517af0afea5783c91423"
+    },
+    "tests/src/tests/defuse/state/upgrade.rs": {
+      "bytes": 9584,
+      "mode": 436,
+      "sha256": "e5ab1185b74ed87856d4f8a1f174571bff0066dfc401d15f0312d575e7c35c78"
+    },
+    "tests/src/tests/defuse/state_init.rs": {
+      "bytes": 16479,
+      "mode": 436,
+      "sha256": "3bbdaea86daa69805717a3ff8bd213c8293c478eca7aeac47525cf30de36cf48"
+    },
+    "tests/src/tests/defuse/storage/mod.rs": {
+      "bytes": 6849,
+      "mode": 436,
+      "sha256": "60c2718cdce45d7193c8780f311a553fda31b26912143d4d580796801ea73986"
+    },
+    "tests/src/tests/defuse/tokens/imt.rs": {
+      "bytes": 3607,
+      "mode": 436,
+      "sha256": "9b584d7ca7555f38b977639a776678dd60331323cc108f7f6fd00d44eb62d4c9"
+    },
+    "tests/src/tests/defuse/tokens/mod.rs": {
+      "bytes": 69,
+      "mode": 436,
+      "sha256": "9e8b22794cc170ae3190f714a616db1368d7b198f073ea4af6e78c85bc62cb42"
+    },
+    "tests/src/tests/defuse/tokens/nep141.rs": {
+      "bytes": 16357,
+      "mode": 436,
+      "sha256": "7527dd102af7f18a21e0cda76eea37798533adeb519ceebb094308733d539ab2"
+    },
+    "tests/src/tests/defuse/tokens/nep171.rs": {
+      "bytes": 17618,
+      "mode": 436,
+      "sha256": "1c93a251be5a7f424a9637acbe8f0bfe9f4b7253bb9fa6e8b1845793fee8ff71"
+    },
+    "tests/src/tests/defuse/tokens/nep245/letter_gen.rs": {
+      "bytes": 2404,
+      "mode": 436,
+      "sha256": "53a248064d7c5e45be1171569d391de1fe4e7aba450600e92dc845a3429dd32d"
+    },
+    "tests/src/tests/defuse/tokens/nep245/mod.rs": {
+      "bytes": 57651,
+      "mode": 436,
+      "sha256": "22ef2a055a4e3c81162465d76198f5af358ab91f8e8eb95f6826bfb3ef2bb72b"
+    },
+    "tests/src/tests/defuse/tokens/nep245/mt_deposit_resolve_gas.rs": {
+      "bytes": 20606,
+      "mode": 436,
+      "sha256": "3e78c0ad13063e56fdf6589580722ad3ee85f63c82407f6a5e82564e1086c2ab"
+    },
+    "tests/src/tests/defuse/tokens/nep245/mt_transfer_resolve_gas.rs": {
+      "bytes": 20275,
+      "mode": 436,
+      "sha256": "266ba077cb93b50ded63f348e4c7593c113152646e94df7a826a5edff11c28b0"
+    },
+    "tests/src/tests/defuse/utils.rs": {
+      "bytes": 545,
+      "mode": 436,
+      "sha256": "92fa0eb0ee24e3d933c39739cbfe20f8a91b18903f9d6a0cf6802aea250d4d34"
+    },
+    "tests/src/tests/escrow/fee_validation.rs": {
+      "bytes": 10938,
+      "mode": 436,
+      "sha256": "811bcfe5de4bb9f6117c75198293cbe48ff0e0a46d0ab7eadf6319623d511f2c"
+    },
+    "tests/src/tests/escrow/helpers/mod.rs": {
+      "bytes": 5188,
+      "mode": 436,
+      "sha256": "cce056da8d2e65f1d449f18363e28e11e87db180d81efc54f62cdd7aaee24b93"
+    },
+    "tests/src/tests/escrow/mod.rs": {
+      "bytes": 63,
+      "mode": 436,
+      "sha256": "be971f93519def211e343994aeb287c7b312597c811fae119a6895df7ec77760"
+    },
+    "tests/src/tests/escrow/partial_fills.rs": {
+      "bytes": 10451,
+      "mode": 436,
+      "sha256": "c02640edf2d7b5791995032a02a88758154421e3b7eb798afbf6d0aa48d7c260"
+    },
+    "tests/src/tests/escrow/state.rs": {
+      "bytes": 1542,
+      "mode": 436,
+      "sha256": "41c6bd21680d91e3308207f6bc35eb484cde2876982fef263ae7d339c6f413c0"
+    },
+    "tests/src/tests/global_deployer/deploy_escrow_swap.rs": {
+      "bytes": 8218,
+      "mode": 436,
+      "sha256": "075cac9744c1c7cfebd82b8be424a03073d7ba9cf9536f29dc9655881126b85b"
+    },
+    "tests/src/tests/global_deployer/mod.rs": {
+      "bytes": 38161,
+      "mode": 436,
+      "sha256": "3be335c0b0220a6091667777fb522e05f28103a0b3eb4cf6653d2565e1363acc"
+    },
+    "tests/src/tests/mod.rs": {
+      "bytes": 284,
+      "mode": 436,
+      "sha256": "6dab24538284bc468b1e723d0e7f5aa206e0a289a8f15da48cd976030a49167b"
+    },
+    "tests/src/tests/outlayer_app/mod.rs": {
+      "bytes": 4661,
+      "mode": 436,
+      "sha256": "6ef1dec062157100fc50e1e6ad824284d5edce1a1f26b9f01668676ed2be7ef2"
+    },
+    "tests/src/tests/poa/full_access_keys.rs": {
+      "bytes": 4271,
+      "mode": 436,
+      "sha256": "ebfdbe90395bb9fbf6111e2214b016105ba422c6f1fdec1bb815e67d2c1c8271"
+    },
+    "tests/src/tests/poa/mod.rs": {
+      "bytes": 7057,
+      "mode": 436,
+      "sha256": "e0c123e4b5b45bec6cfde80e8b8df2e5fe0d0fbe8c6155b4d9cb03870d74de96"
+    },
+    "tests/src/tests/utils.rs": {
+      "bytes": 1778,
+      "mode": 436,
+      "sha256": "ca2573dc584032c85a309fbd342c6a3c2bcd1c24b98ca4a52bab459af70b494f"
+    }
+  },
+  "format_version": 1,
+  "inputs": {
+    "archive_bytes": 1324342,
+    "archive_commit": "32cd1f9788a347908164fbcc56525dc6542f158f",
+    "archive_sha256": "0c9073d58953d06850b408800047a0f061194e925c9ea1c2259e3910f18c24d0",
+    "effective_lock_sha256": "adad54d489e681229757b069e9da48f24ded2b075e2d79d05f1b4d53f21a2102",
+    "lock_source": "reviewed-package-lock",
+    "overlay_files": {
+      "contracts/defuse/src/contract/tokens/nep141/journal.rs": "3f9965b6a4eb20611e8eec68416e8a83900a463bc41d63c135ca196cf59f93d7"
+    },
+    "recipe": "native-nep141-journal-overlay-v1",
+    "shared_crate_files": {
+      "Cargo.toml": "d3dc6fdc031ff1abe050f18f3d524b1ac46bbe6693c2fb2ef9788fe2a601e26d",
+      "src/lib.rs": "472cd1930c647ad7aca4ae565be0508a026f45b21b05eafcdc8d22e9cfcef829",
+      "tests/generate_golden.py": "5d48559f1c65fa5de390130e93e516e9b448612194eba5cc6eb208a6befe572d",
+      "tests/protocol.rs": "1702e6bc82d8add1f26f92cf81adbb6c5d041bd993369d9d633d90e5517f8152"
+    },
+    "vendor_crate": {
+      "archive_bytes": 41810,
+      "archive_root": "near-plugins-0.5.3",
+      "archive_sha256": "ef03cc3e96b4036f8fb0e4d3589887acc5825311a2e153d6b8ab82f5f208c919",
+      "destination": "crates/mandate-near-plugins",
+      "license": "CC0-1.0",
+      "license_file": "NOT_PRESENT_IN_ORIGINAL_ARCHIVE",
+      "manifest_changes": [
+        "[dependencies.near-sdk]: add default-features = false",
+        "[dev-dependencies.near-sdk]: add default-features = false"
+      ],
+      "name": "near-plugins",
+      "original_files": {
+        "Cargo.toml": "8b9df24dd515f5714bce97241d091c16a1934dce3dffca1fa121edfa9f8edd44",
+        "README.md": "d73f0ca82a43810760258b874bbb59c1c962c33a83154193b411ffe219b0ffb1",
+        "src/access_control_role.rs": "84bf26f17fac123a47d810ee85bf714d7f9a41c75ea9d7a68c07d4ff309c0a5d",
+        "src/access_controllable.rs": "4f46de063678eee0288d33601ab776c83f0a879626876f26ebc92daeaadf5a5b",
+        "src/events.rs": "31d67b482d5a81eba739dc9d0738f96e0845d4164f694dda5196ae56e624ffa0",
+        "src/lib.rs": "3b416c5a461e8e44d6723ab2ab878670ebda080f403a0b852612636abcebdad3",
+        "src/ownable.rs": "66a889409fb416faf20061480199ef60c7512b5c65c54e87e51f42302dd8d4f3",
+        "src/pausable.rs": "9afc33e4ad4c3e3f0060e624b1659f667b958b0ae84329b6765433d852e7cb7b",
+        "src/upgradable.rs": "086771c452d637195b69a38a55659e4698a759d400c2c710a6ab237d628fb7b7"
+      },
+      "repository": "https://github.com/Near-One/near-plugins",
+      "source": "vendor/near-plugins-0.5.3",
+      "source_changes": "NONE",
+      "staged_files": {
+        "Cargo.toml": "23473189f13f1655e15278b18e68b988705e6b8a7281de4a72660c651c413270",
+        "README.md": "d73f0ca82a43810760258b874bbb59c1c962c33a83154193b411ffe219b0ffb1",
+        "src/access_control_role.rs": "84bf26f17fac123a47d810ee85bf714d7f9a41c75ea9d7a68c07d4ff309c0a5d",
+        "src/access_controllable.rs": "4f46de063678eee0288d33601ab776c83f0a879626876f26ebc92daeaadf5a5b",
+        "src/events.rs": "31d67b482d5a81eba739dc9d0738f96e0845d4164f694dda5196ae56e624ffa0",
+        "src/lib.rs": "3b416c5a461e8e44d6723ab2ab878670ebda080f403a0b852612636abcebdad3",
+        "src/ownable.rs": "66a889409fb416faf20061480199ef60c7512b5c65c54e87e51f42302dd8d4f3",
+        "src/pausable.rs": "9afc33e4ad4c3e3f0060e624b1659f667b958b0ae84329b6765433d852e7cb7b",
+        "src/upgradable.rs": "086771c452d637195b69a38a55659e4698a759d400c2c710a6ab237d628fb7b7"
+      },
+      "version": "0.5.3"
+    }
+  }
+}

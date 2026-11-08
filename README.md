@@ -23,9 +23,14 @@ Mandate limits authorization, rather than guaranteeing profitable decisions.
 
 > **Experimental prototype — not ready for real funds.** Local contract and
 > client tests, sandbox fixtures and historical interoperability experiments
-> exist. The full sandbox integration suite passed locally on commit `aa32116`,
-> including the gas tests. That is not CI on that commit, not a final release
-> artifact. Gas measurements from the 7 November run are in `docs/evidence/gas.txt`.
+> exist. The pre-journal 8 November hardening candidate passed 479 distinct local tests,
+> including all 14 sandbox targets and gas regressions; exact source/WASM identity
+> and command history are in the [hardening report](docs/audit/HARDENING-2026-11-08.md).
+> A frozen release, reproducible build and CI evidence remain required.
+> The subsequent source-owned withdrawal journal has separate native and
+> preparation checks; the earlier 479-test result does not cover that new mode.
+> Its final asynchronous sandbox and intended-chain results remain unverified.
+> Historical gas measurements from 7 November are in `docs/evidence/gas.txt`.
 > A testnet run on 7 November 2026 deployed the vault and obtained a real testnet
 > MPC signature ([evidence](docs/evidence/testnet-run-2026-11-07/README.md)). It used a
 > fixture Intents contract and a stand-in oracle, and its delayed withdrawal is queued
@@ -180,6 +185,7 @@ Its configuration is validated at initialization and on every rule change.
 | `min_trade_interval_sec` | Minimum interval between recorded approval timestamps, in whole seconds |
 | `max_price_age_sec` | **1–300 seconds**; price-age equality passes, and up to **5 seconds** of future timestamp skew is accepted |
 | `allowed_model_ids` | **0–8** unique, nonblank declared source IDs, at most **64 UTF-8 bytes** each; empty denies all proposals |
+| `withdrawal_limits` | Optional list of unique allowed assets with positive `max_per_request` **token-base-unit strings** (`U128`); an omitted asset is uncapped. Limits apply per request, without an aggregate or daily withdrawal cap |
 
 Amounts use integer units throughout:
 
@@ -202,6 +208,10 @@ trade is evaluated; it does not continuously monitor NAV or automatically sell
 positions. Projected position checks do not guarantee realized weights after
 price changes, external credits or excess output. Daily turnover measures
 **authorized oracle notional**, not successful fills or a rolling 24-hour sum.
+The high-water mark tracks absolute pre-trade NAV and is not adjusted for cash
+flows. A confirmed owner withdrawal lowers NAV without lowering that recorded
+peak, so it can trigger the drawdown guard without a trading loss. Cash-flow
+adjustment remains an open economic-design issue before real-fund use.
 
 ### Timing and delayed changes
 
@@ -226,6 +236,8 @@ immediately and clears the old queued change. Adding a declared source is
 loosening, including the first ID added to an empty list. Removing a source
 applies immediately. Membership is exact and case-sensitive, with no trimming
 or normalization of accepted IDs.
+Adding or reducing a withdrawal ceiling applies immediately. Increasing or
+removing an existing ceiling waits 24 hours, including removal of its asset.
 
 ## Authority and trust boundaries
 
@@ -261,7 +273,7 @@ Private callbacks are internal receipt handlers, not operator commands.
 | Agent assignment | `set_agent`, `cancel_pending_agent` | Owner; exactly 1 yoctoNEAR |
 | Apply agent change | `apply_pending_agent` | Permissionless after maturity; no deposit |
 | Register signing authority | `register_intents_key` | Permissionless; no caller deposit; vault pays the external registration deposit |
-| Propose / execute | `propose`, `execute` | Configured agent / permissionless executor; no deposit |
+| Propose / execute | `propose`, `execute` | Configured agent / permissionless executor; no deposit; execution requires **300 TGas** |
 | Stop / resume | `pause`, `unpause`, `resume_proposals` | Owner; no deposit for pause, exactly 1 yoctoNEAR for either resume method |
 | Authorize withdrawal | `request_withdrawal`, `cancel_pending_withdrawal`, `rearm_pending_withdrawal` | Owner; exactly 1 yoctoNEAR |
 | Dispatch / recover | `apply_pending_withdrawal`, `recover_withdrawal` | Permissionless when protocol conditions pass; no deposit; gas requirements below |
@@ -279,6 +291,8 @@ Useful public reads include `get_owner`, `get_agent`, `get_mandate`,
 `get_pending_proposal`, `get_signed_intent` and `get_last_proposal_outcome`.
 Queued owner changes and withdrawal stages have dedicated views. Reading an
 old retained signature or outcome does not make it current or settled.
+Attach **300 TGas** when calling `execute`; lower prepaid gas is rejected before
+the pending proposal is consumed or an execution lock is created.
 
 ## Agent modes and model provenance
 
@@ -291,7 +305,7 @@ Intents treasury payloads.
 | Manual | `public-plan.json` | Validates a plan and submits it with source `manual-v1` |
 | Autonomous preview | `--auto agent/examples/rebalance-public.json --dry-run` | Public RPC/quote requests; no signing configuration, proposal or outbox |
 | Autonomous execution | `--auto public-config.json` | Prepares and submits one two-asset rebalance decision with source `rebalance-v1` |
-| Autonomous loop | `--auto public-config.json --loop` | Repeats, waiting 30 seconds after each completed decision; errors may terminate the process |
+| Autonomous loop | `--auto public-config.json --loop` | Repeats with bounded backoff for snapshot/quote failures before submission; an unknown submitted transaction requires reconciliation before another proposal |
 | Model preview | `--model --dry-run` | Calls the configured model provider; no NEAR transaction or outbox |
 | Model execution | `--model` | Validates a response, refreshes state, writes public evidence and submits the exact decision |
 | Offline record verification | `--verify-model public-record.json --reason-hash REPLACE_WITH_ON_CHAIN_HASH` | Checks canonical commitment, decision and supplied/stored signatures; no chain calls |
@@ -408,7 +422,15 @@ account. A queue request fixes asset, amount and receiver and starts a 24-hour
 delay; replacing it restarts that delay. Queuing/dispatching is refused while a
 trade execution or unexpired signed intent owns the relevant lock.
 
-The current `unique_voucher_v1` protocol separates authorization, dispatch and
+`withdrawal_limits` caps each configured asset's amount per request in exact
+token base units. An asset without a ceiling retains uncapped behavior. The
+vault checks the current ceiling at request, mature apply and preparation before
+dispatch. Tightening during preparation can refuse the send; tightening after
+dispatch does not reinterpret terminal delivery or authorize another send.
+This is not a daily or aggregate custody-exposure limit: repeated owner requests
+can each satisfy the ceiling. Increasing or removing a ceiling waits 24 hours.
+
+The default `unique_voucher_v1` protocol separates authorization, dispatch and
 recovery:
 
 1. **Owner queues one request**, with exactly 1 yoctoNEAR, arming one attempt.
@@ -435,6 +457,20 @@ Recovery proof `sent=0, cancelled=1` permits safe requeue. Proof
 **DebitObserved is not terminal receiver delivery** and does not exclude a
 later FT refund; resolver/refund receipts may overlap subsequent operations.
 
+Fresh deployments may explicitly select `durable_withdrawal_journal_v1` through
+`new_with_journal(owner, mandate, journal)`, binding the signer, executor, oracle,
+oracle kind and immutable ledger domain. The [source-owned executor package](integrations/intents-executor/README.md)
+adds the journal to the actual Intents custody/debit/resolver code. Preparing
+performs descriptor and vault-admission reads before dispatch. Same-ID requests
+are permanently deduplicated; cancellation writes a tombstone that fences a
+delayed original. Only an exact authenticated `Delivered`, `Refunded` or
+`Cancelled` record resolves the vault guard. A lost vault callback can be
+reconciled after the executor records a terminal result. A missing executor
+resolver can leave `Pending` indefinitely; no finalized-receipt proof verifier
+exists. This mode is fresh-only and supplies no terminal truth for unknown
+historical sends. The [protocol and remaining gates](docs/design/f26-durable-executor.md)
+describe source trust, ordinary NEP141 token assumptions, storage and gas.
+
 **Accepted availability residual (F26):** missing, failed or inconsistent proof
 retains the guard, blocking new **withdrawal dispatches and trade authorization**.
 A successor withdrawal request can still be queued. Neither elapsed time,
@@ -445,7 +481,12 @@ current testnet scope; it does not establish real-fund readiness.
 Read `get_withdrawal_status`, `get_last_withdrawal_outcome`,
 `get_pending_withdrawal`, `get_withdrawal_stage`, `is_withdrawal_retry_armed`,
 `get_withdrawal_protocol` and `get_withdrawal_recovery_accounts` for bounded
-status. Full prerequisites and proof limitations are in
+status. `get_withdrawal_journal_binding` exposes the local journal configuration;
+`get_withdrawal_recovery_state` returns one atomic attempt snapshot and
+`recover_withdrawal_attempt(withdrawal_id)` makes stale-ID recovery a no-op.
+The keeper persists an exact public paid-transaction hash before broadcast and
+retains a restart fence after ambiguous outcomes, requiring operator
+reconciliation. Full prerequisites and proof limitations are in
 [Operational readiness](docs/OPERATIONAL-READINESS.md).
 
 SR-1 trade recovery is separate: every error after dispatching a signing request
@@ -493,16 +534,20 @@ approval for funded/deployment actions.
 ### Supported migrations
 
 Changing WASM alone cannot safely read an incompatible Borsh state layout.
-Private `migrate` supports exactly five historical layouts: pre-sequence
+Private `migrate` supports exactly six historical layouts: pre-sequence
 `77ebc0c`, sequence-enabled `0de5c48`, pre-provider remediation,
-provider-enabled pre-voucher, and voucher-enabled pre-model `b43569d`.
+provider-enabled pre-voucher, voucher-enabled pre-model `b43569d`, and
+source-admission-enabled pre-ceiling `a582d36`.
 It preserves the chosen provider where present.
 
 Migration requires a paused, quiescent vault with a distinct owner: no stored
 execution, pending proposal, queued withdrawal, future signed deadline or
-unresolved withdrawal guard/stage/retry authorization. Active and queued old
-mandates receive **empty source lists**; admitting any source requires a new
-24-hour change, while existing queued change deadlines are preserved.
+unresolved withdrawal guard/stage/retry authorization. Pre-model active and
+queued mandates receive **empty source lists**; admitting any source requires
+a new 24-hour change. The pre-ceiling layout preserves recorded source lists.
+Every migrated mandate starts with empty withdrawal ceilings (uncapped), while
+existing queued change deadlines are preserved. Configure reviewed ceilings
+before relying on them.
 
 Migration is an authorized self-call during upgrade, not an owner recovery
 escape or an upgrade mechanism for an already sealed account. Unknown external
@@ -517,17 +562,23 @@ Historical results are not a current release certificate.
 
 | Evidence | What it establishes | Remaining limit |
 |---|---|---|
+| [Hardening review, 8 November](docs/audit/HARDENING-2026-11-08.md) | Final locked graph: 360 fast Rust, 36 JavaScript, 19 Python and 64 distinct sandbox tests across all 14 targets passed; source/WASM hashes recorded | Direct commands completed the configured scope across three sandbox batches. The final `verify.sh` wrapper was blocked by review infrastructure; frozen-commit CI, reproducible build and live readiness remain open |
+| [Source-owned journal checkpoint, 8 November](docs/audit/F26-DURABLE-2026-11-08.md) | Final source-v4 optimized artifact and source/lock bindings; scoped 301 workspace native and 37 executor tests; 23 preparation and 25 builder tests | Eleven final asynchronous cases remain unexecuted; two new maximum-input groups are authored/compiled only. An older source-v3 run failed at localhost startup; full HTTP/runtime verification, ABI packaging, reproducibility and independent audit remain open |
 | [Captured fast run, 7 November](docs/evidence/phase0-9-2026-11-07/final-fast-outside-sandbox-after-model-name-fix.txt) | Saved output ends `All checks passed.` after the model-name correction | Log lacks an embedded revision/time header; final release verification must be tied to an immutable artifact |
-| [Verification script](scripts/verify.sh) and [CI](.github/workflows/ci.yml) | Defined fast scope plus 14 configured sandbox targets in integration mode | A workflow definition is not a passing CI result. The integration suite passed locally on `aa32116`; CI on that commit and the final release artifact remain unverified |
+| [Verification script](scripts/verify.sh) and [CI](.github/workflows/ci.yml) | Defined fast scope plus 15 configured sandbox targets, including the source-owned journal, in integration mode | A workflow definition is not a passing CI result; CI for a frozen release remains unverified |
 | [Eight attack receipts](docs/evidence/attacks.txt) | Historical sandbox refusals recorded on **6 November 2026** | Not a claim that every attack or the final revision passed |
 | [Gas limit evidence](docs/evidence/gas-limit.txt) | Historical **4 November** size measurements motivated the 20-asset cap | Superseded for final-source numbers by [`docs/evidence/gas.txt`](docs/evidence/gas.txt): a 7 November run (exit 0) that includes the maximum-assets, source-ID case. It is not a final artifact or CI result |
 | [R1 report](docs/spikes/R1.md) | Historical separate spike → testnet MPC → mainnet simulation interoperability | Not a funded trade from the current vault or verified current deployment identity |
 | [Sandbox settlement test](contracts/vault/tests/settlement.rs) | Test for matched funded settlement, atomic refusal and nonce replay against supplied Intents fixture | Uses a stand-in signer/oracle, not live MPC or authenticated current mainnet binaries |
 
 Earlier restricted-host attempts failed because protocol fixtures could not
-bind loopback ports. A later captured fast run passed outside that restriction;
-neither result substitutes for final sandbox/gas or live evidence. There is no
-fixed cumulative test-count claim here: use the output of the actual run.
+bind loopback ports. The pre-journal hardening report records its completed direct-command
+results, reruns and artifact identity separately from those earlier attempts.
+The current journal run is separately blocked by host ABI packaging and localhost
+permissions; [reproduction commands](docs/OPERATIONAL-READINESS.md#current-host-verification-limit)
+include an explicit supported no-ABI sandbox option. Compile-only checks do not
+establish an asynchronous pass.
+Local verification does not establish intended-chain custody or settlement.
 
 Focused local commands:
 
@@ -594,7 +645,9 @@ a live attack dashboard or safe real-fund operation.
 | [contracts/mock-ft/](contracts/mock-ft/) | Test-only NEP141 token |
 | [contracts/mock-oracle/](contracts/mock-oracle/) · [contracts/mock-externals/](contracts/mock-externals/) | Sandbox stand-ins; no live-provider guarantee |
 | [agent/](agent/) | Manual/rebalance/model decisions, public snapshots, quote protocol, canonical evidence and provenance verification |
-| [keeper/](keeper/) | Execution, signed-intent handoff and optional relay publication |
+| [keeper/](keeper/) | Execution, signed-intent handoff, ID-bound recovery, durable paid-transaction fence and optional relay publication |
+| [crates/withdrawal-journal/](crates/withdrawal-journal/) | Shared strict journal schema, canonical request commitment and golden vectors |
+| [integrations/intents-executor/](integrations/intents-executor/) | Pinned native custody/resolver journal overlay, vendor provenance, controlled offline build and artifact manifest |
 | [web/site/](web/site/) · [web/dashboard/](web/dashboard/) | Main site, integrated inspection and dedicated read-only dashboard |
 | [scripts/](scripts/) | Verification, fixture preview, inspection and evidence tooling |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Design, trust model and canonical-response format |
@@ -610,5 +663,8 @@ Claude Code and Codex, and uses vendored NEAR agent guidance. Dependencies and
 versions are declared in the repository manifests; test mocks and external
 fixtures do not establish production-provider identity.
 
-Licensed under [MIT](LICENSE). Review the security and operational documents
+Mandate source is licensed under [MIT](LICENSE). Vendored near-plugins 0.5.3
+retains its **CC0-1.0** license and original source; its provenance is in the
+[executor package](integrations/intents-executor/README.md).
+Review the security and operational documents
 before adapting the prototype for treasury custody.

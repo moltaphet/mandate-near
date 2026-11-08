@@ -50,6 +50,17 @@ function modelIds(value) {
   if (new Set(ids).size !== ids.length) invalid("duplicate declared source ID");
   return ids;
 }
+function withdrawalLimits(value, identifiers) {
+  if (!Array.isArray(value) || value.length > identifiers.size) invalid("withdrawal ceilings");
+  const seen = new Set();
+  return value.map((entry) => {
+    const limit = object(entry, "withdrawal ceiling"), id = asset(limit.asset_id);
+    const maximum = amount(limit.max_per_request, "per-request withdrawal ceiling");
+    if (!identifiers.has(id) || seen.has(id) || maximum === 0n) invalid("withdrawal ceiling asset or amount");
+    seen.add(id);
+    return { asset_id: id, max_per_request: maximum };
+  });
+}
 
 export function validateAccount(value) {
   if (typeof value !== "string" || value.length < 2 || value.length > 64 ||
@@ -130,6 +141,7 @@ function mandate(raw) {
   if (maxTrade === 0n || maxTrade > daily) invalid("trade limits");
   return { assets, stable_assets: stable,
     allowed_model_ids: Object.hasOwn(m, "allowed_model_ids") ? modelIds(m.allowed_model_ids) : null,
+    withdrawal_limits: Object.hasOwn(m, "withdrawal_limits") ? withdrawalLimits(m.withdrawal_limits, identifiers) : null,
     max_trade_usd: maxTrade, max_daily_turnover_usd: daily,
     max_position_bps: uint(m.max_position_bps, "position cap", 10000n),
     max_slippage_bps: uint(m.max_slippage_bps, "slippage cap", 500n),
@@ -164,6 +176,17 @@ function activeWithdrawal(raw) {
   return { id: uint(a.id, "withdrawal ID"), request_seq: uint(a.request_seq, "withdrawal generation"),
     request: withdrawal(a.request), started_sec: uint(a.started_sec, "withdrawal start"),
     balance_before: optional(a.balance_before, (v) => amount(v, "withdrawal baseline")) };
+}
+function journalBinding(raw, intents) {
+  const binding = object(raw, "withdrawal journal binding");
+  const fields = ["protocol_version", "ledger_domain", "executor_id", "request_hash_scheme"];
+  if (Object.keys(binding).length !== fields.length || fields.some((field) => !Object.hasOwn(binding, field)) ||
+      binding.protocol_version !== "durable_withdrawal_journal_v1" ||
+      binding.request_hash_scheme !== "sha256-borsh-v1" ||
+      typeof binding.ledger_domain !== "string" || binding.ledger_domain.length !== 64 || !/^[0-9a-f]{64}$/.test(binding.ledger_domain) ||
+      /^0+$/.test(binding.ledger_domain) || validateAccount(binding.executor_id) !== intents) invalid("withdrawal journal binding");
+  return { protocol_version: binding.protocol_version, ledger_domain: binding.ledger_domain,
+    executor_id: binding.executor_id, request_hash_scheme: binding.request_hash_scheme };
 }
 function variant(raw, variants, field) {
   const data = object(raw, field), entries = Object.keys(data);
@@ -294,6 +317,10 @@ export async function readAuditSnapshot(config, dependencies = {}) {
   if (oracleKind === "pyth" && rules.assets.some((asset) => !/^[a-f0-9]{64}$/.test(asset.price_feed_id))) invalid("Pyth feed IDs");
   if (!Array.isArray(externals) || externals.length !== 3) invalid("external contracts");
   const [signer, intents, oracle] = externals.map(validateAccount);
+  const withdrawalProtocol = text(raw.get_withdrawal_protocol, "withdrawal protocol", 64);
+  if (!["unique_voucher_v1", "durable_withdrawal_journal_v1"].includes(withdrawalProtocol)) invalid("withdrawal protocol");
+  const withdrawalJournalBinding = withdrawalProtocol === "durable_withdrawal_journal_v1"
+    ? journalBinding((await query(account, "get_withdrawal_journal_binding", {}, block)).value, intents) : null;
   const balanceRaw = (await query(intents, "mt_batch_balance_of", { account_id: account,
     token_ids: rules.assets.map((a) => a.asset_id) }, block)).value;
   if (!Array.isArray(balanceRaw) || balanceRaw.length !== rules.assets.length) invalid("Intents balances");
@@ -322,8 +349,11 @@ export async function readAuditSnapshot(config, dependencies = {}) {
       return value;
     }),
     withdrawalRetryArmed: boolean(raw.is_withdrawal_retry_armed, "withdrawal retry arm"),
-    withdrawalProtocol: text(raw.get_withdrawal_protocol, "withdrawal protocol", 64),
+    withdrawalProtocol, withdrawalJournalBinding,
     recoveryAccounts: (() => {
+      // This legacy tuple remains exported in journal mode but proves nothing
+      // about that protocol's executor records or terminal outcomes.
+      if (withdrawalJournalBinding) return null;
       const accounts = raw.get_withdrawal_recovery_accounts;
       if (!Array.isArray(accounts) || accounts.length !== 2 ||
           accounts[0] !== `s.${account}` || accounts[1] !== `c.${account}`) invalid("receipt sink accounts");
@@ -331,10 +361,11 @@ export async function readAuditSnapshot(config, dependencies = {}) {
     })(),
     withdrawalOutcome: optional(raw.get_last_withdrawal_outcome, withdrawalOutcome),
     balances: rules.assets.map((a, i) => ({ ...a, units: amount(balanceRaw[i], "ledger balance") })) };
-  if (snapshot.withdrawalProtocol !== "unique_voucher_v1" ||
-      (snapshot.withdrawal === null) !== (snapshot.withdrawalStage === null) ||
+  if ((snapshot.withdrawal === null) !== (snapshot.withdrawalStage === null) ||
       (snapshot.withdrawalRetryArmed && !snapshot.pendingWithdrawal) ||
-      (snapshot.withdrawal && (snapshot.withdrawal.balance_before === null) !== (snapshot.withdrawalStage === "Preparing"))) invalid("withdrawal protocol coherence");
+      (snapshot.withdrawal && (withdrawalJournalBinding
+        ? snapshot.withdrawal.balance_before !== null
+        : (snapshot.withdrawal.balance_before === null) !== (snapshot.withdrawalStage === "Preparing")))) invalid("withdrawal protocol coherence");
   snapshot.readiness = deriveReadiness(snapshot);
   return snapshot;
 }
@@ -396,6 +427,14 @@ export function renderSnapshot(container, snapshot, documentRef = globalThis.doc
     row(list, "Cooldown / price age", `${rules.min_trade_interval_sec}s / ${rules.max_price_age_sec}s`);
     row(list, "Stable subset", rules.stable_assets.join(", ") || "None");
     row(list, "Allowed declared sources", rules.allowed_model_ids === null ? "Unavailable · legacy schema" : rules.allowed_model_ids.join(", ") || "None · proposals disabled");
+    for (const asset of rules.assets) {
+      const ceiling = rules.withdrawal_limits?.find((limit) => limit.asset_id === asset.asset_id);
+      const value = rules.withdrawal_limits === null
+        ? "Uncapped · legacy schema"
+        : ceiling ? `${ceiling.max_per_request} base units per request` : "Uncapped · no ceiling configured";
+      row(list, "Withdrawal ceiling", `${asset.asset_id}: ${value}`);
+    }
+    row(list, "Withdrawal scope", "Per request only; no aggregate or daily withdrawal cap");
   };
   const assetFields = (rules) => {
     const table = element("table"), head = element("thead"), headers = element("tr"), body = element("tbody");
@@ -469,7 +508,8 @@ export function renderSnapshot(container, snapshot, documentRef = globalThis.doc
   } else event("No signature stored", "Signature absence does not prove an earlier signing request failed or that an earlier intent did not settle.");
   if (snapshot.withdrawal) {
     const w = snapshot.withdrawal;
-    event(`Withdrawal ${w.id} · ${snapshot.withdrawalStage === "Preparing" ? "Preparing receipt / not sent" : "Dispatched / unresolved"}`,
+    const preparing = snapshot.withdrawalJournalBinding ? "Checking executor / not sent" : "Preparing receipt / not sent";
+    event(`Withdrawal ${w.id} · ${snapshot.withdrawalStage === "Preparing" ? preparing : "Dispatched / unresolved"}`,
       `${describeWithdrawal(w.request)}. Generation ${w.request_seq}; started ${date(w.started_sec)}. An unresolved sent result must not be blindly retried.`);
   } else event("No withdrawal guard observed", "This is current state, not complete withdrawal history.");
   if (snapshot.withdrawalOutcome) {
@@ -499,9 +539,15 @@ export function renderSnapshot(container, snapshot, documentRef = globalThis.doc
   row(identityList, "Vault code hash", snapshot.codeHash);
   row(identityList, "Signer", snapshot.externals.signer); row(identityList, "Intents", snapshot.externals.intents); row(identityList, "Oracle", snapshot.externals.oracle);
   row(identityList, "Withdrawal protocol", snapshot.withdrawalProtocol);
-  row(identityList, "Receipt sinks · existence/authority unverified", snapshot.recoveryAccounts.join(", "));
+  if (snapshot.withdrawalJournalBinding) {
+    row(identityList, "Journal executor", snapshot.withdrawalJournalBinding.executor_id);
+    row(identityList, "Ledger domain", snapshot.withdrawalJournalBinding.ledger_domain);
+    row(identityList, "Request hash scheme", snapshot.withdrawalJournalBinding.request_hash_scheme);
+  } else row(identityList, "Receipt sinks · existence/authority unverified", snapshot.recoveryAccounts.join(", "));
   row(identityList, "RPC", snapshot.rpc); identity.append(identityList);
-  identity.append(element("p", "Account permissions, permanently inert receipt sinks, external code/admin roles, source/audit correspondence and oracle freshness/correctness are UNVERIFIED. A matching supplied vault hash alone is not custody readiness.", "audit-note"));
+  identity.append(element("p", snapshot.withdrawalJournalBinding
+    ? "This binding is reported by the vault. Executor admission, authoritative journal outcomes, completed refunds, account permissions, external code/admin roles, source/audit correspondence and live withdrawal results are UNVERIFIED. A matching supplied vault hash alone is not custody readiness."
+    : "Account permissions, permanently inert receipt sinks, external code/admin roles, source/audit correspondence and oracle freshness/correctness are UNVERIFIED. A matching supplied vault hash alone is not custody readiness.", "audit-note"));
   grid.append(controls, rules, accounting, queues, timeline, ledger, identity);
   container.replaceChildren(anchor, grid);
 }

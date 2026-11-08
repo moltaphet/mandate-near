@@ -1,0 +1,45 @@
+    Checking defuse-digest v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/crates/digest)
+    Checking defuse-io-utils v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/crates/io-utils)
+    Checking defuse-crypto v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/crates/crypto)
+    Checking defuse-serde-utils v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/crates/serde-utils)
+    Checking defuse-near-utils v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/crates/near/utils)
+    Checking defuse-num-utils v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/crates/num-utils)
+    Checking defuse-map-utils v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/crates/map-utils)
+    Checking defuse-nep461 v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/crates/signatures/nep461)
+    Checking defuse-token-id v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/crates/primitives/token-id)
+    Checking defuse-wnear v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/crates/near/wnear)
+    Checking near-plugins v0.5.3 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/crates/mandate-near-plugins)
+    Checking defuse-auth-call v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/crates/near/auth-call)
+    Checking defuse-controller v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/crates/near/controller)
+    Checking defuse-borsh-utils v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/crates/borsh-utils)
+    Checking mandate-withdrawal-journal v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/crates/mandate-withdrawal-journal)
+    Checking defuse-fees v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/crates/primitives/fees)
+    Checking defuse-admin-utils v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/crates/near/admin-utils)
+    Checking defuse-near-promise v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/crates/near/promise)
+    Checking defuse-nep245 v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/crates/near/nep245)
+    Checking defuse-bitmap v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/crates/bitmap)
+warning: struct `StageCode` is never constructed
+   --> crates/mandate-near-plugins/src/upgradable.rs:225:8
+    |
+225 | struct StageCode {
+    |        ^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: struct `DeployCode` is never constructed
+   --> crates/mandate-near-plugins/src/upgradable.rs:245:8
+    |
+245 | struct DeployCode {
+    |        ^^^^^^^^^^
+
+warning: `near-plugins` (lib) generated 2 warnings
+    Checking defuse-time v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/crates/primitives/time)
+    Checking defuse-nep413 v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/crates/signatures/nep413)
+    Checking defuse-sep53 v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/crates/signatures/sep53)
+    Checking defuse-webauthn v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/crates/signatures/webauthn)
+    Checking defuse-erc191 v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/crates/signatures/erc191)
+    Checking defuse-tip191 v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/crates/signatures/tip191)
+    Checking defuse-ton-connect v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/crates/signatures/ton-connect)
+    Checking defuse-core v0.1.0 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/contracts/defuse/core)
+    Checking defuse v0.4.5 (/Users/ehs4n/mandate-near/target/intents-executor/source-v4/contracts/defuse)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 3.86s

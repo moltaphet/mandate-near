@@ -1333,7 +1333,7 @@ td {
      <li><b>Ordered gates &amp; owner delays</b><span>Unit, boundary and property tests; sandbox access-control checks.</span></li>
      <li><b>Signing &amp; matched settlement</b><span>Sandbox vault flow, a stand-in signer and the supplied Intents verifier fixture. Historical mainnet simulations are separate evidence.</span></li>
      <li><b>Withdrawal lifecycle &amp; proof guards</b><span>Delivery, refund, owner-rearmed retries and adversarial receipt tests. Sandbox maturity injection does not prove 24 elapsed hours.</span></li>
-     <li><b>Agent decision sources</b><span>Two-asset rebalancing, strict model output and canonical commitments. Declared IDs use delayed admission and immediate removal; model origin, live inference and hardware attestation remain unverified. New combined sandbox evidence is pending.</span></li>
+     <li><b>Agent decision sources</b><span>Two-asset rebalancing, strict model output and canonical commitments. Declared IDs use delayed admission and immediate removal. Final local client and sandbox checks passed on 8 November; model origin, live inference and hardware attestation remain unverified.</span></li>
      <li><b>Connected public dashboard</b><span>Pinned block, exact base-unit formatting and text-only rendering of RPC data.</span></li>
     </ul><a class="text-link" href="https://github.com/moltaphet/mandate-near/tree/main/contracts/vault/tests" target="_blank" rel="noopener noreferrer">Review the tests ↗</a></article>
     <article class="proof-card"><span class="badge amber"><span class="dot"></span>Live evidence pending</span><h3>The release boundary.</h3><ul>
@@ -1344,7 +1344,7 @@ td {
      <li><b>TEE attestation &amp; operational history</b><span>OutLayer integration is planned. Relay acknowledgement is not fill verification.</span></li>
     </ul><a class="text-link" href="https://github.com/moltaphet/mandate-near/blob/main/docs/OPERATIONAL-READINESS.md" target="_blank" rel="noopener noreferrer">Read the release gates ↗</a></article>
    </div>
-   <div class="reproduce"><div><h3>Reproduce the local checks.</h3><p>Rust, cargo-near, Python 3 and Node.js 22+. Test counts and failures come from the actual run. The 7 November fast checks pass outside the sandbox; the complete integration pass remains pending.</p></div><div><div class="command"><code>./scripts/verify.sh --integration</code><button id="copy-verify" type="button" aria-label="Copy verification command" disabled>Copy</button></div><p class="copy-status" id="copy-status" role="status"></p></div></div>
+   <div class="reproduce"><div><h3>Reproduce the local checks.</h3><p>Rust, cargo-near, Python 3 and Node.js 22+. The 8 November candidate passed 479 distinct local tests, including all 14 sandbox targets, through direct commands. The hardening report records source/WASM identity and command history. Frozen-release CI, reproducible builds and live custody evidence remain required.</p></div><div><div class="command"><code>./scripts/verify.sh --integration</code><button id="copy-verify" type="button" aria-label="Copy verification command" disabled>Copy</button></div><p class="copy-status" id="copy-status" role="status"></p></div></div>
   </section>
   <section class="section" id="roadmap" aria-labelledby="roadmap-title">
    <div class="section-head"><div><span class="eyebrow">04 / What's next</span><h2 id="roadmap-title">Prove the path. Then expand.</h2></div><p>The next milestone is reproducible live execution. More features do not substitute for custody, oracle and recovery evidence.</p></div>

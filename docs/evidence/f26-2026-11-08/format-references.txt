@@ -1,0 +1,18 @@
+UTC: 2026-11-08T15:30:07.075005+00:00
+
+Command: cargo fmt --all -- --check
+Exit: 0
+
+
+Command: bash scripts/check-claims.sh
+Exit: 0
+Allowed local references checked. External citations and security claims are not verified; no tests were run.
+
+
+Command: python3 -B scripts/build-web.py --check
+Exit: 0
+Site audit asset matches the tested shared reader.
+
+
+Command: git diff --check
+Exit: 0

@@ -1,0 +1,10 @@
+UTC: 2026-11-08T15:44:11.642362+00:00
+
+Command: bash scripts/check-claims.sh
+Exit: 0
+Allowed local references checked. External citations and security claims are not verified; no tests were run.
+
+
+Command: git diff --check
+Exit: 0
+

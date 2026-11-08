@@ -1,0 +1,154 @@
+   Compiling mandate-vault v0.1.0 (/Users/ehs4n/mandate-near/contracts/vault)
+   Compiling mandate-agent v0.1.0 (/Users/ehs4n/mandate-near/agent)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 5.67s
+     Running tests/autonomous.rs (target/debug/deps/autonomous-bff52e88ec8f8d29)
+
+running 7 tests
+test quote_window_and_invalid_configuration_fail_closed ... ok
+test quote_exact_output_is_used_and_shared_engine_rejects_economic_loss ... ok
+test reverse_rebalance_keeps_24_decimal_precision ... ok
+test target_band_is_no_trade_and_pending_signature_blocks ... ok
+test denied_or_removed_rebalance_source_refuses_before_strategy_and_quote ... ok
+test exact_candidate_respects_trade_daily_and_balance_caps ... ok
+test cooldown_stale_data_and_exhausted_allowance_refuse_before_quote ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.47s
+
+     Running tests/model.rs (target/debug/deps/model-d9a61fac9394260b)
+
+running 39 tests
+test complete_request_marker_scan_covers_model_metadata_and_system_instructions ... ok
+test compact_prompt_preserves_public_integer_prices_balances_and_rules ... ok
+test empty_source_allowlist_makes_zero_model_calls ... ok
+test captured_envelope_rejects_oversize_and_non_model_reserved_ids ... ok
+test decoded_scan_fails_closed_when_embedded_json_exceeds_its_depth_budget ... ok
+test decoded_scan_detects_escaped_and_nested_public_markers_without_credentials ... ok
+test an_unlisted_returned_model_id_refuses_after_one_call ... ok
+test invalid_public_snapshot_stops_before_the_model_call ... ok
+test explicit_no_trade_stops_after_one_call_with_a_bounded_reason ... ok
+test malformed_optional_settings_never_downgrade_to_absence ... ok
+test manual_adapter_preserves_plan_hash_and_existing_structural_only_validation ... ok
+test inconsistent_client_content_is_rejected_without_repairing_the_capture ... ok
+test a_provider_named_model_cannot_select_an_allowed_source ... ok
+test attestation_address_metadata_is_retained_without_claiming_verified_provenance ... ok
+test client_hash_and_identity_mutations_never_become_a_trade ... ok
+test paused_or_halted_snapshot_makes_zero_model_calls ... ok
+test pure_decision_extraction_retains_strict_schema_without_a_snapshot ... ok
+test malformed_and_fenced_json_fail_without_a_repair_request ... ok
+test only_distinct_mandate_assets_are_accepted ... ok
+test canonical_commitment_preserves_equivalent_outer_json_while_raw_hashes_differ ... ok
+test no_trade_still_requires_valid_assets_amounts_and_rationale ... ok
+test signature_lookup_uses_only_the_configured_https_origin_and_encoded_id ... ok
+test forged_plan_commitment_and_trade_tuple_do_not_validate_against_the_capture ... ok
+test inline_unknown_signatures_and_duplicate_capture_fields_are_refused ... ok
+test removing_a_previously_allowed_model_refuses_its_next_decision ... ok
+test timeout_http_failure_and_missing_configuration_produce_no_trade ... ok
+test every_field_is_required_including_explicit_nullable_reason ... ok
+test unchanged_local_engine_refuses_excess_size_and_bad_minimum_output ... ok
+test nullable_and_string_no_trade_reasons_remain_schema_valid ... ok
+test unknown_and_duplicate_fields_are_rejected_instead_of_overwritten ... ok
+test public_signed_fixture_is_verified_before_the_exact_trade_is_returned ... ok
+test supplied_proof_without_an_external_pin_and_required_missing_proof_refuse ... ok
+test valid_model_json_preserves_exact_plan_and_raw_unverified_response ... ok
+test wrong_json_types_do_not_get_coerced ... ok
+test rationale_bound_counts_unicode_characters_and_preserves_text ... ok
+test returned_invalid_or_unsupported_proofs_refuse_even_with_optional_policy ... ok
+test amounts_are_exact_positive_u128_decimal_strings ... ok
+test stalled_fake_client_times_out_once_without_network_or_twenty_second_wait ... ok
+test rebalance_adapter_uses_the_existing_exact_candidate_without_network_requests ... ok
+
+test result: ok. 39 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.46s
+
+     Running tests/protocol.rs (target/debug/deps/protocol-0a0e00f087dcf774)
+
+running 14 tests
+test dry_run_binary_prepares_from_public_data_with_empty_account_environment ... FAILED
+test malformed_expired_and_mismatched_quotes_never_get_selected ... FAILED
+test denied_rebalance_source_makes_public_reads_and_zero_quote_requests ... FAILED
+test autonomous_loop_keeps_fail_stop_boundary_after_public_preparation ... FAILED
+test oversized_error_and_mismatched_rpc_envelopes_fail_without_echoing_data ... FAILED
+test one_shot_autonomous_binary_still_returns_a_public_preparation_failure ... FAILED
+test manual_agent_network_pin_refuses_before_signer_configuration_or_transaction_requests ... FAILED
+test final_views_are_pinned_and_wrong_height_network_or_hash_is_refused ... FAILED
+test autonomous_loop_recovers_from_a_public_rpc_outage_without_submission ... FAILED
+test changed_quote_at_refresh_is_discarded_and_the_next_iteration_gets_a_new_quote ... FAILED
+test prohibited_public_paths_are_refused_before_file_open ... ok
+test quote_publish_and_status_use_documented_protocol_and_do_not_invent_settlement ... FAILED
+test larger_evidence_files_keep_default_limits_and_prohibited_path_guards ... ok
+test publication_association_rejects_wrong_ids_amounts_hashes_curves_and_deadlines ... ok
+
+failures:
+
+---- dry_run_binary_prepares_from_public_data_with_empty_account_environment stdout ----
+
+thread 'dry_run_binary_prepares_from_public_data_with_empty_account_environment' (6635212) panicked at agent/tests/common_http/mod.rs:18:59:
+loopback HTTP fixture can bind: Os { code: 1, kind: PermissionDenied, message: "Operation not permitted" }
+
+---- malformed_expired_and_mismatched_quotes_never_get_selected stdout ----
+
+thread 'malformed_expired_and_mismatched_quotes_never_get_selected' (6635215) panicked at agent/tests/common_http/mod.rs:18:59:
+loopback HTTP fixture can bind: Os { code: 1, kind: PermissionDenied, message: "Operation not permitted" }
+
+---- denied_rebalance_source_makes_public_reads_and_zero_quote_requests stdout ----
+
+thread 'denied_rebalance_source_makes_public_reads_and_zero_quote_requests' (6635211) panicked at agent/tests/common_http/mod.rs:18:59:
+loopback HTTP fixture can bind: Os { code: 1, kind: PermissionDenied, message: "Operation not permitted" }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- autonomous_loop_keeps_fail_stop_boundary_after_public_preparation stdout ----
+
+thread 'autonomous_loop_keeps_fail_stop_boundary_after_public_preparation' (6635208) panicked at agent/tests/common_http/mod.rs:18:59:
+loopback HTTP fixture can bind: Os { code: 1, kind: PermissionDenied, message: "Operation not permitted" }
+
+---- oversized_error_and_mismatched_rpc_envelopes_fail_without_echoing_data stdout ----
+
+thread 'oversized_error_and_mismatched_rpc_envelopes_fail_without_echoing_data' (6635218) panicked at agent/tests/common_http/mod.rs:18:59:
+loopback HTTP fixture can bind: Os { code: 1, kind: PermissionDenied, message: "Operation not permitted" }
+
+---- one_shot_autonomous_binary_still_returns_a_public_preparation_failure stdout ----
+
+thread 'one_shot_autonomous_binary_still_returns_a_public_preparation_failure' (6635217) panicked at agent/tests/common_http/mod.rs:18:59:
+loopback HTTP fixture can bind: Os { code: 1, kind: PermissionDenied, message: "Operation not permitted" }
+
+---- manual_agent_network_pin_refuses_before_signer_configuration_or_transaction_requests stdout ----
+
+thread 'manual_agent_network_pin_refuses_before_signer_configuration_or_transaction_requests' (6635216) panicked at agent/tests/common_http/mod.rs:18:59:
+loopback HTTP fixture can bind: Os { code: 1, kind: PermissionDenied, message: "Operation not permitted" }
+
+---- final_views_are_pinned_and_wrong_height_network_or_hash_is_refused stdout ----
+
+thread 'final_views_are_pinned_and_wrong_height_network_or_hash_is_refused' (6635213) panicked at agent/tests/common_http/mod.rs:18:59:
+loopback HTTP fixture can bind: Os { code: 1, kind: PermissionDenied, message: "Operation not permitted" }
+
+---- autonomous_loop_recovers_from_a_public_rpc_outage_without_submission stdout ----
+
+thread 'autonomous_loop_recovers_from_a_public_rpc_outage_without_submission' (6635209) panicked at agent/tests/common_http/mod.rs:18:59:
+loopback HTTP fixture can bind: Os { code: 1, kind: PermissionDenied, message: "Operation not permitted" }
+
+---- changed_quote_at_refresh_is_discarded_and_the_next_iteration_gets_a_new_quote stdout ----
+
+thread 'changed_quote_at_refresh_is_discarded_and_the_next_iteration_gets_a_new_quote' (6635210) panicked at agent/tests/common_http/mod.rs:18:59:
+loopback HTTP fixture can bind: Os { code: 1, kind: PermissionDenied, message: "Operation not permitted" }
+
+---- quote_publish_and_status_use_documented_protocol_and_do_not_invent_settlement stdout ----
+
+thread 'quote_publish_and_status_use_documented_protocol_and_do_not_invent_settlement' (6635221) panicked at agent/tests/common_http/mod.rs:18:59:
+loopback HTTP fixture can bind: Os { code: 1, kind: PermissionDenied, message: "Operation not permitted" }
+
+
+failures:
+    autonomous_loop_keeps_fail_stop_boundary_after_public_preparation
+    autonomous_loop_recovers_from_a_public_rpc_outage_without_submission
+    changed_quote_at_refresh_is_discarded_and_the_next_iteration_gets_a_new_quote
+    denied_rebalance_source_makes_public_reads_and_zero_quote_requests
+    dry_run_binary_prepares_from_public_data_with_empty_account_environment
+    final_views_are_pinned_and_wrong_height_network_or_hash_is_refused
+    malformed_expired_and_mismatched_quotes_never_get_selected
+    manual_agent_network_pin_refuses_before_signer_configuration_or_transaction_requests
+    one_shot_autonomous_binary_still_returns_a_public_preparation_failure
+    oversized_error_and_mismatched_rpc_envelopes_fail_without_echoing_data
+    quote_publish_and_status_use_documented_protocol_and_do_not_invent_settlement
+
+test result: FAILED. 3 passed; 11 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p mandate-agent --test protocol`

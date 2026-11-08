@@ -186,6 +186,19 @@ def sink_summary(rpc, vault, intents, block, height):
     return summaries
 
 
+def journal_binding(value, intents):
+    fields = {"protocol_version", "ledger_domain", "executor_id", "request_hash_scheme"}
+    if not isinstance(value, dict) or set(value) != fields:
+        raise ValueError("invalid withdrawal journal binding shape")
+    domain = value["ledger_domain"]
+    if (value["protocol_version"] != "durable_withdrawal_journal_v1"
+            or value["request_hash_scheme"] != "sha256-borsh-v1"
+            or not isinstance(domain, str) or not DIGEST.fullmatch(domain)
+            or domain == "0" * 64 or account_id(value["executor_id"]) != intents):
+        raise ValueError("invalid withdrawal journal binding")
+    return {field: value[field] for field in sorted(fields)}
+
+
 def inspect(rpc, vault, expected_sha256=None, expected_chain=None):
     account_id(vault)
     if expected_sha256 is not None and not DIGEST.fullmatch(expected_sha256):
@@ -227,12 +240,19 @@ def inspect(rpc, vault, expected_sha256=None, expected_chain=None):
         if report["oracle_kind"] not in ("price_oracle", "pyth"):
             raise ValueError("invalid oracle provider view")
         report["withdrawal_protocol"] = read_view(rpc, vault, "get_withdrawal_protocol", block, height)
-        if report["withdrawal_protocol"] != "unique_voucher_v1":
+        if report["withdrawal_protocol"] == "durable_withdrawal_journal_v1":
+            report["withdrawal_journal_binding"] = journal_binding(
+                read_view(rpc, vault, "get_withdrawal_journal_binding", block, height), externals[1])
+            report["withdrawal_journal_binding_observation"] = "PUBLIC_SELF_REPORT_UNVERIFIED"
+            report["receipt_sinks"] = "NOT_APPLICABLE"
+            report["checks"]["receipt_sinks_have_no_account_or_registered_identity"] = None
+        elif report["withdrawal_protocol"] == "unique_voucher_v1":
+            report["receipt_sinks"] = sink_summary(rpc, vault, externals[1], block, height)
+            report["checks"]["receipt_sinks_have_no_account_or_registered_identity"] = all(
+                item["near_account_absent"] and item["registered_intents_identity_count"] == 0
+                for item in report["receipt_sinks"])
+        else:
             raise ValueError("unsupported withdrawal recovery protocol")
-        report["receipt_sinks"] = sink_summary(rpc, vault, externals[1], block, height)
-        report["checks"]["receipt_sinks_have_no_account_or_registered_identity"] = all(
-            item["near_account_absent"] and item["registered_intents_identity_count"] == 0
-            for item in report["receipt_sinks"])
         report["recorded_signing_registration"] = read_view(rpc, vault, "is_key_registered", block, height)
         if not isinstance(report["paused"], bool) or not isinstance(report["recorded_signing_registration"], bool):
             raise ValueError("invalid boolean control view")
@@ -249,6 +269,12 @@ def inspect(rpc, vault, expected_sha256=None, expected_chain=None):
         "exact vault live MPC and matched settlement",
         "real elapsed 24-hour withdrawal and failure recovery",
     ]
+    if report.get("withdrawal_protocol") == "durable_withdrawal_journal_v1":
+        report["unverified_obligations"].extend([
+            "executor admission and immutable ledger-domain configuration",
+            "authoritative journal terminal delivery or completed refund",
+            "executor upgrade/admin authority and journal immutability",
+        ])
     return report
 
 

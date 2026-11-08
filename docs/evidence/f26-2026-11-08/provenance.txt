@@ -1,0 +1,37 @@
+   Compiling mandate-vault v0.1.0 (/Users/ehs4n/mandate-near/contracts/vault)
+   Compiling mandate-agent v0.1.0 (/Users/ehs4n/mandate-near/agent)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 4.74s
+     Running tests/provenance.rs (target/debug/deps/provenance-773231f626f102a4)
+
+running 15 tests
+test canonical_json_refuses_duplicates_at_every_depth_and_unsupported_numbers ... ok
+test canonical_json_sorts_every_object_and_preserves_strings_and_arrays ... ok
+test public_flat_proof_refuses_extra_actual_proof_containers_at_every_depth ... ok
+test the_commitment_becomes_the_reason_hash_and_plan_files_cannot_set_it ... ok
+test reordered_response_has_the_same_canonical_commitment_but_different_wire_hash ... ok
+test a_tampered_stored_response_fails_the_record_check ... ok
+test a_signature_by_another_key_does_not_verify_against_the_pin ... ok
+test a_signature_over_another_response_does_not_verify ... ok
+test the_reported_signing_address_must_equal_the_pin ... ok
+test a_flipped_signature_bit_or_bad_encoding_does_not_verify ... ok
+test gateway_and_legacy_documents_use_their_own_payloads ... ok
+test a_provider_tee_signature_over_the_exact_hashes_verifies ... ok
+test signed_capture_policy_never_downgrades_invalid_or_missing_required_proof ... ok
+test record_checks_request_response_metadata_schema_and_exact_trade_binding ... ok
+test unsupported_algorithm_kind_or_pin_are_refused ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/provenance_cli.rs (target/debug/deps/provenance_cli-2448365615aa147e)
+
+running 7 tests
+test verifier_resolves_allowed_symlinks_before_reading_the_public_record ... ok
+test verify_model_passes_for_the_pinned_signer_and_fails_otherwise ... ok
+test verifier_refuses_duplicate_record_fields_prohibited_paths_and_oversized_files ... ok
+test verifier_checks_public_plan_tuple_and_refuses_duplicate_flags ... ok
+test stored_signature_is_always_checked_and_cannot_be_downgraded_to_unsigned ... ok
+test verify_model_without_a_signature_reports_not_checked_and_checks_the_reason_hash ... ok
+test verifier_refuses_tampered_wire_hashes_metadata_and_decision ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.68s
+

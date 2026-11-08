@@ -16,6 +16,13 @@ operation was performed while preparing this document.
 | Signer | Official docs list `v1.signer-prod.testnet` | Deployed account/source/permissions, domain1/config/gas and a successful vault call |
 | Custody | Intended testnet Intents deployment | Actual deployed code, ledger behavior, administrator trust and signer registration |
 
+The existing testnet selection is the legacy fixture/voucher mode. A later
+journal rehearsal needs a separately reviewed fresh executor and vault,
+matching immutable domain/admission and both exact artifact hashes; it cannot
+retrofit unknown earlier sends. Source implementation and local tests do not
+authorize deploying that mode. See the [journal protocol](design/f26-durable-executor.md)
+and [current-host verification commands](OPERATIONAL-READINESS.md#current-host-verification-limit).
+
 The historical `mandate-r1-4715a0.testnet` account is an MPC spike reference,
 not the approved fresh vault. The task owner's read-only inspector run on
 7 November 2026 exited 1 at block 276611007, hash
@@ -103,6 +110,9 @@ Exact URLs, source excerpts and limitations are saved in
    execution identity, expiry, locked-state, proof and owner-rearm evidence.
    An unknown dispatched withdrawal is never blindly resent. F26 remains an
    accepted guard-availability residual; time/balance/owner cannot override it.
+   In a separately selected journal rehearsal, prove terminal delivery, atomic
+   refund and cancellation tombstones in the real executor. Missing executor
+   resolution remains Pending; no finalized-receipt proof verifier exists.
 
 Phase 4 sandbox and live-provider demonstrations remain **NOT RUN** until the task
 owner records actual results. Save public records and command/receipt evidence

@@ -1,7 +1,8 @@
 # Mandate — Architecture & Risk Register
 
-> Status: implemented prototype and remaining integration risks, 2026-11-07.
-> Sandbox tests use an Intents WASM fixture with stand-in signer and oracle.
+> Status: implemented prototype and remaining integration risks, 2026-11-08.
+> Legacy sandbox tests use an Intents WASM fixture with stand-in signer and oracle.
+> The later source-owned journal has separate final-artifact and sandbox gates.
 > Historical R1 evidence uses mainnet simulation. Live funded vault signing,
 > settlement, withdrawal and failure recovery remain unverified.
 
@@ -15,6 +16,23 @@ unverified; OutLayer TEE operation is planned.
 The owner can separately withdraw supported NEP141 assets after a delay.
 Permitted trades can lose money. Custody also trusts the deployed NEAR Intents
 and MPC contracts and their administrative permissions.
+
+The default withdrawal mode remains `unique_voucher_v1`. A fresh vault may
+explicitly select `durable_withdrawal_journal_v1` with immutable executor/domain
+binding. The [executor package](../integrations/intents-executor/README.md)
+applies the native journal to the pinned Intents custody debit and terminal
+resolver, using the shared `crates/withdrawal-journal` commitment implementation.
+Preparing performs only descriptor/admission reads. Exact requests are
+permanently deduplicated, and pre-dispatch cancellation creates an irrevocable
+tombstone. Exact authenticated Delivered/Refunded/Cancelled clears the guard;
+Pending or an inconsistent tuple does not. Missing executor resolution still
+has no implemented finalized-receipt proof escape. New initialization supplies
+no facts about unknown historical sends.
+
+Keeper recovery uses an atomic ID-bound snapshot and cannot owner-rearm a
+replacement. Its single-writer operation journal records public transaction
+hashes before paid broadcast; ambiguous outcomes retain a restart fence until
+operator reconciliation. No private transaction bytes are persisted.
 
 ## 2. Core security invariant
 
@@ -186,12 +204,14 @@ Completed known receipts alone cannot exclude a duplicate holder's later
 burn/refund. Current supply is not lifetime issuance.
 
 Existing state requires the private `migrate` entry point for its known Borsh
-layout, or a fresh deployment. Exactly five historical layouts are recognized:
+layout, or a fresh deployment. Exactly six historical layouts are recognized:
 `77ebc0c` pre-sequence, `0de5c48` sequence-enabled, pre-provider remediation and
 provider-enabled pre-voucher, and voucher-enabled pre-source-admission at
-`b43569d`. The last two preserve their selected provider. Both migrated active
-and queued source lists are empty. The first source addition waits another
-24 hours; a matured old queue cannot authorize a source. Unresolved voucher
+`b43569d`, plus source-admission-enabled pre-ceiling at `a582d36`.
+Provider-enabled layouts preserve their selected provider. Pre-model active
+and queued source lists are empty; the first addition waits another 24 hours.
+The pre-ceiling layout preserves its source lists. All migrated ceilings start
+empty (uncapped), and queued deadlines are preserved. Unresolved voucher
 stage or retry authorization also blocks migration.
 Migration requires a distinct owner, paused and
 quiescent state, and final-receipt evidence for legacy dispatched withdrawals.
@@ -199,8 +219,9 @@ It must be called by the vault account in an authorized deployment transaction;
 it neither replaces the owner nor restores an upgrade key to a keyless vault.
 An active withdrawal guard is refused, never discarded; historical unknown
 sends cannot be retrofitted into voucher proof. The 6 November 170 TGas
-withdrawal validation applies to the older pre-voucher path. Final combined
-280/140 TGas protocol verification and intended-chain evidence remain required.
+withdrawal validation applies to the older pre-voucher path. The 8 November
+artifact passed the configured local 280/140 TGas protocol targets;
+intended-chain evidence remains required.
 
 The autonomous reference mode supports exactly two mandate assets, uses final
 hash/height-pinned balances and the chosen oracle adapter, and selects an
@@ -318,14 +339,18 @@ the README claims accordingly. We do not hide it.
 
 - `./scripts/verify.sh` runs formatting, Clippy, allowed-document reference
   checks and workspace unit/property tests. Counts come from that run.
-- The 7 November baseline attempt before this documentation reconciliation
-  exited 101: protocol tests could not bind loopback sockets (`PermissionDenied`).
-  Formatting and strict Clippy passed before the failure; later provenance targets
-  were not reached. Separate focused passes are not a complete fast or integration
-  pass; final combined verification remains required.
+- The pre-journal 8 November candidate passed its configured local components: 479 distinct
+  tests, all 14 sandbox targets, formatting, all-target check and strict Clippy.
+  The [hardening report](audit/HARDENING-2026-11-08.md) records artifact identity,
+  test repairs and the three serial command batches. The final verify.sh wrapper
+  was blocked by review infrastructure; direct commands completed its scope.
 - Add `--integration` for the listed sandbox targets, including owner controls,
   registration, execution, keeper/agent, attacks, withdrawal and supported-size
-  gas regressions. New client/voucher paths still require final combined verification.
+  gas regressions, plus the separately pinned source-owned journal target.
+  That fifteenth target requires the final executor artifact/build manifest;
+  it never substitutes a mock or skips a missing artifact. A frozen release,
+  reproducible build and intended-chain
+  verification remain required.
 - A dedicated `matched_funded_settlement_is_atomic_and_replay_is_refused`
   sandbox test checks funded ledger settlement, atomic bundle refusal and
   replay against the fixture. The signer and oracle are stand-ins. Actual

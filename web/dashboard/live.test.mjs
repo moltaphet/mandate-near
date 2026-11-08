@@ -11,7 +11,7 @@ const rules = () => ({ assets: [
   { asset_id: "nep141:wrap.near", decimals: 24, price_feed_id: "near" },
 ], stable_assets: ["nep141:usdc.near"], max_trade_usd: "50000000", max_daily_turnover_usd: "200000000",
   max_position_bps: 6000, max_slippage_bps: 100, max_drawdown_bps: 1500, min_trade_interval_sec: 300, max_price_age_sec: 60,
-  allowed_model_ids: ["manual-v1", "fixture-model"] });
+  allowed_model_ids: ["manual-v1", "fixture-model"], withdrawal_limits: [] });
 function views() {
   return { get_chain_time_sec: NOW, get_owner: "owner.near", get_mandate: rules(), get_agent: "agent.near",
     get_externals: ["v1.signer", "intents.near", "price-oracle.near"], get_oracle_kind: "price_oracle",
@@ -23,6 +23,20 @@ function views() {
     get_withdrawal_stage: null, is_withdrawal_retry_armed: false, get_withdrawal_protocol: "unique_voucher_v1",
     get_withdrawal_recovery_accounts: ["s.vault.near", "c.vault.near"],
     mt_batch_balance_of: ["1234567", "1000000000000000000000001"] };
+}
+function journalViews(stage = null) {
+  const values = views();
+  values.get_withdrawal_protocol = "durable_withdrawal_journal_v1";
+  values.get_withdrawal_journal_binding = { protocol_version: "durable_withdrawal_journal_v1",
+    ledger_domain: "ab".repeat(32), executor_id: "intents.near", request_hash_scheme: "sha256-borsh-v1" };
+  if (stage) {
+    values.get_withdrawal_status = { id: "7", request_seq: "8", started_sec: NOW - 300,
+      request: { asset_id: "nep141:usdc.near", receiver: "owner.near", amount: "20", effective_sec: NOW - 300 },
+      balance_before: null };
+    values.get_withdrawal_stage = stage;
+    values.is_in_flight = true;
+  }
+  return values;
 }
 function fixture({ values = views(), chain = "mainnet", code = CODE, alter = () => {} } = {}) {
   const calls = [];
@@ -208,6 +222,44 @@ test("queued rules are shown separately and do not replace current rules", async
   assert.match(container.textContent, /\$50/); assert.match(container.textContent, /\$75/);
   assert.match(container.textContent, /Waiting 86400s/);
 });
+test("withdrawal ceilings show exact base units and uncapped assets without aggregate claims", async () => {
+  const values = views();
+  const maximum = "340282366920938463463374607431768211455";
+  values.get_mandate.withdrawal_limits = [{ asset_id: "nep141:usdc.near", max_per_request: maximum }];
+  const snapshot = await readAuditSnapshot(config, fixture({ values })), container = new FakeElement("div");
+  renderSnapshot(container, snapshot, fakeDocument);
+  assert.equal(snapshot.mandate.withdrawal_limits[0].max_per_request, BigInt(maximum));
+  assert.match(container.textContent, new RegExp(`${maximum} base units per request`));
+  assert.match(container.textContent, /Withdrawal ceiling nep141:wrap.near: Uncapped · no ceiling configured/);
+  assert.match(container.textContent, /no aggregate or daily withdrawal cap/);
+});
+test("legacy ceiling omission is uncapped and queued limits stay distinct", async () => {
+  const values = views(); delete values.get_mandate.withdrawal_limits;
+  const queued = rules();
+  queued.withdrawal_limits = [{ asset_id: "nep141:usdc.near", max_per_request: "1" }];
+  values.get_pending_mandate = { mandate: queued, effective_sec: NOW + 86400 };
+  const snapshot = await readAuditSnapshot(config, fixture({ values })), container = new FakeElement("div");
+  renderSnapshot(container, snapshot, fakeDocument);
+  assert.equal(snapshot.mandate.withdrawal_limits, null);
+  assert.match(container.textContent, /Uncapped · legacy schema/);
+  assert.match(container.textContent, /1 base units per request/);
+  assert.match(container.textContent, /Inspect queued mandate · not yet applied/);
+});
+test("malformed, duplicate, unknown and excessive withdrawal ceilings invalidate the snapshot", async () => {
+  for (const limits of [null, {}, [{ asset_id: "nep141:usdc.near", max_per_request: "0" }],
+    [{ asset_id: "nep141:usdc.near", max_per_request: 20 }],
+    [{ asset_id: "nep141:usdc.near", max_per_request: "340282366920938463463374607431768211456" }],
+    [{ asset_id: "nep141:other.near", max_per_request: "1" }],
+    [{ asset_id: "nep141:usdc.near", max_per_request: "1" }, { asset_id: "nep141:usdc.near", max_per_request: "2" }],
+    Array.from({ length: 21 }, (_, i) => ({ asset_id: `nep141:token${i}.near`, max_per_request: "1" })),
+  ]) {
+    const values = views(); values.get_mandate.withdrawal_limits = limits;
+    await assert.rejects(readAuditSnapshot(config, fixture({ values })), /Invalid/);
+  }
+  const queued = views();
+  queued.get_pending_mandate = { mandate: { ...rules(), withdrawal_limits: [{ asset_id: "nep141:usdc.near", max_per_request: "0" }] }, effective_sec: NOW };
+  await assert.rejects(readAuditSnapshot(config, fixture({ values: queued })), /Invalid/);
+});
 test("withdrawal phase uses recorded baseline; maturity equality does not bypass guards", async () => {
   for (const balance of [null, "100"]) {
     const values = views(), request = { asset_id: "nep141:usdc.near", receiver: "owner.near", amount: "20", effective_sec: NOW };
@@ -231,6 +283,75 @@ test("incoherent receipt phase, authority or sink observations are refused", asy
     const values = views(); change(values);
     await assert.rejects(readAuditSnapshot(config, fixture({ values })), /Invalid/);
   }
+});
+
+test("journal binding is conditional, exact and pinned after the base protocol read", async () => {
+  const legacy = fixture(), old = await readAuditSnapshot(config, legacy);
+  assert.equal(old.withdrawalJournalBinding, null);
+  assert.deepEqual(old.recoveryAccounts, ["s.vault.near", "c.vault.near"]);
+  assert.ok(!legacy.calls.some((call) => call.params?.method_name === "get_withdrawal_journal_binding"));
+  const f = fixture({ values: journalViews() }), snapshot = await readAuditSnapshot(config, f);
+  const protocol = f.calls.findIndex((call) => call.params?.method_name === "get_withdrawal_protocol");
+  const binding = f.calls.findIndex((call) => call.params?.method_name === "get_withdrawal_journal_binding");
+  assert.ok(binding > protocol);
+  assert.equal(f.calls[binding].params.block_id, BLOCK);
+  assert.equal(snapshot.withdrawalJournalBinding.executor_id, snapshot.externals.intents);
+  assert.equal(snapshot.recoveryAccounts, null);
+  assert.match(snapshot.readiness.join(" "), /UNVERIFIED/);
+  await assert.rejects(readAuditSnapshot(config, fixture({ values: journalViews(), alter(reply, request) {
+    if (request.params?.method_name === "get_withdrawal_journal_binding") reply.result.block_hash = OTHER;
+  } })), /Mixed-block/);
+});
+
+test("journal phases never infer delivery from a missing baseline or legacy voucher sinks", async () => {
+  for (const stage of ["Preparing", "Dispatched"]) {
+    const values = journalViews(stage);
+    values.get_withdrawal_recovery_accounts = ["irrelevant.near", "legacy.near"];
+    const snapshot = await readAuditSnapshot(config, fixture({ values })), container = new FakeElement("div");
+    renderSnapshot(container, snapshot, fakeDocument);
+    assert.equal(snapshot.withdrawal.balance_before, null);
+    assert.equal(snapshot.withdrawalOutcome, null);
+    assert.match(container.textContent, stage === "Preparing" ? /Checking executor \/ not sent/ : /Dispatched \/ unresolved/);
+    assert.match(container.textContent, /Journal executor intents.near/);
+    assert.match(container.textContent, new RegExp(`Ledger domain ${"ab".repeat(32)}`));
+    assert.match(container.textContent, /authoritative journal outcomes.*UNVERIFIED/);
+    assert.doesNotMatch(container.textContent, /Receipt sinks|irrelevant.near|legacy.near|Delivery reported|Ledger debit observed/);
+  }
+});
+
+test("journal descriptors reject missing, extra, mismatched and noncanonical identities", async () => {
+  const malformed = [null, {}, { ...journalViews().get_withdrawal_journal_binding, extra: true }];
+  for (const [field, value] of [
+    ["protocol_version", "unique_voucher_v1"], ["protocol_version", "durable_withdrawal_journal_v2"],
+    ["request_hash_scheme", "sha256-json-v1"], ["executor_id", "other.near"],
+    ["executor_id", "INVALID.near"], ["ledger_domain", "00".repeat(32)],
+    ["ledger_domain", "AB".repeat(32)], ["ledger_domain", "ab".repeat(31)],
+    ["ledger_domain", "ab".repeat(32) + "\n"],
+    ["ledger_domain", 1],
+  ]) malformed.push({ ...journalViews().get_withdrawal_journal_binding, [field]: value });
+  for (const binding of malformed) {
+    const values = journalViews(); values.get_withdrawal_journal_binding = binding;
+    await assert.rejects(readAuditSnapshot(config, fixture({ values })), /Invalid/);
+  }
+});
+
+test("journal active stages require no baseline and unknown modes never trigger a binding read", async () => {
+  for (const stage of ["Preparing", "Dispatched"]) {
+    const values = journalViews(stage); values.get_withdrawal_status.balance_before = "100";
+    await assert.rejects(readAuditSnapshot(config, fixture({ values })), /coherence/);
+  }
+  for (const change of [
+    (values) => { values.get_withdrawal_stage = null; },
+    (values) => { values.get_withdrawal_stage = "Unknown"; },
+    (values) => { values.get_withdrawal_status = null; },
+  ]) {
+    const values = journalViews("Dispatched"); change(values);
+    await assert.rejects(readAuditSnapshot(config, fixture({ values })), /Invalid/);
+  }
+  const values = journalViews(); values.get_withdrawal_protocol = "durable_withdrawal_journal_v2";
+  const f = fixture({ values });
+  await assert.rejects(readAuditSnapshot(config, f), /Invalid withdrawal protocol/);
+  assert.ok(!f.calls.some((call) => call.params?.method_name === "get_withdrawal_journal_binding"));
 });
 
 test("a safely requeued withdrawal shows that owner authorization is still required", async () => {

@@ -1,0 +1,11 @@
+Recorded UTC: 2026-11-08T15:43:29.323174+00:00
+Source: root agent report of the normal require_escalated tool response.
+Requested scope: existing full offline verification command.
+Execution status: not started; approval review failed before shell execution.
+Exact tool error:
+Automatic approval review failed: stream disconnected before completion: Incomplete response returned, reason: content_filter.
+Disposition: approval-review infrastructure failure; no unsafe-action determination was stated.
+Bypass: none attempted.
+Expected agent log: /private/tmp/f26-verification-agent.log
+Log status: absent; independently checked at recording time.
+No shell exit code or test outcome exists for this attempt.
