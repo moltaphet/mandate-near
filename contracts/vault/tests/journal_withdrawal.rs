@@ -307,7 +307,13 @@ async fn journal_maximum_executor_inputs_enforce_funding_then_refund_cancel_and_
     block_receiver(&w, true).await?;
     let failed = executor_send(&w, "withdraw_with_id", &req, 100).await?;
     assert_eq!(failed.token_receipts, 1);
-    assert_eq!(failed.executor_receipts, 2, "entry and actual private resolver receipts");
+    // Three receipts run on the executor: the entry call, the protocol's refund of the
+    // failed FT call's attached 1 yoctoNEAR back to the executor (a bare refund receipt,
+    // 223_182_562_500 gas, no logs), and the private resolver that mints the refund.
+    assert_eq!(
+        failed.executor_receipts, 3,
+        "entry, refund of the failed token call's deposit and actual private resolver receipts"
+    );
     assert_eq!(failed.failures, 1, "explicit ordinary FT refusal");
     let refunded = status(&w, req.withdrawal_id).await.unwrap();
     assert_bound(&w, &refunded, &req).await;
