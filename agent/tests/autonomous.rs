@@ -36,6 +36,7 @@ fn snapshot() -> Snapshot {
                 AssetConfig { asset_id: B.into(), decimals: 24, price_feed_id: "wrap.near".into() },
             ],
             stable_assets: vec![A.into()],
+            withdrawal_limits: vec![],
             max_trade_usd: U64(20_000_000),
             max_daily_turnover_usd: U64(200_000_000),
             max_position_bps: 6000,
