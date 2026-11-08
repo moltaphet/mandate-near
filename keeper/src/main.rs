@@ -28,7 +28,16 @@ fn optional_chain_setting(name: &str) -> Result<Option<String>, MainError> {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), MainError> {
+async fn main() {
+    if let Err(error) = run().await {
+        // Print the message (Display), not the Debug form a returned error would get, so an
+        // operator reads "paid keeper outcome unknown ..." rather than a bare type name.
+        eprintln!("Error: {error}");
+        std::process::exit(1);
+    }
+}
+
+async fn run() -> Result<(), MainError> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     if !(args.is_empty() || (args.len() == 2 && args[0] == "--publish")) {
         return Err("usage: mandate-keeper [--publish <public-relay-config.json>]".into());
