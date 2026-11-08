@@ -40,3 +40,30 @@ in an isolated /private/tmp Cargo workspace, and writes the two fixture files he
 - 0de5c48888ff495d017f1daadd1c6ba1e8b5039b:contracts/vault/src/mandate.rs: `6944629eb9e8e14128224ea1ebdb16808c9e09d1b42f10a905fa219ac9b0f190`
 - 0de5c48888ff495d017f1daadd1c6ba1e8b5039b:contracts/vault/src/math.rs: `bf8c82d2a9d4d4974d520b103a641b0ef8bc3069af589c0b9517dd06342a2d76`
 - 0de5c48888ff495d017f1daadd1c6ba1e8b5039b:contracts/vault/src/oracle.rs: `5051bca2f263f2f46afb28606b1cbefcedf035665acd9b22b9b6ebd9f98de8f3`
+
+## Pre-ceiling source-admission state
+
+The two `pre-ceiling-a582d36-*-state.borsh` files were emitted by the actual
+`Vault` serializer at `a582d36d0233eec2607fed85fc0cab8007a960a9`, before adding
+`Mandate.withdrawal_limits`. The saved native exporter is
+[pre-ceiling-exporter.rs](../../../../docs/evidence/pre-ceiling-exporter.rs).
+It requires that exact historical checkout, includes a temporary unit-test module
+in its original vault, and serializes that vault rather than the migration decoder.
+
+| Fixture | Bytes | SHA-256 |
+|---|---:|---|
+| `pre-ceiling-a582d36-price-oracle-state.borsh` | 1,345 | `fb8ebf36d092d224ceb935b12e369031f7e400ff9dd24c86558e3d7640911dfc` |
+| `pre-ceiling-a582d36-pyth-state.borsh` | 1,509 | `f99060f217db651d4e7d6de24b3b92597a43e758cd0bfa4a4bf5c16366238e8f` |
+
+Both fixtures use public account names and expired payload/signature placeholders
+at Unix second `1793448000`. They preserve active and queued source lists,
+pending mandate/agent deadlines, trading reservations, monotonic identifiers,
+provider choice and an expired orphan execution snapshot. They contain no live
+signing credentials. The vault is paused and has no pending proposal, in-flight
+execution, queued/active withdrawal, voucher phase or retry authorization.
+
+Migration checks the immutable bytes, retains those source lists and provider,
+and sets both active and queued withdrawal-ceiling lists to empty for legacy
+uncapped behavior. It discards only the quiescent orphan snapshot and rejects
+active authorization or future signing deadlines. These are native unit-VM
+compatibility fixtures, not evidence of a live-chain upgrade or receipt history.

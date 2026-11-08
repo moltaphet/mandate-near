@@ -32,6 +32,46 @@ async fn strikes(w: &World) -> Value {
 }
 
 #[tokio::test]
+async fn underfunded_execute_cannot_lock_a_healthy_proposal() -> testresult::TestResult<()> {
+    let w = world().await?;
+    register_key(&w).await?;
+    fund_vault(&w, 10_000_000).await?;
+    set_prices(&w, now_sec()).await?;
+    propose(&w).await?;
+    let pending = view(&w.vault, &w.network, "get_pending_proposal", json!({})).await;
+
+    let refusal = w
+        .vault
+        .call_function("execute", json!({}))
+        .transaction()
+        .gas(NearGas::from_tgas(30))
+        .with_signer(w.stranger.clone(), w.signer.clone())
+        .send_to(&w.network)
+        .await?
+        .into_result()
+        .expect_err("an underfunded execution must fail before reserving the lock");
+    assert!(format!("{refusal:?}").contains("execution requires at least 300 TGas"));
+    assert_eq!(view(&w.vault, &w.network, "get_pending_proposal", json!({})).await, pending);
+    assert_eq!(view(&w.vault, &w.network, "is_in_flight", json!({})).await, json!(false));
+    assert_eq!(view(&w.vault, &w.network, "get_signed_intent", json!({})).await, Value::Null);
+    assert_eq!(strikes(&w).await, json!(0));
+
+    // An adequately funded owner can still execute the same proposal immediately.
+    let outcome = w
+        .vault
+        .call_function("execute", json!({}))
+        .transaction()
+        .gas(NearGas::from_tgas(300))
+        .with_signer(w.owner.clone(), w.signer.clone())
+        .send_to(&w.network)
+        .await?
+        .assert_success()
+        .json::<Value>()?;
+    assert!(outcome.get("Executed").is_some(), "{outcome}");
+    Ok(())
+}
+
+#[tokio::test]
 async fn execute_without_a_proposal_is_refused() -> testresult::TestResult<()> {
     let w = world().await?;
     w.vault

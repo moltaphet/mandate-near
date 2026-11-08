@@ -8,6 +8,8 @@
 
 #![allow(dead_code)]
 
+mod fixture;
+
 use near_api::{AccountId, Contract, NearGas, NearToken, NetworkConfig, Signer};
 use near_sdk::serde_json::{Value, json};
 use std::sync::Arc;
@@ -124,6 +126,7 @@ pub fn mandate_with_extra(extra: usize) -> Value {
         "min_trade_interval_sec": 300,
         "max_price_age_sec": 60,
         "allowed_model_ids": ["manual-v1", "rebalance-v1", "fixture-model"],
+        "withdrawal_limits": [],
     })
 }
 
@@ -132,9 +135,21 @@ pub fn mandate_with_extra(extra: usize) -> Value {
 pub fn build_contract(manifest: Option<&str>) -> testresult::TestResult<Vec<u8>> {
     static BUILD_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
     let _guard = BUILD_LOCK.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+    // Explicit sandbox-only opt-in for hosts whose ABI dylib cannot load (for
+    // example the Apple LINKEDIT alignment defect). Default still generates
+    // ABI, and build failure never triggers an automatic fallback. This uses
+    // cargo-near's supported --no-abi mode and keeps WASM optimization enabled.
+    let no_abi = std::env::var("MANDATE_SANDBOX_NO_ABI").is_ok_and(|value| value == "1");
+    if no_abi {
+        println!(
+            "BUILD | explicit MANDATE_SANDBOX_NO_ABI=1 | cargo-near --no-abi, WASM optimization enabled"
+        );
+    }
     let opts = match manifest {
-        Some(path) => cargo_near_build::BuildOpts::builder().manifest_path(path).build(),
-        None => Default::default(),
+        Some(path) => {
+            cargo_near_build::BuildOpts::builder().manifest_path(path).no_abi(no_abi).build()
+        }
+        None => cargo_near_build::BuildOpts::builder().no_abi(no_abi).build(),
     };
     Ok(std::fs::read(cargo_near_build::build_with_cli(opts)?)?)
 }
@@ -157,6 +172,17 @@ pub async fn world_with_pyth(extra: usize) -> testresult::TestResult<World> {
     {
         asset["price_feed_id"] = json!(format!("{:064x}", i + 1));
     }
+    config["withdrawal_limits"] = json!(
+        config["assets"]
+            .as_array()
+            .expect("fixture assets")
+            .iter()
+            .map(|asset| json!({
+                "asset_id": asset["asset_id"],
+                "max_per_request": u128::MAX.to_string(),
+            }))
+            .collect::<Vec<_>>()
+    );
     world_with_provider(extra, Some(config)).await
 }
 
@@ -166,7 +192,7 @@ async fn world_with_provider(extra: usize, pyth: Option<Value>) -> testresult::T
     let oracle_wasm = build_contract(Some("../mock-oracle/Cargo.toml"))?;
     let ft_wasm = build_contract(Some("../mock-ft/Cargo.toml"))?;
     let intents_wasm = std::fs::read(INTENTS_WASM)?;
-    assert!(intents_wasm.starts_with(b"\0asm"), "fixture is not a wasm file");
+    fixture::validate_intents_fixture(&intents_wasm).expect("reviewed Intents verifier fixture");
 
     let sandbox = near_sandbox::Sandbox::start_sandbox().await?;
     let network = NetworkConfig::from_rpc_url("sandbox", sandbox.rpc_addr.parse()?);

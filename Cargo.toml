@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["contracts/vault", "contracts/mock-externals", "contracts/mock-oracle", "contracts/mock-ft", "keeper", "agent"]
+members = ["contracts/vault", "contracts/mock-externals", "contracts/mock-oracle", "contracts/mock-ft", "keeper", "agent", "crates/withdrawal-journal"]
 
 [workspace.package]
 edition = "2024"
@@ -9,7 +9,10 @@ repository = "https://github.com/moltaphet/mandate-near"
 rust-version = "1.95"
 
 [workspace.dependencies]
-near-sdk = "5.30.0"
+mandate-withdrawal-journal = { path = "crates/withdrawal-journal" }
+# Use Rust's standard Wasm allocator instead of the SDK's wee_alloc default
+# (RUSTSEC-2022-0054 / GHSA-rc23-xxgq-x27g).
+near-sdk = { version = "5.30.0", default-features = false }
 # 256-bit intermediates for exact USD math (no_std, no default features).
 uint = { version = "0.10.2", default-features = false }
 proptest = "1.12.0"

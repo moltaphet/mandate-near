@@ -9,6 +9,7 @@ use near_sdk::serde_json::json;
 
 fn keeper(w: &common::World) -> Keeper {
     Keeper {
+        expected_chain_id: None,
         network: w.network.clone(),
         vault: w.vault.account_id().clone(),
         account: w.stranger.clone(),

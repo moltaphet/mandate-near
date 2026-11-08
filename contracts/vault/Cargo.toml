@@ -21,10 +21,16 @@ passed_env = []
 container_build_command = ["cargo", "near", "build", "non-reproducible-wasm", "--locked"]
 
 [dependencies]
+mandate-withdrawal-journal.workspace = true
 near-sdk.workspace = true
 uint.workspace = true
 # base58 for the signature string NEAR Intents expects (ed25519:<base58>).
 bs58 = "0.5"
+
+# SDK ABI schemas are host-only. Keeping this feature off Wasm also supports
+# cargo-near's explicit --no-abi build without host schema dependencies.
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+mandate-withdrawal-journal = { workspace = true, features = ["abi"] }
 
 [dev-dependencies]
 # The keeper and the agent drive the vault in tests; they are not runtime dependencies.
@@ -38,6 +44,7 @@ near-api.workspace = true
 cargo-near-build.workspace = true
 tokio.workspace = true
 testresult.workspace = true
+sha2 = "0.10"
 
 [lints]
 workspace = true
