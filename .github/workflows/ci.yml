@@ -57,7 +57,9 @@ jobs:
       - name: Fetch public locked executor dependencies
         run: cargo +1.95.0 fetch --locked --manifest-path target/intents-executor/source/Cargo.toml
       - name: Build optimized source-owned executor and bound manifest
-        run: python3 -B integrations/intents-executor/build.py --archive "$INTENTS_ARCHIVE" --destination target/intents-executor/source
+        # rust-cache exports CARGO_INCREMENTAL=0. The builder refuses any Cargo build
+        # override on purpose, so clear that one variable for this step only.
+        run: env -u CARGO_INCREMENTAL python3 -B integrations/intents-executor/build.py --archive "$INTENTS_ARCHIVE" --destination target/intents-executor/source
       - name: Test native journal in the verified executor source
         run: CARGO_TARGET_DIR="$PWD/target/intents-executor/build" cargo +1.95.0 test -p defuse --features contract --lib --manifest-path target/intents-executor/source/Cargo.toml --locked --offline
       - name: Lint verified executor library with warnings denied
