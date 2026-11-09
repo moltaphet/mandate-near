@@ -23,7 +23,8 @@ jobs:
         run: rustup toolchain install 1.95.0 --profile minimal --component rustfmt --component clippy --target wasm32-unknown-unknown
       # Same pinned installer the `cargo near new` template uses.
       - name: Install cargo-near
-        run: curl --proto '=https' --tlsv1.2 -LsSf https://github.com/near/cargo-near/releases/download/cargo-near-v0.22.0/cargo-near-installer.sh | sh
+        # GitHub release downloads can fail transiently (HTTP 504). Retry the same pinned URL.
+        run: curl --proto '=https' --tlsv1.2 -LsSf --retry 6 --retry-all-errors --retry-delay 20 https://github.com/near/cargo-near/releases/download/cargo-near-v0.22.0/cargo-near-installer.sh | sh
       - uses: Swatinem/rust-cache@v2
       - uses: actions/setup-node@v4
         with:
