@@ -1,0 +1,7 @@
+SNAPSHOT after
+chain time           : 1794160942
+pending withdrawal   : None
+withdrawal status    : None
+last outcome         : {'Delivered': {'withdrawal_id': '1', 'amount': '1000000'}}
+receiver USDC balance: 1000000
+vault Intents ledger : ['9000000']

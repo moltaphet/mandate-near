@@ -1,0 +1,14 @@
+VIEW | get_owner | "mandate-t1.sputnikv2.testnet"
+VIEW | get_agent | "agent.mandate-t1.testnet"
+VIEW | get_externals | ["v1.signer-prod.testnet","intents.mandate-t1.testnet","oracle.mandate-t1.testnet"]
+VIEW | is_key_registered | true
+VIEW | get_chain_time_sec | 1794160975
+VIEW | is_paused | false
+VIEW | is_in_flight | false
+VIEW | get_pending_proposal | null
+VIEW | get_signed_intent | {"proposal_id":"1","payload":"{\"deadline\":\"2026-11-07T17:44:21Z\",\"intents\":[{\"diff\":{\"nep141:usdc.mandate-t1.testnet\":\"-2000000\",\"nep141:wrap.testnet\":\"450000000000000000000000\"},\"intent\":\"token_diff\"}],\"nonce\":\"Vij2xgBNSyPkAFLcr07U5Ri4TvgG8tGI5+Oz2SNvs/o=\",\"signer_id\":\"vault.mandate-t1.testnet\",\"verifying_contract\":\"intents.mandate-t1.testnet\"}","public_key":"ed25519:ADbT3FKzBG8QF2YFG7UsBF2A3ZnPxezzCjoDgqrwJK2a","signature":"ed25519:3vRyLS5RkVjg9LziUfaT5Dz7QKit9dS8WndF1YJHP3a2ATmzHnepCPCzKwSYeBX5LpGRdKq9yb4NtKDRXrqQpN1D","expires_sec":1794073461}
+VIEW | get_last_proposal_outcome | {"proposal_id":"1","outcome":{"Executed":{"proposal_id":"1","expires_sec":"1794073461"}}}
+VIEW | get_pending_withdrawal | null
+VIEW | get_withdrawal_status | null
+VIEW | get_last_withdrawal_outcome | {"Delivered":{"withdrawal_id":"1","amount":"1000000"}}
+VIEW | intents ledger (nep141 usdc) | Ok(Array [String("9000000")])
