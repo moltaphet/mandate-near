@@ -1,0 +1,14 @@
+VIEW | get_owner | "mandate-t1.sputnikv2.testnet"
+VIEW | get_agent | "agent.mandate-t1.testnet"
+VIEW | get_externals | ["v1.signer-prod.testnet","intents.mandate-t1.testnet","oracle.mandate-t1.testnet"]
+VIEW | is_key_registered | true
+VIEW | get_chain_time_sec | 1794221191
+VIEW | is_paused | false
+VIEW | is_in_flight | false
+VIEW | get_pending_proposal | null
+VIEW | get_signed_intent | null
+VIEW | get_last_proposal_outcome | null
+VIEW | get_pending_withdrawal | null
+VIEW | get_withdrawal_status | null
+VIEW | get_last_withdrawal_outcome | null
+VIEW | intents ledger (nep141 usdc) | Ok(Array [String("10000000")])

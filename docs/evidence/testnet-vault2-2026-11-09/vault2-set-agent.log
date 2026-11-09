@@ -1,0 +1,3 @@
+TX | add_proposal on mandate-t1.sputnikv2.testnet by mandate-t1.testnet | hash LCV3ZuM5uJZUEygNRfhwHParxQ9iSfhdnPH3BQPU1xz | receipt failures: 0
+TX | act_proposal on mandate-t1.sputnikv2.testnet by mandate-t1.testnet | hash Djkv8xPBAvhKf6hB6qtKmALwB8S2eLmYH5k2VNw1MVp7 | receipt failures: 0
+OWNER | set_agent approved through DAO proposal 3
