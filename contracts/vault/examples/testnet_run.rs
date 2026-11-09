@@ -43,6 +43,11 @@ fn id(s: &str) -> AccountId {
 fn sub(name: &str) -> AccountId {
     id(&format!("{name}.{PARENT}"))
 }
+fn vault_id() -> AccountId {
+    // The vault account name; MANDATE_VAULT selects a second vault for a later run.
+    let name = std::env::var("MANDATE_VAULT").unwrap_or_else(|_| "vault".to_string());
+    sub(&name)
+}
 fn dao() -> AccountId {
     id(&format!("{DAO_NAME}.{FACTORY}"))
 }
@@ -142,6 +147,7 @@ fn mandate() -> Value {
         "min_trade_interval_sec": 300,
         "max_price_age_sec": 60,
         "allowed_model_ids": ["manual-v1"],
+        "withdrawal_limits": [{ "asset_id": usdc_asset(), "max_per_request": "5000000" }],
     })
 }
 
@@ -157,7 +163,7 @@ async fn owner_call(cx: &Ctx, method: &str, args: Value, desc: &str) -> R<()> {
     });
     let proposal = json!({ "proposal": {
         "description": desc,
-        "kind": { "FunctionCall": { "receiver_id": sub("vault"), "actions": [action] } },
+        "kind": { "FunctionCall": { "receiver_id": vault_id(), "actions": [action] } },
     }});
     // The DAO policy sets a 1 NEAR proposal bond, returned when the proposal is approved.
     let added =
@@ -260,7 +266,7 @@ async fn step(cx: &Ctx, name: &str, rest: &[String]) -> R<()> {
                 "intents": sub("intents"),
                 "oracle": sub("oracle"),
             });
-            let vault = sub("vault");
+            let vault = vault_id();
             let r = Transaction::construct(parent.clone(), vault.clone())
                 .add_action(Action::CreateAccount(CreateAccountAction {}))
                 .add_action(Action::Transfer(TransferAction { deposit: NearToken::from_near(7) }))
@@ -291,7 +297,7 @@ async fn step(cx: &Ctx, name: &str, rest: &[String]) -> R<()> {
         "register" => {
             call(
                 cx,
-                &sub("vault"),
+                &vault_id(),
                 &parent,
                 "register_intents_key",
                 json!({}),
@@ -322,7 +328,7 @@ async fn step(cx: &Ctx, name: &str, rest: &[String]) -> R<()> {
                 json!({
                     "receiver_id": sub("intents"),
                     "amount": amount,
-                    "msg": json!({ "receiver_id": sub("vault") }).to_string(),
+                    "msg": json!({ "receiver_id": vault_id() }).to_string(),
                 }),
                 200,
                 NearToken::from_yoctonear(1),
@@ -348,7 +354,7 @@ async fn step(cx: &Ctx, name: &str, rest: &[String]) -> R<()> {
         "propose" => {
             call(
                 cx,
-                &sub("vault"),
+                &vault_id(),
                 &sub("agent"),
                 "propose",
                 json!({
@@ -365,16 +371,8 @@ async fn step(cx: &Ctx, name: &str, rest: &[String]) -> R<()> {
             .await?;
         }
         "execute" => {
-            call(
-                cx,
-                &sub("vault"),
-                &parent,
-                "execute",
-                json!({}),
-                300,
-                NearToken::from_yoctonear(0),
-            )
-            .await?;
+            call(cx, &vault_id(), &parent, "execute", json!({}), 300, NearToken::from_yoctonear(0))
+                .await?;
         }
         // 11. Queue one withdrawal through the DAO, then apply it after the real delay.
         "withdraw-queue" => {
@@ -388,13 +386,13 @@ async fn step(cx: &Ctx, name: &str, rest: &[String]) -> R<()> {
             .await?;
             println!(
                 "PENDING | {}",
-                view(cx, &sub("vault"), "get_pending_withdrawal", json!({})).await?
+                view(cx, &vault_id(), "get_pending_withdrawal", json!({})).await?
             );
         }
         "withdraw-apply" => {
             call(
                 cx,
-                &sub("vault"),
+                &vault_id(),
                 &parent,
                 "apply_pending_withdrawal",
                 json!({}),
@@ -404,7 +402,7 @@ async fn step(cx: &Ctx, name: &str, rest: &[String]) -> R<()> {
             .await?;
         }
         "status" => {
-            let vault = sub("vault");
+            let vault = vault_id();
             for m in [
                 "get_owner",
                 "get_agent",
@@ -440,7 +438,10 @@ async fn step(cx: &Ctx, name: &str, rest: &[String]) -> R<()> {
                 ("mock_oracle", format!("{here}/../mock-oracle/Cargo.toml")),
                 ("mock_ft", format!("{here}/../mock-ft/Cargo.toml")),
             ] {
-                let opts = cargo_near_build::BuildOpts::builder().manifest_path(manifest).build();
+                let opts = cargo_near_build::BuildOpts::builder()
+                    .manifest_path(manifest)
+                    .no_abi(true)
+                    .build();
                 let built = cargo_near_build::build_with_cli(opts)?;
                 std::fs::copy(built.as_std_path(), format!("{WASM_DIR}/{name}.wasm"))?;
                 println!(
