@@ -44,8 +44,13 @@ fn sub(name: &str) -> AccountId {
     id(&format!("{name}.{PARENT}"))
 }
 fn vault_id() -> AccountId {
-    // The vault account name; MANDATE_VAULT selects a second vault for a later run.
-    let name = std::env::var("MANDATE_VAULT").unwrap_or_else(|_| "vault".to_string());
+    // The target vault must be named on every run. There is no default: on 9 Nov 2026 a
+    // missing name silently fell back to the first testnet vault, and a proposal and an
+    // execution ran there by mistake.
+    let name = std::env::var("MANDATE_VAULT").unwrap_or_else(|_| {
+        panic!("set MANDATE_VAULT to the target vault name (for example vault2); refusing to guess")
+    });
+    println!("TARGET | vault {name}");
     sub(&name)
 }
 fn dao() -> AccountId {
