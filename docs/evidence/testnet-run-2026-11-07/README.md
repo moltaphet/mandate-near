@@ -38,6 +38,7 @@ is the DAO. The vault, oracle and token WASM hashes are in `00-wasm-sha256.txt`.
 | `execute` | outcome `Executed`, signed intent retained | not captured, see below |
 | `request_withdrawal` through DAO proposal 2 | queued, `effective_sec` 1794159940 | `F5s1ps27…` (add), `2N3GxKHg…` (approve) |
 | `apply_pending_withdrawal` before maturity | refused: "the withdrawal is still in its delay" | `09-withdraw-apply-early.log` |
+| `apply_pending_withdrawal` after maturity (8 Nov 2026, 18:01 UTC) | ok, receipt failures 0 | `3RPHMsYvjFA51FvVnnq1MoiSiMvVVDYTGx7oRQsPCC1j` (logs `11`–`14`) |
 
 ## Independent check of the signature
 
@@ -52,11 +53,17 @@ So the vault obtained a real testnet MPC signature, and only after the on-chain 
 
 ## Withdrawal
 
-The withdrawal of 1 USDC to `mandate-t1.testnet` is queued with maturity
-**2026-11-08 17:45:40 UTC** (`effective_sec` 1794159940). Applying it after that time
-is the remaining step: `cargo run -p mandate-vault --example testnet_run -- withdraw-apply`.
-Until it is applied and its receiver and ledger changes are recorded, the delayed
-withdrawal is **not** demonstrated.
+The withdrawal of 1 USDC (1,000,000 base units) to `mandate-t1.testnet` was queued and
+matured at `effective_sec` 1794159940 (2026-11-08 17:45:40 UTC). Before maturity an
+early apply was refused. The apply ran about 15 minutes after maturity:
+
+- chain time at apply: 1794160858; elapsed since the queue: 87,318 seconds (requirement 86,400);
+- the receiver's USDC balance went from 0 to 1,000,000;
+- the vault's Intents ledger went from 10,000,000 to 9,000,000;
+- the last withdrawal outcome is `Delivered { withdrawal_id: "1", amount: "1000000" }`.
+
+This delayed, real-time withdrawal is shown on testnet. Logs are `11-withdraw-before.log`
+to `14-status-after-withdrawal.log`.
 
 ## Problems met and how they were handled
 
@@ -77,5 +84,5 @@ withdrawal is **not** demonstrated.
 It shows, on a real chain: atomic keyless deployment, DAO-governed owner calls, key
 registration against the real testnet signer, gates passing, and a verifiable MPC
 signature. It does **not** show a matched settlement (no counterparty and no real Intents
-contract), a production oracle, an elapsed delayed withdrawal (pending), recovery after a
+contract), a production oracle, recovery after a
 lost callback (not exercised), or a live model provider run.

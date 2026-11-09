@@ -33,8 +33,8 @@ Mandate limits authorization, rather than guaranteeing profitable decisions.
 > Historical gas measurements from 7 November are in `docs/evidence/gas.txt`.
 > A testnet run on 7 November 2026 deployed the vault and obtained a real testnet
 > MPC signature ([evidence](docs/evidence/testnet-run-2026-11-07/README.md)). It used a
-> fixture Intents contract and a stand-in oracle, and its delayed withdrawal is queued
-> but not yet applied. Funded matched settlement and withdrawal/recovery evidence
+> fixture Intents contract and a stand-in oracle. A 1 USDC delayed withdrawal was
+> queued and applied after its real 24-hour maturity, and the receiver was paid. Funded matched settlement and withdrawal/recovery evidence
 > remain open.
 > The project has not received an independent professional audit.
 > Start with [Security](SECURITY.md), [Threat model](THREAT_MODEL.md) and

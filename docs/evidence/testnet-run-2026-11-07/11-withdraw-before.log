@@ -1,0 +1,8 @@
+SNAPSHOT before
+chain time           : 1794160858
+pending withdrawal   : {'asset_id': 'nep141:usdc.mandate-t1.testnet', 'receiver': 'mandate-t1.testnet', 'amount': '1000000', 'effective_sec': 1794159940}
+withdrawal status    : None
+last outcome         : None
+receiver USDC balance: 0
+vault Intents ledger : ['10000000']
+== applying the queued withdrawal
