@@ -9,15 +9,24 @@ import unittest
 SPEC = importlib.util.spec_from_file_location("deployment", Path(__file__).with_name("inspect-deployment.py"))
 deployment = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(deployment)
+DEFAULT_BINDING = object()
+
+
+def journal_descriptor():
+    return {"protocol_version": "durable_withdrawal_journal_v1", "ledger_domain": "ab" * 32,
+            "executor_id": "intents.near", "request_hash_scheme": "sha256-borsh-v1"}
 
 
 class FakeRpc:
-    def __init__(self, mismatched=False, bad_code=False, bad_anchor=False, existing_sink=False):
+    def __init__(self, mismatched=False, bad_code=False, bad_anchor=False, existing_sink=False,
+                 protocol="unique_voucher_v1", binding=DEFAULT_BINDING):
         self.calls = []
         self.mismatched = mismatched
         self.bad_code = bad_code
         self.bad_anchor = bad_anchor
         self.existing_sink = existing_sink
+        self.protocol = protocol
+        self.binding = journal_descriptor() if binding is DEFAULT_BINDING else binding
 
     def status(self):
         return {"chain_id": "testnet"}
@@ -44,7 +53,8 @@ class FakeRpc:
         elif kind == "call_function":
             values = {"get_owner": "owner.near", "get_externals": ["signer.near", "intents.near", "oracle.near"],
                       "is_paused": True, "is_key_registered": False, "get_oracle_kind": "pyth",
-                      "get_withdrawal_protocol": "unique_voucher_v1", "public_keys_of": []}
+                      "get_withdrawal_protocol": self.protocol, "public_keys_of": [],
+                      "get_withdrawal_journal_binding": self.binding}
             result["result"] = list(json.dumps(values[params["method_name"]]).encode())
         return result
 
@@ -116,6 +126,59 @@ class InspectionTests(unittest.TestCase):
         report = deployment.inspect(FakeRpc(), "vault.near")
         self.assertTrue(report["checks"]["receipt_sinks_have_no_account_or_registered_identity"])
         self.assertEqual(report["historical_issuer_receipt_quiescence"], "UNVERIFIED")
+
+    def test_journal_binding_is_conditional_and_legacy_inspection_is_unchanged(self):
+        legacy = FakeRpc()
+        old = deployment.inspect(legacy, "vault.near")
+        self.assertNotIn("withdrawal_journal_binding", old)
+        self.assertFalse(any(call.get("method_name") == "get_withdrawal_journal_binding" for call in legacy.calls))
+        self.assertEqual(len(old["receipt_sinks"]), 2)
+        rpc = FakeRpc(protocol="durable_withdrawal_journal_v1", existing_sink=True)
+        report = deployment.inspect(rpc, "vault.near")
+        self.assertTrue(report["checks"]["control_views_valid"])
+        self.assertEqual(report["withdrawal_journal_binding"], journal_descriptor())
+        self.assertEqual(report["withdrawal_journal_binding_observation"], "PUBLIC_SELF_REPORT_UNVERIFIED")
+        self.assertEqual(report["receipt_sinks"], "NOT_APPLICABLE")
+        self.assertIsNone(report["checks"]["receipt_sinks_have_no_account_or_registered_identity"])
+        self.assertEqual(report["live_readiness"], "UNVERIFIED")
+        self.assertIn("authoritative journal terminal delivery or completed refund", report["unverified_obligations"])
+        methods = [call.get("method_name") for call in rpc.calls]
+        self.assertGreater(methods.index("get_withdrawal_journal_binding"), methods.index("get_withdrawal_protocol"))
+        self.assertNotIn("public_keys_of", methods)
+        self.assertFalse(any(call["account_id"].startswith(("s.", "c.")) for call in rpc.calls))
+        self.assertTrue(all(call.get("block_id") == "3" * 44 for call in rpc.calls[1:]))
+
+    def test_journal_binding_rejects_malformed_or_mismatched_descriptors(self):
+        malformed = [None, {}, {**journal_descriptor(), "extra": True}]
+        for field, value in (("protocol_version", "unique_voucher_v1"),
+                             ("protocol_version", "durable_withdrawal_journal_v2"),
+                             ("request_hash_scheme", "sha256-json-v1"),
+                             ("executor_id", "other.near"), ("executor_id", "INVALID.near"),
+                             ("ledger_domain", "00" * 32), ("ledger_domain", "AB" * 32),
+                             ("ledger_domain", "ab" * 31), ("ledger_domain", "ab" * 32 + "\n"),
+                             ("ledger_domain", 1)):
+            malformed.append({**journal_descriptor(), field: value})
+        for binding in malformed:
+            with self.subTest(binding=binding):
+                report = deployment.inspect(FakeRpc(protocol="durable_withdrawal_journal_v1", binding=binding), "vault.near")
+                self.assertFalse(report["checks"]["control_views_valid"])
+                self.assertIn("control_views_valid", report["blocking_checks"])
+                self.assertNotIn("withdrawal_journal_binding", report)
+                self.assertEqual(report["live_readiness"], "UNVERIFIED")
+
+    def test_journal_binding_must_share_the_final_anchor_and_unknown_modes_are_refused(self):
+        class ChangedBindingBlock(FakeRpc):
+            def query(self, params):
+                result = super().query(params)
+                if params.get("method_name") == "get_withdrawal_journal_binding":
+                    result["block_height"] += 1
+                return result
+        report = deployment.inspect(ChangedBindingBlock(protocol="durable_withdrawal_journal_v1"), "vault.near")
+        self.assertFalse(report["checks"]["control_views_valid"])
+        unknown = FakeRpc(protocol="durable_withdrawal_journal_v2")
+        report = deployment.inspect(unknown, "vault.near")
+        self.assertFalse(report["checks"]["control_views_valid"])
+        self.assertFalse(any(call.get("method_name") == "get_withdrawal_journal_binding" for call in unknown.calls))
 
     def test_missing_account_errors_require_exact_account_and_block_binding(self):
         class Response:

@@ -155,8 +155,8 @@ async fn gas_by_feed_count() -> testresult::TestResult<()> {
     Ok(())
 }
 
-/// The supported maximum combines twenty held-or-traded assets with eight longest source
-/// IDs. The accepted ID is last and shares a 63-byte prefix with every rejected
+/// The supported maximum combines twenty held-or-traded assets, twenty ceilings,
+/// and eight longest source IDs. The accepted ID is last and shares a 63-byte prefix with every rejected
 /// ID, exercising the full bounded source lookup on proposal and execution.
 #[tokio::test]
 async fn gas_at_max_assets_and_last_long_source_id() -> testresult::TestResult<()> {
@@ -169,6 +169,18 @@ async fn gas_at_max_assets_and_last_long_source_id() -> testresult::TestResult<(
     assert!(ids.iter().all(|id| id.len() == 64));
     let last = ids.last().unwrap().clone();
     configured["allowed_model_ids"] = json!(ids);
+    configured["withdrawal_limits"] = json!(
+        configured["assets"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|asset| json!({
+                "asset_id": asset["asset_id"],
+                "max_per_request": u128::MAX.to_string(),
+            }))
+            .collect::<Vec<_>>()
+    );
+    assert_eq!(configured["withdrawal_limits"].as_array().unwrap().len(), 20);
     let externals = view(&w.vault, &w.network, "get_externals", json!({})).await;
     assert_eq!(externals.as_array().unwrap().len(), 3);
 

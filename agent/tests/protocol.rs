@@ -370,3 +370,203 @@ async fn dry_run_binary_prepares_from_public_data_with_empty_account_environment
     std::fs::remove_dir_all(dir).unwrap();
     mock.task.abort();
 }
+
+fn autonomous_config(url: &str) -> mandate_agent::autonomous::AutonomousConfig {
+    mandate_agent::autonomous::AutonomousConfig {
+        rpc_url: url.into(),
+        expected_chain_id: Some("fixture".into()),
+        vault_id: "vault.near".into(),
+        relay_url: url.into(),
+        asset_a: A.into(),
+        asset_b: B.into(),
+        target_a_bps: 5000,
+        band_bps: 100,
+        minimum_quote_validity_sec: 450,
+        legacy_price_oracle: false,
+    }
+}
+
+#[tokio::test]
+async fn autonomous_loop_recovers_from_a_public_rpc_outage_without_submission() {
+    use mandate_agent::decision::{PreparationAttempt, PreparationLoop, RebalanceDecision};
+    use std::sync::atomic::{AtomicBool, Ordering};
+
+    let outage = AtomicBool::new(true);
+    let mock = server(move |request| {
+        if request["method"] == "status" && outage.swap(false, Ordering::SeqCst) {
+            json!({"jsonrpc":"2.0", "id":1, "error":{"message":"untrusted outage detail"}})
+        } else {
+            public_view(request)
+        }
+    })
+    .await;
+    let source =
+        RebalanceDecision::new(autonomous_config(&mock.url), Relay::new(&mock.url, None).unwrap());
+    let mut iterations = PreparationLoop::new(true);
+    assert!(matches!(
+        iterations.next(&source).await.unwrap(),
+        PreparationAttempt::Retry { after } if after == std::time::Duration::from_secs(10)
+    ));
+    assert!(matches!(
+        iterations.next(&source).await.unwrap(),
+        PreparationAttempt::Ready(mandate_agent::autonomous::Preparation::Trade { .. })
+    ));
+    let requests = mock.requests.lock().unwrap();
+    assert_eq!(requests.iter().filter(|r| r["method"] == "quote").count(), 1);
+    assert!(
+        requests
+            .iter()
+            .all(|r| ["status", "query", "quote"].contains(&r["method"].as_str().unwrap()))
+    );
+    drop(requests);
+    mock.task.abort();
+}
+
+#[tokio::test]
+async fn changed_quote_at_refresh_is_discarded_and_the_next_iteration_gets_a_new_quote() {
+    use mandate_agent::decision::{PreparationAttempt, PreparationLoop, RebalanceDecision};
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    let snapshots = AtomicUsize::new(0);
+    let mock = server(move |request| {
+        if request["params"]["method_name"] == "get_chain_time_sec" {
+            snapshots.fetch_add(1, Ordering::SeqCst);
+        }
+        let current = snapshots.load(Ordering::SeqCst);
+        let method = request["params"]["method_name"].as_str().unwrap_or("").to_owned();
+        let quote_request = request["method"] == "quote";
+        let requested_amount = request["params"][0]["exact_amount_in"].clone();
+        let mut response = public_view(request);
+        if method == "get_mandate" && current >= 2 {
+            let bytes: Vec<u8> =
+                near_sdk::serde_json::from_value(response["result"]["result"].clone()).unwrap();
+            let mut mandate: Value = near_sdk::serde_json::from_slice(&bytes).unwrap();
+            mandate["max_trade_usd"] = json!("10000000");
+            response["result"]["result"] = json!(near_sdk::serde_json::to_vec(&mandate).unwrap());
+        }
+        if quote_request && requested_amount == "10000000" {
+            response["result"][0]["quote_hash"] = json!("fixture-offer-refreshed");
+            response["result"][0]["amount_in"] = json!("10000000");
+            response["result"][0]["amount_out"] = json!("2000000000000000000000000");
+        }
+        response
+    })
+    .await;
+    let source =
+        RebalanceDecision::new(autonomous_config(&mock.url), Relay::new(&mock.url, None).unwrap());
+    let mut iterations = PreparationLoop::new(true);
+    assert!(matches!(iterations.next(&source).await.unwrap(), PreparationAttempt::Retry { .. }));
+    let PreparationAttempt::Ready(mandate_agent::autonomous::Preparation::Trade { prepared }) =
+        iterations.next(&source).await.unwrap()
+    else {
+        panic!("the changed snapshot must receive a new quote on the next iteration")
+    };
+    assert_eq!(prepared.plan.amount_in.0, 10_000_000);
+    assert_eq!(prepared.quote.quote_hash, "fixture-offer-refreshed");
+    let requests = mock.requests.lock().unwrap();
+    let amounts: Vec<&Value> = requests
+        .iter()
+        .filter(|r| r["method"] == "quote")
+        .map(|r| &r["params"][0]["exact_amount_in"])
+        .collect();
+    assert_eq!(amounts, vec![&json!("20000000"), &json!("10000000")]);
+    assert!(
+        requests
+            .iter()
+            .all(|r| ["status", "query", "quote"].contains(&r["method"].as_str().unwrap()))
+    );
+    drop(requests);
+    mock.task.abort();
+}
+
+#[tokio::test]
+async fn one_shot_autonomous_binary_still_returns_a_public_preparation_failure() {
+    let mock =
+        server(|_| json!({"jsonrpc":"2.0","id":1,"error":{"message":"untrusted outage detail"}}))
+            .await;
+    let dir = std::env::temp_dir().join(format!("mandate-one-shot-public-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let config = dir.join("rebalance-public.json");
+    std::fs::write(&config, near_sdk::serde_json::to_vec(&autonomous_config(&mock.url)).unwrap())
+        .unwrap();
+    let output = tokio::process::Command::new(env!("CARGO_BIN_EXE_mandate-agent"))
+        .env_clear()
+        .arg("--auto")
+        .arg(&config)
+        .output()
+        .await
+        .unwrap();
+    assert!(!output.status.success());
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    assert!(stderr.contains("public RPC returned an application error"));
+    assert!(!stderr.contains("untrusted outage detail"));
+    assert_eq!(mock.requests.lock().unwrap().len(), 1);
+    std::fs::remove_dir_all(dir).unwrap();
+    mock.task.abort();
+}
+
+#[tokio::test]
+async fn manual_agent_network_pin_refuses_before_signer_configuration_or_transaction_requests() {
+    let mock = server(|request| {
+        assert_eq!(request["method"], "status");
+        result(json!({"chain_id":"testnet"}))
+    })
+    .await;
+    let dir = std::env::temp_dir().join(format!("mandate-manual-public-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let path = dir.join("plan-public.json");
+    std::fs::write(&path, near_sdk::serde_json::to_vec(&binding().plan).unwrap()).unwrap();
+    let output = tokio::process::Command::new(env!("CARGO_BIN_EXE_mandate-agent"))
+        .env_clear()
+        .env("NEAR_RPC_URL", &mock.url)
+        .env("VAULT_ID", "vault.near")
+        .env("NEAR_CHAIN_ID", "mainnet")
+        .arg(&path)
+        .output()
+        .await
+        .unwrap();
+    assert!(!output.status.success());
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    assert!(stderr.contains("RPC network differs from the configured expected chain"));
+    assert!(!stderr.contains("AGENT_ACCOUNT"));
+    assert_eq!(mock.requests.lock().unwrap().len(), 1);
+    std::fs::remove_dir_all(dir).unwrap();
+    mock.task.abort();
+}
+
+#[tokio::test]
+async fn autonomous_loop_keeps_fail_stop_boundary_after_public_preparation() {
+    let mock = server(public_view).await;
+    let dir = std::env::temp_dir().join(format!("mandate-fail-stop-public-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let path = dir.join("rebalance-public.json");
+    std::fs::write(&path, near_sdk::serde_json::to_vec(&autonomous_config(&mock.url)).unwrap())
+        .unwrap();
+    let output = tokio::time::timeout(
+        std::time::Duration::from_secs(5),
+        tokio::process::Command::new(env!("CARGO_BIN_EXE_mandate-agent"))
+            .env_clear()
+            .arg("--auto")
+            .arg(&path)
+            .arg("--loop")
+            .output(),
+    )
+    .await
+    .expect("the submission boundary must exit without a retry sleep")
+    .unwrap();
+    assert!(!output.status.success());
+    assert!(
+        String::from_utf8(output.stderr)
+            .unwrap()
+            .contains("required setting AGENT_ACCOUNT is absent")
+    );
+    let requests = mock.requests.lock().unwrap();
+    assert_eq!(requests.iter().filter(|r| r["method"] == "quote").count(), 1);
+    assert_eq!(
+        requests.iter().filter(|r| r["params"]["method_name"] == "get_chain_time_sec").count(),
+        2
+    );
+    drop(requests);
+    std::fs::remove_dir_all(dir).unwrap();
+    mock.task.abort();
+}

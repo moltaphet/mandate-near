@@ -7,14 +7,25 @@ mechanism that answers it and the test that shows it. Attack numbers refer to
 [SECURITY.md](SECURITY.md#self-review-findings) and are not repeated as solved here.
 
 Status words: **built and tested** applies to the stated environment and dated
-run, not every later source revision. The recent client/voucher changes need
-final combined release verification.
+run, not every later source revision. The pre-journal 8 November hardening candidate passed
+the complete configured local scope; a frozen release and live evidence remain required.
 **planned** means it is not in the code. **not verified** means the claim rests
 on reading, not on a run.
-The 7 November baseline attempt before this documentation reconciliation exited
-101 after protocol tests hit loopback-socket `PermissionDenied`. Formatting and
-strict Clippy passed before that failure; later provenance targets were not
-reached. Final combined fast and integration verification remain incomplete.
+The [hardening report](docs/audit/HARDENING-2026-11-08.md) records 479 distinct
+local tests, all 14 sandbox targets, artifact identity and full affected-target
+reruns after stale JSON test expectations were repaired. Formatting, the
+all-target build check and strict Clippy passed. The final verify.sh wrapper was
+blocked by review infrastructure; direct commands completed its configured scope.
+
+The later source-owned journal candidate has a separate verification scope.
+Its fresh vault adapter binds an immutable executor/domain and consumes an
+exact authenticated terminal record from the native custody/resolver journal.
+Permanent operation records and cancellation tombstones prevent same-ID repeat
+dispatch. A lost vault callback is recoverable after a terminal record commits;
+an absent executor resolver can still leave `Pending` indefinitely. No
+finalized-receipt proof verifier exists. Unknown legacy sends are not journaled
+retroactively. Ordinary NEP141 token semantics and executor upgrade/admin
+authorities remain trusted; see the [protocol](docs/design/f26-durable-executor.md).
 
 ## Assets
 
@@ -37,7 +48,7 @@ are outside its supported custody path. See T3 and SR-6.
 |---|---|---|
 | Owner | writing the mandate, pausing, authorizing delayed withdrawals and safe retry rearming | Trade signatures remain gated; stolen owner authority can withdraw after the delay |
 | Agent (manual, deterministic two-asset or optional model decision; TEE planned) | choosing a trade | On-chain gates remain authoritative; local previews do not replace them |
-| Keeper, any stranger | running `execute` and `register_intents_key` | choosing or changing a trade |
+| Keeper, any stranger | running `execute`, `register_intents_key` and ID-bound withdrawal recovery | choosing or changing a trade, owner rearm or replacement payment authorization |
 | Solver / relay | filling a signed intent at or above `min_amount_out` | altering bytes; taking more than the signed diff |
 | Configured immutable PriceOracle or Pyth adapter | market correctness and coherent publication times | Mainnet feed/updater, source and administrative identity UNVERIFIED; a fresh wrong price can pass (T6) |
 | `v1.signer` (MPC) | signing only what the vault asks for, under its derivation rules | nothing on the vault's behalf beyond the call |
@@ -147,7 +158,10 @@ unverified.
   mandate-approved trades.
 - A stolen owner key can queue a withdrawal of any mandate asset. The owner has
   24 h to notice and cancel. If nobody cancels, anyone can send it after the
-  delay, so the funds leave. This is the main residual risk for real funds.
+  delay, so the funds leave. Configured per-request ceilings bound each amount;
+  assets without a ceiling are uncapped. Repeated requests are not constrained
+  by a daily or aggregate withdrawal cap. Increasing or removing a ceiling
+  waits 24 h. Owner compromise remains a custody risk for real funds.
 - The owner can tighten a mandate to a point that stops all trading. That is a
   liveness loss, not a theft.
 - **Accepted residual (F26): a stuck withdrawal guard.** A withdrawal may already
@@ -156,7 +170,11 @@ unverified.
   withdrawals and trades. Elapsed time, a larger balance and owner authority
   cannot override it. Retaining the guard initiates no additional transfer;
   the original withdrawal may already have moved funds. Availability can be
-  lost until authenticated proof resolves it. This receipt-loss fault has not
+  lost until authenticated proof resolves it. In source-owned journal mode,
+  exact Delivered/Refunded/Cancelled resolves the guard; Pending, missing or
+  mismatched records retain it. A keeper stores the public paid-transaction
+  hash before broadcast and retains a restart fence after an ambiguous outcome.
+  This receipt-loss fault has not
   been reproduced on a live chain. The project owner accepted this residual
   for the current testnet scope.
 - The selected DAO owner's vote, execution, cancellation and recovery tests
@@ -193,6 +211,10 @@ intents still consume turnover quota and cooldown, with no automatic refund.
 The high-water mark uses pre-trade snapshot NAV. An intent approved before
 UTC midnight can settle on the next day within its deadline, so the daily
 turnover cap does not bound actual settlement-day turnover.
+The stored high-water mark is not cash-flow adjusted. A confirmed owner
+withdrawal can lower NAV without lowering that peak, causing a drawdown refusal
+without a trading loss. This remains an open economic-design issue; per-request
+withdrawal ceilings do not resolve it.
 The regression
 `signing_dispatch_reserves_quota_even_if_the_result_arrives_after_lock_expiry`
 checks that a late answer cannot discard the reservation.
@@ -220,8 +242,8 @@ exponent from -30 through 0, confidence below price, and confidence/price within
 the mandate's slippage allowance. Equality at that allowance passes. Missing or
 invalid held/traded entries become `MissingPrice`. Provider tests and
 `contracts/vault/tests/pyth_path.rs` cover the documented response shape,
-confidence/null refusal and twenty-asset sandbox wiring; final combined revision
-verification remains required.
+confidence/null refusal and twenty-asset sandbox wiring. These targets passed on
+the 8 November artifact; functioning intended-chain feeds remain unverified.
 
 The execution records the oldest approved-price deadline. Before the salt
 callback requests signing, all approved prices must still satisfy configured
@@ -359,11 +381,13 @@ compare its hash.
 - `new_with_externals` lets the deployer choose the signer, intents and oracle
   accounts. Users must check `get_externals` before trusting a deployment.
 - Changed Borsh state requires private atomic migration or fresh deployment.
-  Exactly five historical layouts are recognized: `77ebc0c` pre-sequence,
+  Exactly six historical layouts are recognized: `77ebc0c` pre-sequence,
   `0de5c48` sequence-enabled, pre-provider remediation and provider-enabled
-  pre-voucher, plus voucher-enabled pre-source-admission at `b43569d`.
-  Migrated active and queued lists deny all declared sources until a new delayed
-  owner addition. All require paused/quiescent state and a distinct owner; an
+  pre-voucher, voucher-enabled pre-source-admission at `b43569d`, and
+  source-admission-enabled pre-ceiling at `a582d36`.
+  Pre-model active and queued lists deny all declared sources until a new delayed
+  owner addition; the pre-ceiling layout preserves its source lists. All migrated
+  ceilings start empty (uncapped). All require paused/quiescent state and a distinct owner; an
   active withdrawal guard is never discarded. The provider-enabled layout
   and voucher-enabled layouts preserve their adapter. Unresolved voucher stage
   or retry authorization also blocks migration. Old unrecorded sends require external final-receipt
@@ -379,6 +403,8 @@ compare its hash.
 **Mechanism.** PriceOracle reads an aggregate and one report per held/traded
 feed; Pyth uses one batch. Both use the engine's held/traded price checks. The
 mandate caps assets at `MAX_ASSETS` (20).
+Execution requires 300 TGas before consuming a proposal or recording a lock;
+an underfunded permissionless call is refused before those state changes.
 
 **Historical measurement (4 November, PriceOracle path).** On the sandbox,
 22 feeds passed and 24 and 32 failed with

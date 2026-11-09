@@ -1,0 +1,91 @@
+{
+  "format_version": 1,
+  "upstream": {
+    "repository": "https://github.com/near/intents",
+    "commit": "32cd1f9788a347908164fbcc56525dc6542f158f",
+    "license": "MIT",
+    "archive_sha256": "0c9073d58953d06850b408800047a0f061194e925c9ea1c2259e3910f18c24d0",
+    "archive_bytes": 1324342,
+    "archive_root": "intents-32cd1f9788a347908164fbcc56525dc6542f158f",
+    "regular_files": 479,
+    "unpacked_file_bytes": 4537127,
+    "fixture_source_correspondence": "UNVERIFIED",
+    "deployment_source_correspondence": "UNVERIFIED"
+  },
+  "skipped_links": [
+    {
+      "path": ".claude/CLAUDE.md",
+      "target": "../.agents/AGENTS.md",
+      "type": "symbolic"
+    },
+    {
+      "path": ".claude/skills",
+      "target": "../.agents/skills/",
+      "type": "symbolic"
+    },
+    {
+      "path": "releases/previous.wasm",
+      "target": "defuse-0.2.10.wasm",
+      "type": "symbolic"
+    }
+  ],
+  "baseline_files": {
+    "Cargo.toml": "bde49b481f2b8381ed7209cbd884f2ea2975e5960e79663380f670275967df0b",
+    "Cargo.lock": "6c5601b8213d0f3a3cde5f76085ce1221989e134126821fabd7c5deafa9531e6",
+    "contracts/defuse/Cargo.toml": "489893088b772df693c4c5e26e691e5a4891757e53e00ffc8c7b39c21497c2d7",
+    "contracts/defuse/src/contract/tokens/nep141/mod.rs": "d501c927010bc58acbe8a4c9d13946e6570462465b8530de96c557d88d80611b"
+  },
+  "overlay_files": {
+    "contracts/defuse/src/contract/tokens/nep141/journal.rs": "3f9965b6a4eb20611e8eec68416e8a83900a463bc41d63c135ca196cf59f93d7"
+  },
+  "shared_crate_source": "crates/withdrawal-journal",
+  "shared_crate_destination": "crates/mandate-withdrawal-journal",
+  "shared_crate_files": {
+    "Cargo.toml": "d3dc6fdc031ff1abe050f18f3d524b1ac46bbe6693c2fb2ef9788fe2a601e26d",
+    "src/lib.rs": "472cd1930c647ad7aca4ae565be0508a026f45b21b05eafcdc8d22e9cfcef829",
+    "tests/generate_golden.py": "5d48559f1c65fa5de390130e93e516e9b448612194eba5cc6eb208a6befe572d",
+    "tests/protocol.rs": "1702e6bc82d8add1f26f92cf81adbb6c5d041bd993369d9d633d90e5517f8152"
+  },
+  "recipe": "native-nep141-journal-overlay-v1",
+  "build_status": "NOT_RECORDED",
+  "audit_status": "NOT_INDEPENDENTLY_AUDITED",
+  "vendor_crate": {
+    "name": "near-plugins",
+    "version": "0.5.3",
+    "license": "CC0-1.0",
+    "repository": "https://github.com/Near-One/near-plugins",
+    "archive_sha256": "ef03cc3e96b4036f8fb0e4d3589887acc5825311a2e153d6b8ab82f5f208c919",
+    "archive_bytes": 41810,
+    "archive_root": "near-plugins-0.5.3",
+    "source": "vendor/near-plugins-0.5.3",
+    "destination": "crates/mandate-near-plugins",
+    "original_files": {
+      "Cargo.toml": "8b9df24dd515f5714bce97241d091c16a1934dce3dffca1fa121edfa9f8edd44",
+      "README.md": "d73f0ca82a43810760258b874bbb59c1c962c33a83154193b411ffe219b0ffb1",
+      "src/access_control_role.rs": "84bf26f17fac123a47d810ee85bf714d7f9a41c75ea9d7a68c07d4ff309c0a5d",
+      "src/access_controllable.rs": "4f46de063678eee0288d33601ab776c83f0a879626876f26ebc92daeaadf5a5b",
+      "src/events.rs": "31d67b482d5a81eba739dc9d0738f96e0845d4164f694dda5196ae56e624ffa0",
+      "src/lib.rs": "3b416c5a461e8e44d6723ab2ab878670ebda080f403a0b852612636abcebdad3",
+      "src/ownable.rs": "66a889409fb416faf20061480199ef60c7512b5c65c54e87e51f42302dd8d4f3",
+      "src/pausable.rs": "9afc33e4ad4c3e3f0060e624b1659f667b958b0ae84329b6765433d852e7cb7b",
+      "src/upgradable.rs": "086771c452d637195b69a38a55659e4698a759d400c2c710a6ab237d628fb7b7"
+    },
+    "staged_files": {
+      "Cargo.toml": "23473189f13f1655e15278b18e68b988705e6b8a7281de4a72660c651c413270",
+      "README.md": "d73f0ca82a43810760258b874bbb59c1c962c33a83154193b411ffe219b0ffb1",
+      "src/access_control_role.rs": "84bf26f17fac123a47d810ee85bf714d7f9a41c75ea9d7a68c07d4ff309c0a5d",
+      "src/access_controllable.rs": "4f46de063678eee0288d33601ab776c83f0a879626876f26ebc92daeaadf5a5b",
+      "src/events.rs": "31d67b482d5a81eba739dc9d0738f96e0845d4164f694dda5196ae56e624ffa0",
+      "src/lib.rs": "3b416c5a461e8e44d6723ab2ab878670ebda080f403a0b852612636abcebdad3",
+      "src/ownable.rs": "66a889409fb416faf20061480199ef60c7512b5c65c54e87e51f42302dd8d4f3",
+      "src/pausable.rs": "9afc33e4ad4c3e3f0060e624b1659f667b958b0ae84329b6765433d852e7cb7b",
+      "src/upgradable.rs": "086771c452d637195b69a38a55659e4698a759d400c2c710a6ab237d628fb7b7"
+    },
+    "manifest_changes": [
+      "[dependencies.near-sdk]: add default-features = false",
+      "[dev-dependencies.near-sdk]: add default-features = false"
+    ],
+    "source_changes": "NONE",
+    "license_file": "NOT_PRESENT_IN_ORIGINAL_ARCHIVE"
+  }
+}

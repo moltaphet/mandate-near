@@ -1,0 +1,41 @@
+• Collecting cargo project metadata...
+• done
+
+• Checking rustc version...
+INFO: contract's near-sdk targets protocol version 88; rustc 1.95.0 accepted (bulk-memory opcodes supported by nearcore VM)
+• done
+
+• Checking the host environment...
+• done
+
+• Building contract
+ │ warning: struct `StageCode` is never constructed
+ │    --> crates/mandate-near-plugins/src/upgradable.rs:225:8
+ │     |
+ │ 225 | struct StageCode {
+ │     |        ^^^^^^^^^
+ │     |
+ │     = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+ │ 
+ │ warning: struct `DeployCode` is never constructed
+ │    --> crates/mandate-near-plugins/src/upgradable.rs:245:8
+ │     |
+ │ 245 | struct DeployCode {
+ │     |        ^^^^^^^^^^
+ │ 
+ │ warning: `near-plugins` (lib) generated 2 warnings
+ │     Finished `release` profile [optimized] target(s) in 0.46s
+
+• Running an optimize for size post-step with wasm-opt --enable-nontrapping-float-to-int --enable-bulk-memory...
+    Finished wasm-opt -O in 1s 545ms
+• done
+
+✓ Contract successfully built! (in CARGO_NEAR_BUILD_ENVIRONMENT=host)
+     -                Binary: /Users/ehs4n/mandate-near/target/intents-executor/artifact/defuse.wasm
+     -                  Size: 1.4 MB (1366237 bytes)
+     - SHA-256 checksum hex : b0f39b46f0b8174986957db4329084121fde8c853ec1537dcad8b8ae916420fb
+     - SHA-256 checksum bs58: CukChSB9Nzc5p3xruC9tgbV2A5pGj1on8GEUifJFUmh4
+    Finished cargo near build in 2s
+Here is the console command if you ever need to re-run it again:
+cargo near build non-reproducible-wasm --locked --no-abi --out-dir /Users/ehs4n/mandate-near/target/intents-executor/artifact --manifest-path /Users/ehs4n/mandate-near/target/intents-executor/source-v4/contracts/defuse/Cargo.toml --features contract --override-toolchain 1.95.0
+{"artifact": "/Users/ehs4n/mandate-near/target/intents-executor/artifact/defuse.wasm", "artifact_sha256": "b0f39b46f0b8174986957db4329084121fde8c853ec1537dcad8b8ae916420fb", "build_manifest": "/Users/ehs4n/mandate-near/target/intents-executor/build-manifest.json", "source_root": "/Users/ehs4n/mandate-near/target/intents-executor/source-v4"}

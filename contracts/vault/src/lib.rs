@@ -21,6 +21,8 @@
 
 pub mod engine;
 pub mod intent;
+mod journal_withdrawal;
+pub use journal_withdrawal::JournalVaultConfig;
 pub mod mandate;
 pub mod math;
 mod migration;
@@ -42,7 +44,7 @@ use near_sdk::{
 use crate::engine::{INTENT_TTL_SEC, Market, Trade, TradeError, check_trade};
 pub use crate::engine::{TradingState, TradingStateView};
 use crate::intent::{TokenDiff, token_diff_payload, v1_nonce};
-pub use crate::mandate::{AssetConfig, Mandate, MandateError, loosened_fields};
+pub use crate::mandate::{AssetConfig, Mandate, MandateError, WithdrawalLimit, loosened_fields};
 use crate::oracle::{AssetView, PriceData, prices_for};
 
 /// Fixed at initialization. Switching providers requires a separately reviewed deployment.
@@ -60,6 +62,10 @@ pub const PROPOSAL_TTL_SEC: u64 = 60;
 /// The lock it holds runs out once this window and the intent's lifetime have both passed, so
 /// no intent from that execution can still be valid when the next one starts.
 pub const EXECUTION_WINDOW_SEC: u64 = 300;
+/// Require the full NEAR transaction budget before reserving execution authority.
+/// This funds the maximum supported oracle/signing callback chain and prevents
+/// strangers from persisting a lock with a deliberately underfunded continuation.
+pub const MIN_EXECUTION_GAS_TGAS: u64 = 300;
 /// Consecutive rejections before the circuit breaker halts new proposals.
 pub const MAX_STRIKES: u32 = 3;
 
@@ -213,8 +219,22 @@ pub struct ActiveWithdrawal {
     pub request_seq: U64,
     pub request: PendingWithdrawal,
     pub started_sec: u64,
-    /// Set before sending; `None` means the balance read has not sent anything.
+    /// Legacy voucher balance snapshot. Journal mode uses request-keyed results
+    /// and does not infer dispatch or terminal delivery from this field.
     pub balance_before: Option<U128>,
+}
+
+/// Atomic local recovery context for a keeper. This is not an executor receipt
+/// or proof of terminal delivery; recovery still validates authenticated vouchers.
+#[near(serializers = [json])]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct WithdrawalRecoveryState {
+    pub protocol: String,
+    pub withdrawal_id: U64,
+    pub stage: WithdrawalStage,
+    pub started_sec: u64,
+    pub recover_after_sec: u64,
+    pub required_gas_tgas: u64,
 }
 
 #[near(serializers = [json, borsh])]
@@ -434,6 +454,21 @@ impl Vault {
         self.active_withdrawal.clone()
     }
 
+    /// Read the attempt, phase and eligibility together rather than combining
+    /// views that may refer to different withdrawal generations.
+    pub fn get_withdrawal_recovery_state(&self) -> Option<WithdrawalRecoveryState> {
+        let active = self.active_withdrawal.as_ref()?;
+        let stage = self.withdrawal_stage.expect("active withdrawal has no phase");
+        Some(WithdrawalRecoveryState {
+            protocol: self.get_withdrawal_protocol(),
+            withdrawal_id: active.id,
+            stage,
+            started_sec: active.started_sec,
+            recover_after_sec: active.started_sec.saturating_add(WITHDRAW_RECOVERY_SEC),
+            required_gas_tgas: MIN_WITHDRAWAL_RECOVERY_GAS_TGAS,
+        })
+    }
+
     pub fn get_last_withdrawal_outcome(&self) -> Option<WithdrawalOutcome> {
         self.last_withdrawal_outcome.clone()
     }
@@ -635,6 +670,10 @@ impl Vault {
         );
         require!(token_account(&asset_id).is_some(), "only nep141 assets can be withdrawn");
         require!(amount.0 > 0, "the amount must be positive");
+        require!(
+            self.mandate.withdrawal_limit(&asset_id).is_none_or(|ceiling| amount.0 <= ceiling),
+            "the withdrawal exceeds the per-request ceiling"
+        );
         // Tokens sent to the vault or to intents.near would not return to the owner's control.
         require!(
             receiver != env::current_account_id() && receiver != self.intents,
@@ -695,7 +734,8 @@ impl Vault {
     }
 
     pub fn get_withdrawal_protocol(&self) -> String {
-        "unique_voucher_v1".into()
+        self.journal_binding()
+            .map_or_else(|| "unique_voucher_v1".into(), |binding| binding.protocol_version)
     }
 
     pub fn get_withdrawal_recovery_accounts(&self) -> (AccountId, AccountId) {
@@ -721,7 +761,17 @@ impl Vault {
             env::prepaid_gas() >= Gas::from_tgas(MIN_WITHDRAWAL_GAS_TGAS),
             "withdrawal requires at least 280 TGas"
         );
+        require!(
+            self.mandate.asset(&pending.asset_id).is_some(),
+            "the asset is not in the mandate"
+        );
         require!(token_account(&pending.asset_id).is_some(), "only nep141 assets can be withdrawn");
+        require!(
+            self.mandate
+                .withdrawal_limit(&pending.asset_id)
+                .is_none_or(|ceiling| pending.amount.0 <= ceiling),
+            "the withdrawal exceeds the per-request ceiling"
+        );
         require!(
             pending.receiver != env::current_account_id() && pending.receiver != self.intents,
             "the receiver cannot be the vault or intents.near"
@@ -739,11 +789,18 @@ impl Vault {
             balance_before: None,
         });
         self.withdrawal_stage = Some(WithdrawalStage::Preparing);
-        self.prepare_withdrawal(id, &pending.asset_id)
+        if self.journal_binding().is_some() {
+            self.prepare_journal_withdrawal(id)
+        } else {
+            self.prepare_withdrawal(id, &pending.asset_id)
+        }
     }
 
     #[private]
     pub fn on_withdrawal_balance(&mut self, withdrawal_id: U64) -> PromiseOrValue<bool> {
+        if self.journal_binding().is_some() {
+            return PromiseOrValue::Value(false);
+        }
         let Some(active) = self.current_withdrawal(withdrawal_id, WithdrawalStage::Preparing)
         else {
             return PromiseOrValue::Value(false);
@@ -769,10 +826,25 @@ impl Vault {
         withdrawal_id: U64,
         balance_before: U128,
     ) -> PromiseOrValue<bool> {
+        if self.journal_binding().is_some() {
+            return PromiseOrValue::Value(false);
+        }
         let Some(active) = self.current_withdrawal(withdrawal_id, WithdrawalStage::Preparing)
         else {
             return PromiseOrValue::Value(false);
         };
+        if self.mandate.asset(&active.request.asset_id).is_none() {
+            self.withdrawal_failed(active, "the asset is not in the mandate");
+            return PromiseOrValue::Value(false);
+        }
+        if self
+            .mandate
+            .withdrawal_limit(&active.request.asset_id)
+            .is_some_and(|ceiling| active.request.amount.0 > ceiling)
+        {
+            self.withdrawal_failed(active, "the withdrawal exceeds the per-request ceiling");
+            return PromiseOrValue::Value(false);
+        }
         if balance_before.0 < active.request.amount.0
             || Self::voucher_snapshot_result() != Some((1, 1, 0, 0))
         {
@@ -790,7 +862,19 @@ impl Vault {
 
     #[private]
     pub fn on_withdrawn(&mut self, withdrawal_id: U64) -> bool {
+        if self.journal_binding().is_some() {
+            return false;
+        }
         self.finish_withdrawal(withdrawal_id, read_promise::<U128>(0))
+    }
+
+    /// A delayed keeper transaction must never recover a newer attempt. Stale
+    /// or already resolved IDs are no-ops before any state change or promise.
+    pub fn recover_withdrawal_attempt(&mut self, withdrawal_id: U64) -> PromiseOrValue<bool> {
+        if self.active_withdrawal.as_ref().is_none_or(|active| active.id != withdrawal_id) {
+            return PromiseOrValue::Value(false);
+        }
+        self.recover_withdrawal()
     }
 
     /// Before dispatch, invalidate the preparing id. Afterwards race its unique
@@ -816,11 +900,18 @@ impl Vault {
             env::prepaid_gas() >= Gas::from_tgas(MIN_WITHDRAWAL_RECOVERY_GAS_TGAS),
             "recovery requires at least 140 TGas"
         );
-        PromiseOrValue::Promise(self.cancel_withdrawal_voucher(active.id))
+        if self.journal_binding().is_some() {
+            PromiseOrValue::Promise(self.recover_journal_withdrawal(&active))
+        } else {
+            PromiseOrValue::Promise(self.cancel_withdrawal_voucher(active.id))
+        }
     }
 
     #[private]
     pub fn on_withdrawal_cancelled(&mut self, withdrawal_id: U64) -> PromiseOrValue<bool> {
+        if self.journal_binding().is_some() {
+            return PromiseOrValue::Value(false);
+        }
         if self.current_withdrawal(withdrawal_id, WithdrawalStage::Dispatched).is_none() {
             return PromiseOrValue::Value(false);
         }
@@ -843,6 +934,9 @@ impl Vault {
 
     #[private]
     pub fn on_withdrawal_reconciled(&mut self, withdrawal_id: U64) -> bool {
+        if self.journal_binding().is_some() {
+            return false;
+        }
         let Some(active) = self.current_withdrawal(withdrawal_id, WithdrawalStage::Dispatched)
         else {
             return false;
@@ -979,6 +1073,10 @@ impl Vault {
         require!(
             self.trading.signed_intent_expires_at_sec <= now,
             "a signed intent is still outstanding"
+        );
+        require!(
+            env::prepaid_gas() >= Gas::from_tgas(MIN_EXECUTION_GAS_TGAS),
+            "execution requires at least 300 TGas"
         );
         let execution = U64(self.next_execution_id);
         self.next_execution_id =

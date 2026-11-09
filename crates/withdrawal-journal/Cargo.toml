@@ -1,0 +1,17 @@
+[package]
+name = "mandate-withdrawal-journal"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.95"
+license = "MIT"
+
+[features]
+default = []
+abi = ["dep:schemars", "near-sdk/abi"]
+
+[dependencies]
+near-sdk = { version = "=5.30.0", default-features = false, features = ["non-contract-usage"] }
+borsh = { version = "=1.8.1", features = ["derive"] }
+serde = { version = "=1.0.229", features = ["derive"] }
+sha2 = { version = "=0.10.9", default-features = false }
+schemars = { version = "=0.8.22", optional = true }

@@ -7,10 +7,21 @@ Status legend used throughout:
 vault state and listed Intents balances at one final block, while sample mode
 remains separate. Immutable PriceOracle/Pyth adapters, deterministic two-asset
 autonomous preparation, explicit Message Bus publication and the unique-voucher
-withdrawal protocol are implemented. Final combined release verification is
-pending. Usable
-live feeds, owner governance, exact deployed MPC/settlement and withdrawal
+withdrawal protocol are implemented. The pre-journal 8 November hardening candidate passed
+all configured local checks: 479 distinct tests including all 14 sandbox targets.
+Artifact identity and command history are in the [hardening report](audit/HARDENING-2026-11-08.md).
+A frozen release, reproducible build, usable live feeds, owner governance,
+exact deployed MPC/settlement and withdrawal
 recovery evidence remain OPEN. See [OPERATIONAL-READINESS.md](OPERATIONAL-READINESS.md).
+
+The subsequent 8 November candidate adds a fresh-only source-owned withdrawal
+journal, shared commitment crate and ID-bound keeper recovery with a durable
+paid-transaction ambiguity fence. Its executor debit/resolver is implemented in
+the pinned upstream source; final artifact, asynchronous sandbox and independent
+review results remain separate from the earlier 479-test run. Only exact
+authenticated terminal records release the journal guard. A missing executor
+resolver remains Pending, and unknown legacy sends gain no retroactive proof.
+See the [journal protocol and gates](design/f26-durable-executor.md).
 
 ---
 
@@ -43,6 +54,7 @@ In scope:
 - A stable contract interface and reference Rust clients; a separate SDK is planned.
 - Manual-plan, deterministic two-asset and optional strict model Rust decision sources; OutLayer execution and live provider provenance remain unverified.
 - A permissionless Rust keeper with execution/public outbox by default and explicit quote-bound Message Bus publication.
+- Fresh-only journal withdrawal with permanent executor deduplication, cancellation tombstones and exact terminal reconciliation; legacy voucher mode remains supported.
 - `simulate_mandate_change` for rule changes; the pure engine can evaluate trades locally. A general on-chain trade-simulation view is not implemented.
 - A 24-hour delay on mandate changes that loosen limits.
 - An optional SHIELD incident gate is planned; partner access and implementation remain open.
@@ -99,7 +111,7 @@ Components:
 - **Gate engine**: a pure function `check_trade`. Built, with unit and property tests.
 - **Exact math**: 256-bit USD valuation with conservative rounding. Built, with tests.
 - **Intent builder**: `raw_ed25519` `token_diff` payload and V1 nonce. Built; historical author-recorded mainnet simulation and sandbox fixture verification, not a live funded vault trade.
-- **Keeper** (Rust): existing execution/outbox sandbox coverage; explicit publication is implemented with matching quote metadata. Final combined client verification and live binary/relay operation remain open.
+- **Keeper** (Rust): execution/outbox sandbox coverage and final local client/network tests passed; explicit publication is implemented with matching quote metadata. Live binary/relay operation remains open.
 - **Agent integrations**: manual script with existing sandbox coverage; deterministic two-asset strategy and final-snapshot gate preview implemented. OutLayer and model inference [PLANNED].
 - **SDK**: typed client over the vault's public methods. [PLANNED]
 - **Evidence site and dashboard**: selected public vault state and Intents balances can be read at one final block; fixed sample mode is separate. Public RPC data does not independently authenticate custody or settlement.
@@ -246,11 +258,14 @@ current `mt_supply` is not lifetime issuance.
 
 Upgrading an existing Borsh state requires the private `migrate` method for a
 known legacy layout, called by the vault account in an authorized deployment
-transaction. Exactly five layouts are supported: `77ebc0c` pre-sequence,
+transaction. Exactly six layouts are supported: `77ebc0c` pre-sequence,
 `0de5c48` sequence-enabled, pre-provider remediation and provider-enabled
-pre-voucher, and voucher-enabled pre-source-admission at `b43569d`. The last two
-preserve their provider. Active and queued source lists migrate empty, including
-reserved manual/rebalance IDs; first admission requires a new 24-hour delay.
+pre-voucher, voucher-enabled pre-source-admission at `b43569d`, and
+source-admission-enabled pre-ceiling at `a582d36`. Provider-enabled layouts
+preserve their provider. Pre-model active and queued source lists migrate empty,
+including reserved manual/rebalance IDs; first admission requires a new 24-hour
+delay. Pre-ceiling source lists remain intact. All migrated withdrawal ceilings
+start empty (uncapped); existing queue deadlines are preserved.
 Unresolved voucher stage or retry authorization also blocks migration. Owner must be distinct, the vault
 paused, no execution/pending proposal/queued withdrawal/active withdrawal guard
 present, and signed deadlines expired. Queued mandate/agent controls are preserved;
@@ -258,11 +273,11 @@ mandates are revalidated. An active guard is never discarded. Legacy state canno
 dispatched; require final-receipt history or use a fresh deployment. Migration
 does not change owner identity or bypass removal of vault full-access keys.
 
-**Definition of loosening.** A change is loosening if it increases `max_trade_usd`, `max_daily_turnover_usd`, `max_position_bps`, `max_slippage_bps`, `max_drawdown_bps` or `max_price_age_sec`, decreases `min_trade_interval_sec`, adds or changes an asset configuration, or adds a stable classification. Other changes apply immediately. A change that mixes both directions is treated as loosening.
+**Definition of loosening.** A change is loosening if it increases `max_trade_usd`, `max_daily_turnover_usd`, `max_position_bps`, `max_slippage_bps`, `max_drawdown_bps` or `max_price_age_sec`, decreases `min_trade_interval_sec`, adds or changes an asset configuration, adds a stable classification or declared source, or increases/removes an existing withdrawal ceiling (including asset removal). Other changes apply immediately. A change that mixes both directions is treated as loosening.
 
 **Why these rules.** Tightening invalidates unsigned work immediately. Loosening needs a delay, so a compromised owner key cannot raise limits and drain the vault in one step. The owner can cancel queued changes and pause unsigned execution. Already issued signatures retain their original deadline.
 
-Status: owner controls have unit and sandbox coverage. The 6 November 170 TGas lifecycle validation is historical pre-voucher evidence. The current `vault_withdrawal_reads_sends_and_confirms_the_actual_transfer` target must be run at 280 TGas with the final protocol. It probes clock advancement and may patch only request maturity in sandbox STATE; that mode does not prove 24 hours elapsed. Final combined protocol/client verification and actual live post-delay withdrawal remain required. Historical testnet evidence queued and cancelled a loosening (see [TESTNET.md](TESTNET.md)).
+Status: owner controls have unit and sandbox coverage. The 6 November 170 TGas lifecycle validation is historical pre-voucher evidence. The 8 November artifact passed `vault_withdrawal_reads_sends_and_confirms_the_actual_transfer` at 280 TGas and all configured local protocol/client targets. It probes clock advancement and may patch only request maturity in sandbox STATE; that mode does not prove 24 hours elapsed. Actual live post-delay withdrawal remains required. Historical testnet evidence queued and cancelled a loosening (see [TESTNET.md](TESTNET.md)).
 
 ## 10. Owner identity
 
@@ -289,18 +304,18 @@ The contract must not assume the owner is an individual. [PLANNED: one sandbox t
 - Secrets, if any, are bound to the wasm hash.
 - Outputs a proposal within the 900-byte result limit.
 
-### 12.2 Rust reference agent [IMPLEMENTED; final combined verification pending]
+### 12.2 Rust reference agent [IMPLEMENTED; locally tested, live operation unverified]
 - Manual `<public-plan.json>` mode is retained. `--auto <public-config.json>` deterministically rebalances exactly two listed assets toward a configured target outside its band, using actual ledger/oracle values and bounded exact-input quotes. No model inference or TEE is involved.
 - `--dry-run` performs public status/view/quote requests only: no signing/authentication settings, outbox, proposal or publication. The documented partner relay requires a JWT, so an unauthenticated quote request may fail. Set optional `expected_chain_id` to the reviewed network; all views are pinned by final hash and height.
 - Quotes must exceed configured validity, whose minimum is 450 seconds. Every gate is previewed with the shared engine; a fresh snapshot repeats readiness/strategy/gates before proposal. On-chain state races remain subject to authoritative vault checks.
-- Executing mode writes public quote/proposal/vault/verifier/exact-amount metadata for later explicit keeper publication. `--loop` repeats after completed decisions with a 30-second pause; errors can terminate the process. Live strategy and relay operation remain unverified.
+- Executing mode writes public quote/proposal/vault/verifier/exact-amount metadata for later explicit keeper publication. `--loop` repeats after completed decisions with a 30-second pause and retries public preparation/quote failures with bounded 10–600 second backoff. Submission/outcome ambiguity stops the process. Live strategy and relay operation remain unverified.
 - Existing manual-client tests: `contracts/vault/tests/agent.rs`. Historical testnet: proposal reached the vault, execution refused without a registered identity ([TESTNET.md](TESTNET.md)). See current [agent usage](../agent/examples/README.md).
 
 ### 12.3 Optional model decision source [IMPLEMENTED LOCALLY; live provider unverified]
 - `--model` reads a bounded final-block public snapshot and accepts the strict seven-field output. Its dry-run calls the configured model provider with authentication but sends no NEAR transaction; the autonomous dry-run rule above applies to `--auto`.
 - The model path commits to `mandate-response-json-v1` canonical response bytes while retaining distinct raw request/response hashes for provenance. Manual/rebalance paths preserve `SHA256(rationale UTF-8)`.
 - The contract stores the declared `model_id` in the proposal and enforces `allowed_model_ids` at proposal and execution. The list allows at most 8 unique nonblank IDs of at most 64 UTF-8 bytes; empty denies all. Additions wait 24 hours, removals apply immediately. Reserved non-model IDs are `manual-v1` and `rebalance-v1`.
-- Invalid or unsupported supplied signatures refuse a model trade before proposal. Unsigned records remain UNVERIFIED. Declared IDs and pinned signer verification do not prove authenticated model origin or TEE identity. Native checks pass; final sandbox/gas and live provider evidence remain required.
+- Invalid or unsupported supplied signatures refuse a model trade before proposal. Unsigned records remain UNVERIFIED. Declared IDs and pinned signer verification do not prove authenticated model origin or TEE identity. Native and sandbox/gas checks passed for the 8 November artifact; live provider evidence remains required.
 
 Acceptance for both: each agent makes the same proposals through the same SDK, and the vault treats them identically.
 
@@ -347,7 +362,7 @@ Claims distinguish historical [SIMULATED], stated-environment [TESTED], transact
 | Mandate misconfigured | `simulate_mandate_change` and validation on set; local engine evaluation | Owner error is still possible |
 | Re-initialisation | `#[init]` guard | — |
 | Stuck signed intent | Expiry; one outstanding intent at a time | Blocks new trades until expiry |
-| Stuck execution (failed callback) | The lock runs out after a 300 s window plus the 120 s intent lifetime; a late callback from an earlier execution changes nothing | Pauses trading for up to 7 minutes ([SECURITY.md](SECURITY.md) SR-1) |
+| Stuck execution (failed callback) | The lock runs out after a 300 s window plus the 120 s intent lifetime; a late callback from an earlier execution changes nothing | Pauses trading for up to 7 minutes ([SECURITY.md](../SECURITY.md) SR-1) |
 
 The full threat model is in [THREAT_MODEL.md](../THREAT_MODEL.md). The self-review findings are in [SECURITY.md](../SECURITY.md).
 

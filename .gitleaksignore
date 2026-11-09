@@ -9,3 +9,22 @@
 # Public Git commit SHA of the Pyth NEAR receiver source (ec40e5f1…), recorded in
 # external-contract-public-assessment.txt. A commit identifier, not a credential.
 docs/evidence/phase0-9-2026-11-07/external-contract-public-assessment.txt:generic-api-key:86
+# SHA-256 content digests of two vendored near-plugins source files
+# (access_control_role.rs and access_controllable.rs), recorded in the executor
+# source manifests and the evidence copies of them. File hashes, not credentials.
+integrations/intents-executor/source-manifest.json:generic-api-key:65
+integrations/intents-executor/source-manifest.json:generic-api-key:66
+integrations/intents-executor/source-manifest.json:generic-api-key:76
+integrations/intents-executor/source-manifest.json:generic-api-key:77
+docs/evidence/f26-2026-11-08/executor-build-manifest.json:generic-api-key:74
+docs/evidence/f26-2026-11-08/executor-build-manifest.json:generic-api-key:75
+docs/evidence/f26-2026-11-08/executor-build-manifest.json:generic-api-key:88
+docs/evidence/f26-2026-11-08/executor-build-manifest.json:generic-api-key:89
+docs/evidence/f26-2026-11-08/executor-source-manifest.json:generic-api-key:65
+docs/evidence/f26-2026-11-08/executor-source-manifest.json:generic-api-key:66
+docs/evidence/f26-2026-11-08/executor-source-manifest.json:generic-api-key:76
+docs/evidence/f26-2026-11-08/executor-source-manifest.json:generic-api-key:77
+docs/evidence/f26-2026-11-08/executor-preparation.json:generic-api-key:2501
+docs/evidence/f26-2026-11-08/executor-preparation.json:generic-api-key:2502
+docs/evidence/f26-2026-11-08/executor-preparation.json:generic-api-key:2515
+docs/evidence/f26-2026-11-08/executor-preparation.json:generic-api-key:2516

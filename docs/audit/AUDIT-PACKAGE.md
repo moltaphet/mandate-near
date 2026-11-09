@@ -10,6 +10,26 @@ is stated for the revision the testnet run used, `2b043ba` (vault source unchang
 since the model-source change in `20094ed`). Any later change to `contracts/vault/src`
 reopens the scope.
 
+The pre-journal hardening candidate added per-asset withdrawal ceilings, a sixth
+pre-ceiling migration layout and a 300-TGas execution entry guard. These are
+outside the historical hashes/line counts below and require a new frozen
+artifact. Its complete configured local scope passed on 8 November: 479 distinct
+tests including all 14 sandbox targets. The tested host vault WASM is 411,312 bytes,
+SHA256 `4c2e2301a3688397edb1cd1499e415e1d7cd277433aaab24f1fadee15908fde2`.
+The [hardening report](HARDENING-2026-11-08.md) records source/lock identity,
+test-expectation repairs, command batches and remaining dependency findings.
+A frozen commit, reproducible build, CI and independent audit remain required.
+Mainnet remains NO-GO.
+
+The subsequent source-owned journal candidate adds `crates/withdrawal-journal`,
+the pinned upstream preparation/vendor/lock package, native Intents journal
+overlay, fresh vault journal adapter and keeper operation journal. These are
+outside both historical artifact identities. Freeze both current vault/executor
+WASM hashes and all preparation/build inputs; the pre-journal 479-test result
+does not cover the new mode. Exact terminal reconciliation can recover a lost
+vault notification after executor commit, while a missing executor resolver can
+remain Pending. No finalized-receipt proof verifier is implemented.
+
 Record these three values at freeze time: the commit hash, the SHA256 of the built
 vault WASM, and the SHA256 of the Intents verifier fixture.
 
@@ -36,20 +56,40 @@ Out of scope unless agreed: `agent/` and `keeper/` (off-chain clients, about 3,5
 lines), the web pages, the mock contracts and the spikes. The agent and keeper hold no
 treasury signing key, but they decide when proposals and executions happen.
 
+For the new candidate engagement, include `contracts/vault/src/journal_withdrawal.rs`,
+the shared commitment/schema crate, executor native custody/debit/resolver
+overlay and its dependency preparation, plus keeper ID-bound recovery and
+durable paid-transaction handling. Review permanent tombstones, immutable
+domain/admission, funded refund slots, late resolvers, exact status matching,
+ordinary NEP141 semantics and executor upgrade/ledger administrators.
+
 ## 3. Build and reproduce
 
 ```sh
 ./scripts/verify.sh                 # formatting, clippy, unit tests, site and agent suites
-./scripts/verify.sh --integration   # adds 14 sandbox targets; about an hour
+./scripts/verify.sh --integration   # adds 15 targets; requires the prepared journal artifact
 cargo run -p mandate-vault --example testnet_run -- build   # builds the WASM files into target/testnet-wasm
 ```
 
 Toolchain: Rust 1.95.0, cargo-near 0.22.0, near-sdk 5.30.0, near-api 0.8.7, near-sandbox
-0.4.0. The repository has 389 Rust tests and 33 JavaScript tests. CI runs the full
-integration suite on every pull request.
+0.4.0. Use actual run output for test counts and failures. CI is configured to run
+the full integration suite on every pull request; its definition is not a pass.
 
-What the tests show: gate ordering and boundaries, owner delays, the withdrawal state
-machine against the fixture, migration from the five layouts, and gas at the supported
+Prepare and build the real executor first using its
+[package instructions](../../integrations/intents-executor/README.md); the
+`journal_withdrawal` target requires its exact artifact and build manifest.
+The current Apple host cannot load cargo-near's extracted ABI dylib with its
+SDK/linker combination. `MANDATE_SANDBOX_NO_ABI=1` explicitly selects the
+supported no-ABI sandbox build and keeps optimization; default ABI generation
+is unchanged. Both journal and legacy targets accept that helper option.
+ABI packaging needs a compatible compiler/container verification. Current
+localhost/approval infrastructure also prevents executed sandbox evidence;
+no compile-only or historical test count closes that gate. See
+[operational reproduction commands](../OPERATIONAL-READINESS.md#current-host-verification-limit).
+
+What the pre-journal checkpoint's tests showed: gate ordering and boundaries, owner delays,
+the withdrawal state machine against the fixture, migration from six layouts
+(the historical baseline above supports five), and gas at the supported
 asset limit. What they do not show: behaviour against the real NEAR Intents contracts,
 a production oracle, or recovery after a genuinely lost callback.
 
@@ -72,6 +112,7 @@ at least these:
 |---|---|
 | Chain Signatures signer | Returns a correct Ed25519 signature for the vault's derived key only for the vault as caller. |
 | NEAR Intents verifier | Verifies the signature, settles `token_diff`, and enforces nonce and expiry. The vault does not re-verify. |
+| Source-owned journal executor, if selected | Correct immutable domain/admission, atomic native debit/refund/dispatch and terminal records, permanent tombstones, ordinary NEP141 semantics and reviewed upgrade/ledger administrators. A self-reported descriptor is insufficient. |
 | Price oracle | Correct and fresh. The vault checks age and bounds slippage against it but cannot detect a fresh wrong price. |
 | Owner DAO | Its controllers act honestly and keep their keys. A stolen owner key can drain the vault after the 24-hour delay unless cancelled in time. |
 
@@ -82,13 +123,21 @@ a reviewer should look at first:
 
 - **F26.** A withdrawal guard can stay set when a final callback is lost or malformed, and
   nothing clears it early. It is accepted for the prototype and testnet only. See
-  [f26-recovery.md](../design/f26-recovery.md).
-- **No withdrawal ceiling.** The vault has no maximum withdrawal cap.
+  [durable journal protocol](../design/f26-durable-executor.md): exact terminal
+  records can recover lost vault notification, while missing executor resolution
+  can remain Pending without an implemented finalized-receipt verifier.
+- **Withdrawal-ceiling scope.** The historical `2b043ba` vault has no ceiling.
+  The current candidate implements optional per-asset, per-request token-base-unit
+  ceilings; omitted assets and migrated policies remain uncapped. There is no
+  aggregate or daily withdrawal cap.
 - **Model source IDs are declarations.** They are not authenticated model identity.
 - **Oracle trust.** No independent loss bound exists against a fresh wrong price.
+- **Cashflow and high-water mark.** Withdrawal lowers NAV without lowering the stored
+  peak and can trigger drawdown refusal without a trading loss; risk-accounting design remains open.
 
 ## 7. Evidence a reviewer can check
 
+- [Hardening review, 8 Nov 2026](HARDENING-2026-11-08.md): all configured local targets, exact tested artifact, dependency result and remaining release requirements.
 - [Testnet run, 7 Nov 2026](../evidence/testnet-run-2026-11-07/README.md): a keyless deployment with a DAO owner and a verified testnet MPC signature, with transaction hashes.
 - [gas.txt](../evidence/gas.txt): per-call gas on a local sandbox.
 - [attacks.txt](../evidence/attacks.txt): eight attack scenarios and their refusals on a local sandbox.
@@ -102,3 +151,4 @@ a reviewer should look at first:
 4. Is each supported migration layout complete, and does it refuse every unsafe state?
 5. Does any owner or agent path bypass the delay or the gates?
 6. Which design would you choose for F26, and what would it add to the attack surface?
+7. Does the native journal atomically bind debit/dispatch/refund and permanently fence every duplicate and cancellation race? Does keeper transaction finality preserve the no-resend boundary across restarts?

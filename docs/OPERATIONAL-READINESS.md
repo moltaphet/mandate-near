@@ -85,11 +85,14 @@ queue/cancel changes and authorize withdrawals. Do not emit permission values in
 evidence. Reinspect the sealed account at a final block.
 
 Appending provider and voucher fields changes Borsh state. A plain WASM replacement is unsafe
-for an old layout. The migration recognizes exactly five layouts: `77ebc0c`
+for an old layout. The migration recognizes exactly six layouts: `77ebc0c`
 pre-sequence, `0de5c48` sequence-enabled, pre-provider remediation and
 provider-enabled pre-voucher, and voucher-enabled pre-model admission at
-`b43569d`. The fourth and fifth preserve the selected provider. Active and
-queued migrated source lists start empty; first admission still waits 24 hours.
+`b43569d`, plus source-admission-enabled pre-ceiling at `a582d36`. Provider-enabled
+layouts preserve the selected provider. Pre-model active and queued migrated
+source lists start empty; first admission still waits 24 hours. Pre-ceiling source
+lists and all queued deadlines are preserved. Migrated withdrawal ceilings start
+empty (uncapped); configure the reviewed per-asset limits before relying on them.
 Unresolved voucher stages and retry authorization must be resolved. It must execute
 privately and atomically with deployment, while paused and without an execution
 record, pending proposal, queued withdrawal or future signed deadline. An active
@@ -101,8 +104,17 @@ Migration is not an escape from an unresolved historical send.
 
 ## Withdrawal proof prerequisites
 
+These voucher prerequisites apply to the default `unique_voucher_v1` mode.
+The fresh-only journal mode has a separate source/artifact and trust boundary
+described below; protocol detection never silently switches an existing vault.
+
 Withdrawal apply requires at least **280 TGas**; dispatched recovery requires
-at least **140 TGas**. Before dispatch, authenticated Intents reads must show
+at least **140 TGas**, and trade execution requires **300 TGas** before acquiring
+its lock. `withdrawal_limits` are positive per-request amounts in token base
+units. An omitted asset ceiling is uncapped; there is no aggregate or daily cap.
+Adding/tightening is immediate, increasing/removing waits 24 hours, and checks
+run at request, apply and preparation before dispatch. Before dispatch,
+authenticated Intents reads must show
 global `mt_supply` exactly one, source balance one, both destination balances
 zero and sufficient victim balance. This rejects receipt units preseeded into
 any ledger by a former issuer authority. Recovery requires supply one, source
@@ -132,6 +144,85 @@ a later FT resolver refund; those receipts may overlap subsequent operations.
 Cancelled proof safely requeues an unarmed request; owner plus exactly one
 yoctoNEAR must rearm it, preserving maturity and allocating a new attempt ID.
 Per-ID records persist in external Intents storage and need measured funding.
+
+## Source-owned journal readiness
+
+`new_with_journal(owner, mandate, journal)` binds signer, executor, oracle,
+oracle kind and an immutable ledger domain for a fresh vault. A separately
+reviewed fresh executor uses `new_with_withdrawal_journal(config, ledger_domain,
+authorized_vaults)`, admitting 1–20 distinct vaults immutably. Preparing performs
+only authenticated descriptor/admission reads, followed by guarded dispatch.
+The custody executor atomically debits and records Pending, deduplicates the
+exact request permanently, and records terminal delivery/refund in its actual
+resolver. Cancellation of an absent request creates a permanent bound tombstone.
+Only matching Delivered/Refunded/Cancelled records resolve the vault guard.
+
+A lost vault callback can be reconciled from an already committed terminal
+record. A missing executor resolver can leave Pending indefinitely; no audited
+finalized-receipt proof verifier is implemented. Unknown historical voucher or
+unjournaled sends cannot acquire invented terminal records. Ordinary reviewed
+NEP141 behavior, executor ledger/upgrade/admin authority, storage funding and
+artifact correspondence remain explicit trust and release requirements.
+
+The [preparation package](../integrations/intents-executor/README.md) records
+the upstream archive, original/staged vendor hashes, shared/overlay sources and
+reviewed frozen lock. The journal sandbox target requires the fixed real executor
+WASM plus its build manifest and validates all prepared source files. It does
+not use a mock, accept an artifact override or skip a missing artifact.
+
+The keeper uses `get_withdrawal_recovery_state` and
+`recover_withdrawal_attempt(withdrawal_id)` for both explicitly supported modes.
+It stores the exact public paid-transaction hash before broadcast with a
+single-writer lock. Unknown/not-found or otherwise ambiguous paid outcomes
+retain the restart fence and require operator reconciliation. Recovery cannot
+owner-rearm, apply a queued replacement or blindly resend an unknown payment.
+Fence clearing additionally requires an explicit FINAL RPC status for the exact
+transaction and matching terminal bytes. The SDK transaction projection is
+checked against the full signed context; its synthetic block hash represents
+the reported transaction hash, since RPC does not expose the original reference
+block. Optimistic/Started/missing/mismatched results remain ambiguous.
+The FINAL label is RPC-reported consistency evidence; it does not independently
+authenticate an untrusted RPC or establish terminal custody delivery.
+
+## Current-host verification limit
+
+The Apple SDK 27 linker produced an invalid native ABI dylib layout during
+cargo-near ABI extraction, and the available LLD lacks that SDK's arm64e TAPI
+support. Native ABI/schema source compilation and loading the extracted ABI
+library are separate checks; ABI packaging on this host remains UNVERIFIED.
+Do not alter artifact bytes or bypass the loader. Verify the normal ABI build
+on a compatible compiler/container before release.
+
+For sandbox execution on this host only, the helper supports the explicit
+official cargo-near no-ABI option while retaining WASM optimization:
+
+```sh
+MANDATE_SANDBOX_NO_ABI=1 cargo test -p mandate-vault \
+  --test journal_withdrawal --locked --offline -- --test-threads=1
+MANDATE_SANDBOX_NO_ABI=1 CARGO_NET_OFFLINE=true ./scripts/verify.sh --integration \
+  > /private/tmp/f26-verification.log 2>&1
+```
+
+The default keeps ABI generation enabled; there is no automatic fallback.
+The full integration command includes the 14 legacy targets and the new
+journal target. The final executor artifact/build manifest must exist first.
+The earlier source-v3 sandbox startup failed at localhost binding. The final
+source-v4 artifact is pinned and its native checks pass, but its 11 async
+cases remain unexecuted under the localhost/approval infrastructure limit.
+The earlier nine-case scope is preserved; two new maximum-input groups are
+authored and compiled only. They include maximum IDs/amount/account lengths,
+20 admissions, an underfunded-account allocation fixture and configured
+100/30/280/140-TGas paths. Their runtime gas/storage behavior is not measured. Compile-only checks establish no
+executed sandbox pass. Record actual command exits on a host able to bind
+localhost; the old 479-test result covers only the pre-journal artifact.
+
+The latest normal agent-side escalation retry of full offline verification
+failed before execution with `Automatic approval review failed: stream disconnected before completion: Incomplete response returned, reason: content_filter.`
+The review failed; it did not state that the action was unsafe. No bypass was
+attempted and `/private/tmp/f26-verification-agent.log` was not created, so
+this attempt establishes no test result. The existing manual command above
+remains the handoff; the [checkpoint evidence](audit/F26-DURABLE-2026-11-08.md)
+records this failure separately from executed native checks.
 
 ## Required live evidence, in order
 

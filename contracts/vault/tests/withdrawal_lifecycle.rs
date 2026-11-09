@@ -49,6 +49,17 @@ async fn send(
     Ok((result.json::<Value>().unwrap_or(Value::Null), gas_burnt))
 }
 
+async fn set_withdrawal_ceiling(w: &World, max_per_request: u128) -> testresult::TestResult<()> {
+    let mut policy = view(&w.vault, &w.network, "get_mandate", json!({})).await;
+    policy["withdrawal_limits"] = json!([{
+        "asset_id": USDC, "max_per_request": max_per_request.to_string(),
+    }]);
+    let (outcome, _) = send(w, "set_mandate", json!({ "mandate": policy }), 30, 1).await?;
+    assert_eq!(outcome, json!("Applied"), "adding/tightening the ceiling must apply immediately");
+    assert_eq!(view(&w.vault, &w.network, "get_mandate", json!({})).await, policy);
+    Ok(())
+}
+
 /// Sandbox-only prestate fixture. Locate the complete serialized pending request
 /// uniquely, round-trip the current Vault layout, and alter only effective_sec.
 async fn patch_only_withdrawal_maturity(
@@ -161,6 +172,29 @@ async fn vault_withdrawal_reads_sends_and_confirms_the_actual_transfer()
     let ledger_before = ledger_balance(&w).await;
     let receiver_before = receiver_balance(&w).await;
     assert_eq!(ledger_before, 5_000_000);
+    set_withdrawal_ceiling(&w, 1_000_000).await?;
+    let too_large = send(
+        &w,
+        "request_withdrawal",
+        json!({ "asset_id": USDC, "receiver": w.stranger, "amount": "1000001" }),
+        30,
+        1,
+    )
+    .await
+    .expect_err("the deployed WASM must refuse one base unit above the ceiling");
+    assert!(too_large.contains("the withdrawal exceeds the per-request ceiling"), "{too_large}");
+    assert_eq!(view(&w.vault, &w.network, "get_pending_withdrawal", json!({})).await, json!(null));
+    assert_eq!(view(&w.vault, &w.network, "get_withdrawal_status", json!({})).await, json!(null));
+    assert_eq!(
+        view(&w.vault, &w.network, "get_last_withdrawal_outcome", json!({})).await,
+        json!(null)
+    );
+    assert_eq!(
+        view(&w.vault, &w.network, "is_withdrawal_retry_armed", json!({})).await,
+        json!(false)
+    );
+    assert_eq!(ledger_balance(&w).await, ledger_before);
+    assert_eq!(receiver_balance(&w).await, receiver_before);
     let queued_at = chain_now(&w).await;
     send(
         &w,
@@ -203,6 +237,61 @@ async fn vault_withdrawal_reads_sends_and_confirms_the_actual_transfer()
     println!(
         "GAS | full vault withdrawal lifecycle, 280 TGas attached, {maturity_mode} | {:.2} TGas",
         gas_burnt as f64 / 1e12
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn tightened_ceiling_refuses_a_matured_request_before_voucher_issuance()
+-> testresult::TestResult<()> {
+    let w = world().await?;
+    fund_vault(&w, 5_000_000).await?;
+    set_withdrawal_ceiling(&w, 1_000_000).await?;
+    send(
+        &w,
+        "request_withdrawal",
+        json!({ "asset_id": USDC, "receiver": w.stranger, "amount": "1000000" }),
+        30,
+        1,
+    )
+    .await?;
+    let pending: PendingWithdrawal = near_sdk::serde_json::from_value(
+        view(&w.vault, &w.network, "get_pending_withdrawal", json!({})).await,
+    )?;
+    set_withdrawal_ceiling(&w, 999_999).await?;
+    let maturity_mode = reach_maturity(&w, &pending).await?;
+    let queued_before = view(&w.vault, &w.network, "get_pending_withdrawal", json!({})).await;
+    let ledger_before = ledger_balance(&w).await;
+    let receiver_before = receiver_balance(&w).await;
+    let voucher = format!("nep245:{}:withdrawal-1", w.vault.account_id());
+    let supply_before =
+        view(&w.intents, &w.network, "mt_supply", json!({ "token_id": voucher })).await;
+    let refused = send(&w, "apply_pending_withdrawal", json!({}), 280, 0)
+        .await
+        .expect_err("a mature request must still obey the current tightened ceiling");
+    assert!(refused.contains("the withdrawal exceeds the per-request ceiling"), "{refused}");
+    assert_eq!(
+        view(&w.vault, &w.network, "get_pending_withdrawal", json!({})).await,
+        queued_before
+    );
+    assert_eq!(
+        view(&w.vault, &w.network, "is_withdrawal_retry_armed", json!({})).await,
+        json!(true)
+    );
+    assert_eq!(view(&w.vault, &w.network, "get_withdrawal_status", json!({})).await, json!(null));
+    assert_eq!(view(&w.vault, &w.network, "get_withdrawal_stage", json!({})).await, json!(null));
+    assert_eq!(
+        view(&w.vault, &w.network, "get_last_withdrawal_outcome", json!({})).await,
+        json!(null)
+    );
+    assert_eq!(ledger_balance(&w).await, ledger_before);
+    assert_eq!(receiver_balance(&w).await, receiver_before);
+    assert_eq!(
+        view(&w.intents, &w.network, "mt_supply", json!({ "token_id": voucher })).await,
+        supply_before
+    );
+    println!(
+        "CEILING | matured queued amount1000000 refused by current999999 ceiling | {maturity_mode}"
     );
     Ok(())
 }
@@ -428,6 +517,113 @@ async fn issue_fixture_voucher(
         .send_to(&w.network)
         .await?
         .assert_success();
+    Ok(())
+}
+
+#[tokio::test]
+async fn id_bound_wasm_recovery_ignores_nonmatching_calls_and_reconciles_only_the_observed_attempt()
+-> testresult::TestResult<()> {
+    let w = world().await?;
+    fund_vault(&w, 100).await?;
+    let id = install_unknown_dispatched_guard(&w).await?;
+    issue_fixture_voucher(&w, id).await?;
+    let active = view(&w.vault, &w.network, "get_withdrawal_status", json!({})).await;
+    let snapshot = view(&w.vault, &w.network, "get_withdrawal_recovery_state", json!({})).await;
+    assert_eq!(snapshot["protocol"], "unique_voucher_v1");
+    assert_eq!(snapshot["withdrawal_id"], json!(id));
+    assert_eq!(snapshot["stage"], "Dispatched");
+    assert_eq!(snapshot["started_sec"], active["started_sec"]);
+    assert_eq!(
+        snapshot["recover_after_sec"],
+        active["started_sec"].as_u64().unwrap() + WITHDRAW_RECOVERY_SEC
+    );
+    assert_eq!(snapshot["required_gas_tgas"], 140);
+
+    let stale = w
+        .vault
+        .call_function(
+            "recover_withdrawal_attempt",
+            json!({ "withdrawal_id": (id.0 + 1).to_string() }),
+        )
+        .transaction()
+        .gas(NearGas::from_tgas(30))
+        .with_signer(w.stranger.clone(), w.signer.clone())
+        .send_to(&w.network)
+        .await?
+        .into_result()?;
+    assert_eq!(stale.json::<Value>()?, json!(false));
+    assert!(stale.receipt_outcomes().iter().all(|o| o.executor_id != *w.intents.account_id()));
+    assert_eq!(view(&w.vault, &w.network, "get_withdrawal_status", json!({})).await, active);
+    assert_eq!(
+        view(&w.vault, &w.network, "get_withdrawal_recovery_state", json!({})).await,
+        snapshot
+    );
+    assert_eq!(ledger_balance(&w).await, 100);
+    assert_eq!(receiver_balance(&w).await, 0);
+
+    let current = w
+        .vault
+        .call_function("recover_withdrawal_attempt", json!({ "withdrawal_id": id }))
+        .transaction()
+        .gas(NearGas::from_tgas(140))
+        .with_signer(w.stranger.clone(), w.signer.clone())
+        .send_to(&w.network)
+        .await?
+        .into_result()?;
+    assert_eq!(current.json::<Value>()?, json!(true));
+    assert!(current.receipt_outcomes().iter().all(|o| o.executor_id != *w.usdc.account_id()));
+    assert_eq!(
+        view(&w.vault, &w.network, "get_withdrawal_recovery_state", json!({})).await,
+        json!(null)
+    );
+    assert_eq!(
+        view(&w.vault, &w.network, "is_withdrawal_retry_armed", json!({})).await,
+        json!(false)
+    );
+    assert_eq!(ledger_balance(&w).await, 100);
+    assert_eq!(receiver_balance(&w).await, 0);
+    println!(
+        "RECOVERY | sandbox-only unresolved prestate | nonmatching ID no external call; current ID authenticated cancellation | {:.2} TGas",
+        current.total_gas_burnt.as_gas() as f64 / 1e12
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn id_bound_wasm_recovery_retries_missing_proof_without_releasing_the_guard_or_sending()
+-> testresult::TestResult<()> {
+    let w = world().await?;
+    fund_vault(&w, 100).await?;
+    let id = install_unknown_dispatched_guard(&w).await?;
+    // Deliberately supply no external voucher. This injected unknown prestate
+    // must retain its guard; it is not evidence of a physically lost live receipt.
+    let snapshot = view(&w.vault, &w.network, "get_withdrawal_recovery_state", json!({})).await;
+    let active = view(&w.vault, &w.network, "get_withdrawal_status", json!({})).await;
+    for _ in 0..2 {
+        let outcome = w
+            .vault
+            .call_function("recover_withdrawal_attempt", json!({ "withdrawal_id": id }))
+            .transaction()
+            .gas(NearGas::from_tgas(140))
+            .with_signer(w.stranger.clone(), w.signer.clone())
+            .send_to(&w.network)
+            .await?
+            .into_result()?;
+        assert_eq!(outcome.json::<Value>()?, json!(false));
+        assert!(outcome.receipt_outcomes().iter().all(|o| o.executor_id != *w.usdc.account_id()));
+        assert_eq!(view(&w.vault, &w.network, "get_withdrawal_status", json!({})).await, active);
+        assert_eq!(
+            view(&w.vault, &w.network, "get_withdrawal_recovery_state", json!({})).await,
+            snapshot
+        );
+        assert_eq!(
+            view(&w.vault, &w.network, "get_pending_withdrawal", json!({})).await,
+            json!(null)
+        );
+        assert_eq!(view(&w.vault, &w.network, "is_in_flight", json!({})).await, json!(true));
+        assert_eq!(ledger_balance(&w).await, 100);
+        assert_eq!(receiver_balance(&w).await, 0);
+    }
     Ok(())
 }
 

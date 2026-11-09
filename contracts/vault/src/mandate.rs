@@ -7,7 +7,7 @@
 use std::collections::BTreeSet;
 use std::fmt;
 
-use near_sdk::json_types::U64;
+use near_sdk::json_types::{U64, U128};
 use near_sdk::{AccountId, near};
 
 /// Basis points in 100%.
@@ -40,6 +40,14 @@ pub struct AssetConfig {
     pub price_feed_id: String,
 }
 
+/// Maximum token-base-unit amount authorized by one withdrawal request.
+#[near(serializers = [json, borsh])]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct WithdrawalLimit {
+    pub asset_id: String,
+    pub max_per_request: U128,
+}
+
 /// USD amounts are integer micro-dollars (1 USD = 1_000_000).
 #[near(serializers = [json, borsh])]
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -61,6 +69,9 @@ pub struct Mandate {
     /// Declared decision sources allowed to propose trades. Empty denies all.
     /// Membership does not prove that a model generated the decision.
     pub allowed_model_ids: Vec<String>,
+    /// Per-request ceilings. Assets without an entry retain legacy uncapped withdrawals.
+    #[serde(default)]
+    pub withdrawal_limits: Vec<WithdrawalLimit>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -81,6 +92,10 @@ pub enum MandateError {
     TooManyModelIds,
     InvalidModelId(String),
     DuplicateModelId(String),
+    TooManyWithdrawalLimits,
+    WithdrawalAssetNotAllowed(String),
+    DuplicateWithdrawalLimit(String),
+    ZeroWithdrawalLimit(String),
 }
 
 impl fmt::Display for MandateError {
@@ -117,6 +132,16 @@ impl fmt::Display for MandateError {
                 )
             }
             Self::DuplicateModelId(id) => write!(f, "duplicate model id: {id}"),
+            Self::TooManyWithdrawalLimits => {
+                write!(f, "mandate may have at most {MAX_ASSETS} withdrawal ceilings")
+            }
+            Self::WithdrawalAssetNotAllowed(id) => {
+                write!(f, "withdrawal ceiling asset not in assets: {id}")
+            }
+            Self::DuplicateWithdrawalLimit(id) => write!(f, "duplicate withdrawal ceiling: {id}"),
+            Self::ZeroWithdrawalLimit(id) => {
+                write!(f, "withdrawal ceiling of {id} must be greater than zero")
+            }
         }
     }
 }
@@ -174,6 +199,22 @@ impl Mandate {
             }
         }
 
+        if self.withdrawal_limits.len() > MAX_ASSETS {
+            return Err(MandateError::TooManyWithdrawalLimits);
+        }
+        let mut seen_limits = BTreeSet::new();
+        for limit in &self.withdrawal_limits {
+            if !seen.contains(limit.asset_id.as_str()) {
+                return Err(MandateError::WithdrawalAssetNotAllowed(limit.asset_id.clone()));
+            }
+            if !seen_limits.insert(limit.asset_id.as_str()) {
+                return Err(MandateError::DuplicateWithdrawalLimit(limit.asset_id.clone()));
+            }
+            if limit.max_per_request.0 == 0 {
+                return Err(MandateError::ZeroWithdrawalLimit(limit.asset_id.clone()));
+            }
+        }
+
         if self.max_trade_usd.0 == 0 {
             return Err(MandateError::ZeroTradeLimit);
         }
@@ -204,6 +245,14 @@ impl Mandate {
 
     pub fn allows_model_id(&self, model_id: &str) -> bool {
         self.allowed_model_ids.iter().any(|id| id == model_id)
+    }
+
+    /// None preserves the uncapped authorization used by older policies.
+    pub fn withdrawal_limit(&self, asset_id: &str) -> Option<u128> {
+        self.withdrawal_limits
+            .iter()
+            .find(|limit| limit.asset_id == asset_id)
+            .map(|limit| limit.max_per_request.0)
     }
 }
 
@@ -269,6 +318,13 @@ pub fn loosened_fields(old: &Mandate, new: &Mandate) -> Vec<&'static str> {
     if new.allowed_model_ids.iter().any(|id| !old.allowed_model_ids.contains(id)) {
         out.push("allowed_model_ids");
     }
+    // Removing a listed asset must not hide the loosening of its old ceiling.
+    if old.withdrawal_limits.iter().any(|old_limit| {
+        new.withdrawal_limit(&old_limit.asset_id)
+            .is_none_or(|new_limit| new_limit > old_limit.max_per_request.0)
+    }) {
+        out.push("withdrawal_limits");
+    }
     out
 }
 
@@ -304,7 +360,66 @@ pub(crate) mod tests {
                 "rebalance-v1".into(),
                 "fixture-model".into(),
             ],
+            withdrawal_limits: vec![],
         }
+    }
+
+    fn capped(amount: u128) -> Mandate {
+        Mandate {
+            withdrawal_limits: vec![WithdrawalLimit {
+                asset_id: USDC.into(),
+                max_per_request: U128(amount),
+            }],
+            ..sample()
+        }
+    }
+
+    #[test]
+    fn withdrawal_ceiling_schema_is_a_positive_unique_allowed_subset() {
+        assert!(sample().validate().is_ok());
+        assert!(capped(u128::MAX).validate().is_ok());
+        assert_eq!(capped(0).validate(), Err(MandateError::ZeroWithdrawalLimit(USDC.into())));
+        let mut duplicate = capped(1);
+        duplicate.withdrawal_limits.push(duplicate.withdrawal_limits[0].clone());
+        assert_eq!(duplicate.validate(), Err(MandateError::DuplicateWithdrawalLimit(USDC.into())));
+        let mut unknown = capped(1);
+        unknown.withdrawal_limits[0].asset_id = "nep141:unknown.near".into();
+        assert_eq!(
+            unknown.validate(),
+            Err(MandateError::WithdrawalAssetNotAllowed("nep141:unknown.near".into()))
+        );
+        let mut oversized = capped(1);
+        oversized.withdrawal_limits = vec![oversized.withdrawal_limits[0].clone(); MAX_ASSETS + 1];
+        assert_eq!(oversized.validate(), Err(MandateError::TooManyWithdrawalLimits));
+    }
+
+    #[test]
+    fn withdrawal_ceiling_lookup_and_legacy_json_preserve_uncapped_assets() {
+        let mandate = capped(17);
+        assert_eq!(mandate.withdrawal_limit(USDC), Some(17));
+        assert_eq!(mandate.withdrawal_limit(WNEAR), None);
+        let mut legacy_json = near_sdk::serde_json::to_value(sample()).unwrap();
+        legacy_json.as_object_mut().unwrap().remove("withdrawal_limits");
+        let restored: Mandate = near_sdk::serde_json::from_value(legacy_json).unwrap();
+        assert_eq!(restored, sample());
+        let json = near_sdk::serde_json::to_value(mandate).unwrap();
+        assert_eq!(json["withdrawal_limits"][0]["max_per_request"], "17");
+    }
+
+    #[test]
+    fn withdrawal_ceiling_increases_and_removal_are_loosening() {
+        let old = capped(20);
+        assert_eq!(loosened_fields(&sample(), &old), Vec::<&str>::new());
+        assert!(loosened_fields(&old, &capped(20)).is_empty());
+        assert!(loosened_fields(&old, &capped(19)).is_empty());
+        assert_eq!(loosened_fields(&old, &capped(21)), ["withdrawal_limits"]);
+        assert_eq!(loosened_fields(&old, &sample()), ["withdrawal_limits"]);
+        let mut remove_asset = old.clone();
+        remove_asset.withdrawal_limits.clear();
+        remove_asset.assets.retain(|asset| asset.asset_id != USDC);
+        remove_asset.stable_assets = vec![WNEAR.into()];
+        assert!(remove_asset.validate().is_ok());
+        assert!(loosened_fields(&old, &remove_asset).contains(&"withdrawal_limits"));
     }
 
     #[test]

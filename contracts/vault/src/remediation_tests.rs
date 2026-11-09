@@ -31,6 +31,44 @@ fn setup() -> Vault {
     v
 }
 
+#[test]
+fn execution_gas_boundary_rejects_before_state_and_accepts_equality() {
+    let mut v = setup();
+    context(accounts(3), 0, T, None);
+    v.propose(
+        mandate::tests::USDC.into(),
+        mandate::tests::WNEAR.into(),
+        U128(20_000_000),
+        U128(3_960_000_000_000_000_000_000_000),
+        "ab".repeat(32),
+        "manual-v1".into(),
+    );
+    let before = near_sdk::borsh::to_vec(&v).unwrap();
+    let mut builder = VMContextBuilder::new();
+    builder
+        .current_account_id(accounts(0))
+        .predecessor_account_id(accounts(2))
+        .block_timestamp(T * 1_000_000_000)
+        .prepaid_gas(Gas::from_gas(Gas::from_tgas(MIN_EXECUTION_GAS_TGAS).as_gas() - 1));
+    testing_env!(builder.build());
+    let refusal = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| drop(v.execute())))
+        .expect_err("one gas unit below the minimum must be refused");
+    let message = refusal
+        .downcast_ref::<String>()
+        .map(String::as_str)
+        .or_else(|| refusal.downcast_ref::<&str>().copied());
+    assert_eq!(message, Some("execution requires at least 300 TGas"));
+    assert_eq!(near_sdk::borsh::to_vec(&v).unwrap(), before);
+    assert!(near_sdk::test_utils::get_created_receipts().is_empty());
+
+    builder.prepaid_gas(Gas::from_tgas(MIN_EXECUTION_GAS_TGAS));
+    testing_env!(builder.build());
+    drop(v.execute());
+    assert!(v.is_in_flight());
+    assert_eq!(v.next_execution_id, 2);
+    assert!(!near_sdk::test_utils::get_created_receipts().is_empty());
+}
+
 fn run(v: &mut Vault) -> Proposal {
     context(accounts(3), 0, T, None);
     v.propose(

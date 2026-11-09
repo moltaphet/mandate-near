@@ -1,0 +1,14 @@
+    Blocking waiting for file lock on artifact directory
+   Compiling mandate-vault v0.1.0 (/Users/ehs4n/mandate-near/contracts/vault)
+   Compiling mandate-agent v0.1.0 (/Users/ehs4n/mandate-near/agent)
+   Compiling mandate-keeper v0.1.0 (/Users/ehs4n/mandate-near/keeper)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 9.06s
+     Running tests/fixture_identity.rs (target/debug/deps/fixture_identity-1f43fb01b1a5059e)
+
+running 3 tests
+test refuses_a_different_sized_wasm ... ok
+test accepts_the_exact_reviewed_verifier ... ok
+test refuses_another_valid_wasm_with_the_same_size ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+

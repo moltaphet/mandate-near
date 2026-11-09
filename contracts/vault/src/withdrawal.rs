@@ -231,7 +231,7 @@ impl Vault {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use near_sdk::test_utils::{VMContextBuilder, accounts};
+    use near_sdk::test_utils::{VMContextBuilder, accounts, get_created_receipts};
     use near_sdk::{PromiseResult, testing_env};
 
     const T: u64 = 1_793_448_000;
@@ -300,6 +300,333 @@ mod tests {
             0,
             T + WITHDRAW_DELAY_SEC + WITHDRAW_RECOVERY_SEC,
             snapshot_results(1, 0, sent, cancelled),
+        );
+    }
+
+    fn limit(v: &mut Vault, amount: u128, time: u64) {
+        context(accounts(1), 1, time, vec![]);
+        let mut m = v.mandate.clone();
+        m.withdrawal_limits = vec![WithdrawalLimit {
+            asset_id: mandate::tests::USDC.into(),
+            max_per_request: U128(amount),
+        }];
+        assert_eq!(v.set_mandate(m), MandateChangeOutcome::Applied);
+    }
+
+    fn exact_panic(expected: &str, action: impl FnOnce()) {
+        let panic = std::panic::catch_unwind(std::panic::AssertUnwindSafe(action))
+            .expect_err("the operation must fail before mutation");
+        let text = panic
+            .downcast_ref::<String>()
+            .map(String::as_str)
+            .or_else(|| panic.downcast_ref::<&str>().copied());
+        assert_eq!(text, Some(expected));
+    }
+
+    #[test]
+    fn recovery_snapshot_is_atomic_and_does_not_change_stored_state() {
+        context(accounts(1), 0, T, vec![]);
+        let empty = Vault::new(accounts(1), mandate::tests::sample());
+        assert!(empty.get_withdrawal_recovery_state().is_none());
+
+        let (v, id) = preparing();
+        let stored = near_sdk::borsh::to_vec(&v).unwrap();
+        let state = v.get_withdrawal_recovery_state().unwrap();
+        assert_eq!(state.protocol, "unique_voucher_v1");
+        assert_eq!(state.withdrawal_id, id);
+        assert_eq!(state.stage, WithdrawalStage::Preparing);
+        assert_eq!(state.started_sec, T + WITHDRAW_DELAY_SEC);
+        assert_eq!(state.recover_after_sec, T + WITHDRAW_DELAY_SEC + WITHDRAW_RECOVERY_SEC);
+        assert_eq!(state.required_gas_tgas, MIN_WITHDRAWAL_RECOVERY_GAS_TGAS);
+        assert_eq!(near_sdk::borsh::to_vec(&v).unwrap(), stored);
+        assert_eq!(
+            serde_json::to_value(state).unwrap(),
+            json!({
+                "protocol": "unique_voucher_v1", "withdrawal_id": "1", "stage": "Preparing",
+                "started_sec": T + WITHDRAW_DELAY_SEC,
+                "recover_after_sec": T + WITHDRAW_DELAY_SEC + WITHDRAW_RECOVERY_SEC,
+                "required_gas_tgas": 140,
+            })
+        );
+    }
+
+    #[test]
+    fn recovery_attempt_without_an_active_withdrawal_is_a_receipt_free_noop() {
+        context(accounts(2), 0, T, vec![]);
+        let mut v = Vault::new(accounts(1), mandate::tests::sample());
+        let before = near_sdk::borsh::to_vec(&v).unwrap();
+        assert!(matches!(v.recover_withdrawal_attempt(U64(1)), PromiseOrValue::Value(false)));
+        assert_eq!(near_sdk::borsh::to_vec(&v).unwrap(), before);
+        assert!(get_created_receipts().is_empty());
+    }
+
+    #[test]
+    fn stale_recovery_attempt_cannot_invalidate_or_cancel_a_newer_withdrawal() {
+        let (mut v, old) = preparing();
+        let mature = T + WITHDRAW_DELAY_SEC + WITHDRAW_RECOVERY_SEC;
+        context(accounts(2), 0, mature, vec![]);
+        assert!(matches!(v.recover_withdrawal_attempt(old), PromiseOrValue::Value(true)));
+        context(accounts(1), 1, mature, vec![]);
+        v.rearm_pending_withdrawal();
+        drop(v.apply_pending_withdrawal());
+        let new = v.active_withdrawal.as_ref().unwrap().id;
+        assert_ne!(old, new);
+
+        context(accounts(2), 0, mature + WITHDRAW_RECOVERY_SEC, vec![]);
+        let before = near_sdk::borsh::to_vec(&v).unwrap();
+        assert!(matches!(v.recover_withdrawal_attempt(old), PromiseOrValue::Value(false)));
+        assert_eq!(near_sdk::borsh::to_vec(&v).unwrap(), before);
+        assert!(get_created_receipts().is_empty());
+        assert_eq!(v.get_withdrawal_recovery_state().unwrap().withdrawal_id, new);
+    }
+
+    #[test]
+    fn bound_recovery_preserves_the_existing_delay_and_preparation_guard() {
+        let (mut v, id) = preparing();
+        let mature = T + WITHDRAW_DELAY_SEC + WITHDRAW_RECOVERY_SEC;
+        context(accounts(2), 0, mature - 1, vec![]);
+        let before = near_sdk::borsh::to_vec(&v).unwrap();
+        exact_panic("the withdrawal recovery window has not passed", || {
+            drop(v.recover_withdrawal_attempt(id));
+        });
+        assert_eq!(near_sdk::borsh::to_vec(&v).unwrap(), before);
+        assert!(get_created_receipts().is_empty());
+
+        context(accounts(2), 0, mature, vec![]);
+        assert!(matches!(v.recover_withdrawal_attempt(id), PromiseOrValue::Value(true)));
+        assert!(v.active_withdrawal.is_none());
+        assert!(v.pending_withdrawal.is_some());
+        assert!(!v.is_withdrawal_retry_armed());
+        assert!(get_created_receipts().is_empty(), "preparation invalidation sends no payment");
+    }
+
+    #[test]
+    fn bound_dispatched_recovery_keeps_the_gas_boundary_and_only_cancels_its_voucher() {
+        let (mut v, id) = dispatched();
+        let mature = T + WITHDRAW_DELAY_SEC + WITHDRAW_RECOVERY_SEC;
+        let set_gas = |gas| {
+            testing_env!(
+                VMContextBuilder::new()
+                    .current_account_id(accounts(0))
+                    .predecessor_account_id(accounts(2))
+                    .block_timestamp(mature * 1_000_000_000)
+                    .prepaid_gas(Gas::from_gas(gas))
+                    .build()
+            );
+        };
+        set_gas(Gas::from_tgas(140).as_gas() - 1);
+        let before = near_sdk::borsh::to_vec(&v).unwrap();
+        exact_panic("recovery requires at least 140 TGas", || {
+            drop(v.recover_withdrawal_attempt(id));
+        });
+        assert_eq!(near_sdk::borsh::to_vec(&v).unwrap(), before);
+        assert!(get_created_receipts().is_empty());
+
+        set_gas(Gas::from_tgas(140).as_gas());
+        let result = v.recover_withdrawal_attempt(id);
+        assert!(matches!(&result, PromiseOrValue::Promise(_)));
+        drop(result);
+        assert_eq!(near_sdk::borsh::to_vec(&v).unwrap(), before);
+        let calls: Vec<_> = get_created_receipts()
+            .into_iter()
+            .flat_map(|receipt| receipt.actions)
+            .filter_map(|action| match action {
+                near_sdk::mock::MockAction::FunctionCallWeight { method_name, args, .. } => {
+                    Some((String::from_utf8(method_name).unwrap(), args))
+                }
+                _ => None,
+            })
+            .collect();
+        assert_eq!(calls.len(), 2);
+        assert_eq!(calls[0].0, "mt_transfer");
+        let cancel: serde_json::Value = serde_json::from_slice(&calls[0].1).unwrap();
+        assert_eq!(cancel["token_id"], Vault::voucher_asset(id));
+        assert_eq!(cancel["receiver_id"], "c.alice");
+        assert_eq!(calls[1].0, "on_withdrawal_cancelled");
+        assert!(calls.iter().all(|(method, _)| method != "ft_withdraw"));
+    }
+
+    #[test]
+    fn withdrawal_request_ceiling_accepts_equality_and_refuses_one_above_without_mutation() {
+        context(accounts(1), 1, T, vec![]);
+        let mut v = Vault::new(accounts(1), mandate::tests::sample());
+        limit(&mut v, 20, T);
+        v.request_withdrawal(mandate::tests::USDC.into(), accounts(4), U128(20));
+        let before = near_sdk::borsh::to_vec(&v).unwrap();
+        exact_panic("the withdrawal exceeds the per-request ceiling", || {
+            v.request_withdrawal(mandate::tests::USDC.into(), accounts(4), U128(21));
+        });
+        assert_eq!(near_sdk::borsh::to_vec(&v).unwrap(), before);
+        assert!(v.is_withdrawal_retry_armed());
+    }
+
+    #[test]
+    fn withdrawal_apply_ceiling_accepts_equality_at_maturity() {
+        context(accounts(1), 1, T, vec![]);
+        let mut v = Vault::new(accounts(1), mandate::tests::sample());
+        limit(&mut v, 20, T);
+        v.request_withdrawal(mandate::tests::USDC.into(), accounts(4), U128(20));
+        context(accounts(2), 0, T + WITHDRAW_DELAY_SEC, vec![]);
+        drop(v.apply_pending_withdrawal());
+        assert_eq!(v.active_withdrawal.as_ref().unwrap().request.amount, U128(20));
+        assert_eq!(v.withdrawal_stage, Some(WithdrawalStage::Preparing));
+    }
+
+    #[test]
+    fn withdrawal_apply_tightening_preserves_request_maturity_id_and_arm() {
+        let (mut v, _) = preparing();
+        // Return to the original queued authorization before any dispatch.
+        let active = v.active_withdrawal.clone().unwrap();
+        v.withdrawal_failed(active, "test preparation refusal");
+        context(accounts(1), 1, T + WITHDRAW_DELAY_SEC, vec![]);
+        v.rearm_pending_withdrawal();
+        limit(&mut v, 19, T + WITHDRAW_DELAY_SEC);
+        context(accounts(2), 0, T + WITHDRAW_DELAY_SEC, vec![]);
+        let before = near_sdk::borsh::to_vec(&v).unwrap();
+        exact_panic("the withdrawal exceeds the per-request ceiling", || {
+            drop(v.apply_pending_withdrawal());
+        });
+        assert_eq!(near_sdk::borsh::to_vec(&v).unwrap(), before);
+        assert!(get_created_receipts().is_empty());
+    }
+
+    #[test]
+    fn ceiling_tightened_during_preparing_refuses_dispatch_and_requeues_unarmed() {
+        let (mut v, id) = preparing();
+        let request = v.active_withdrawal.as_ref().unwrap().request.clone();
+        limit(&mut v, 19, T + WITHDRAW_DELAY_SEC);
+        context(accounts(0), 0, T + WITHDRAW_DELAY_SEC, snapshot_results(1, 1, 0, 0));
+        assert!(matches!(v.on_withdrawal_prepared(id, U128(100)), PromiseOrValue::Value(false)));
+        assert!(get_created_receipts().is_empty(), "no external send may be scheduled");
+        assert!(v.active_withdrawal.is_none() && v.withdrawal_stage.is_none());
+        assert_eq!(v.pending_withdrawal, Some(request));
+        assert!(!v.is_withdrawal_retry_armed());
+        assert_eq!(v.next_withdrawal_id, 2);
+        assert_eq!(
+            v.last_withdrawal_outcome,
+            Some(WithdrawalOutcome::Failed {
+                withdrawal_id: id,
+                reason: "the withdrawal exceeds the per-request ceiling".into(),
+            })
+        );
+    }
+
+    #[test]
+    fn preparing_ceiling_refusal_preserves_newer_replacement_and_its_arm() {
+        let (mut v, id) = preparing();
+        let replacement_at = T + WITHDRAW_DELAY_SEC + 7;
+        limit(&mut v, 10, replacement_at);
+        v.request_withdrawal(mandate::tests::USDC.into(), accounts(5), U128(10));
+        let replacement = v.pending_withdrawal.clone();
+        context(accounts(0), 0, replacement_at, snapshot_results(1, 1, 0, 0));
+        assert!(matches!(v.on_withdrawal_prepared(id, U128(100)), PromiseOrValue::Value(false)));
+        assert_eq!(v.pending_withdrawal, replacement);
+        assert!(v.is_withdrawal_retry_armed());
+        assert!(v.active_withdrawal.is_none());
+        assert!(get_created_receipts().is_empty());
+        // The old callback cannot consume the replacement even with valid proof.
+        assert!(matches!(v.on_withdrawal_prepared(id, U128(100)), PromiseOrValue::Value(false)));
+        assert_eq!(v.pending_withdrawal, replacement);
+    }
+
+    #[test]
+    fn confirmed_refund_rearm_cannot_bypass_a_tightened_ceiling() {
+        let (mut v, id) = dispatched();
+        limit(&mut v, 19, T + WITHDRAW_DELAY_SEC);
+        assert!(!v.finish_withdrawal(id, Ok(U128(0))));
+        v.rearm_pending_withdrawal();
+        context(accounts(2), 0, T + WITHDRAW_DELAY_SEC, vec![]);
+        let before = near_sdk::borsh::to_vec(&v).unwrap();
+        exact_panic("the withdrawal exceeds the per-request ceiling", || {
+            drop(v.apply_pending_withdrawal());
+        });
+        assert_eq!(near_sdk::borsh::to_vec(&v).unwrap(), before);
+        assert!(get_created_receipts().is_empty());
+    }
+
+    #[test]
+    fn post_dispatch_ceiling_tightening_preserves_terminal_delivery() {
+        let (mut v, id) = dispatched();
+        limit(&mut v, 19, T + WITHDRAW_DELAY_SEC);
+        assert!(v.finish_withdrawal(id, Ok(U128(20))));
+        assert!(v.active_withdrawal.is_none());
+        assert_eq!(
+            v.last_withdrawal_outcome,
+            Some(WithdrawalOutcome::Delivered { withdrawal_id: id, amount: U128(20) })
+        );
+    }
+
+    #[test]
+    fn removing_asset_and_its_ceiling_waits_the_full_mandate_delay() {
+        context(accounts(1), 1, T, vec![]);
+        let mut v = Vault::new(accounts(1), mandate::tests::sample());
+        let mut capped = v.mandate.clone();
+        capped.withdrawal_limits = vec![WithdrawalLimit {
+            asset_id: mandate::tests::WNEAR.into(),
+            max_per_request: U128(20),
+        }];
+        assert_eq!(v.set_mandate(capped.clone()), MandateChangeOutcome::Applied);
+        let mut removed = capped.clone();
+        removed.assets.retain(|a| a.asset_id != mandate::tests::WNEAR);
+        removed.withdrawal_limits.clear();
+        assert_eq!(
+            v.set_mandate(removed.clone()),
+            MandateChangeOutcome::Queued { effective_sec: U64(T + MANDATE_DELAY_SEC) }
+        );
+        assert_eq!(v.mandate, capped);
+        context(accounts(2), 0, T + MANDATE_DELAY_SEC - 1, vec![]);
+        exact_panic("the mandate change is still in its delay", || v.apply_pending_mandate());
+        assert_eq!(v.mandate, capped);
+        context(accounts(2), 0, T + MANDATE_DELAY_SEC, vec![]);
+        v.apply_pending_mandate();
+        assert_eq!(v.mandate, removed);
+    }
+
+    #[test]
+    fn removing_a_queued_withdrawal_asset_refuses_apply_without_mutation() {
+        context(accounts(1), 1, T, vec![]);
+        let mut v = Vault::new(accounts(1), mandate::tests::sample());
+        v.request_withdrawal(mandate::tests::WNEAR.into(), accounts(4), U128(20));
+        let mut removed = v.mandate.clone();
+        removed.assets.retain(|asset| asset.asset_id != mandate::tests::WNEAR);
+        assert_eq!(v.set_mandate(removed), MandateChangeOutcome::Applied);
+        context(accounts(2), 0, T + WITHDRAW_DELAY_SEC, vec![]);
+        let before = near_sdk::borsh::to_vec(&v).unwrap();
+        exact_panic("the asset is not in the mandate", || {
+            drop(v.apply_pending_withdrawal());
+        });
+        assert_eq!(near_sdk::borsh::to_vec(&v).unwrap(), before);
+        assert!(get_created_receipts().is_empty());
+    }
+
+    #[test]
+    fn removing_an_asset_during_preparation_refuses_external_dispatch() {
+        context(accounts(1), 1, T, vec![]);
+        let mut initial = mandate::tests::sample();
+        initial.stable_assets.push(mandate::tests::WNEAR.into());
+        let mut v = Vault::new(accounts(1), initial);
+        v.request_withdrawal(mandate::tests::USDC.into(), accounts(4), U128(20));
+        let queued = v.pending_withdrawal.clone();
+        context(accounts(2), 0, T + WITHDRAW_DELAY_SEC, vec![]);
+        drop(v.apply_pending_withdrawal());
+        let id = v.active_withdrawal.as_ref().unwrap().id;
+        context(accounts(1), 1, T + WITHDRAW_DELAY_SEC, vec![]);
+        let mut removed = v.mandate.clone();
+        removed.assets.retain(|asset| asset.asset_id != mandate::tests::USDC);
+        removed.stable_assets.retain(|asset| asset != mandate::tests::USDC);
+        assert_eq!(v.set_mandate(removed), MandateChangeOutcome::Applied);
+        context(accounts(0), 0, T + WITHDRAW_DELAY_SEC, snapshot_results(1, 1, 0, 0));
+        assert!(matches!(v.on_withdrawal_prepared(id, U128(100)), PromiseOrValue::Value(false)));
+        assert!(get_created_receipts().is_empty());
+        assert!(v.active_withdrawal.is_none() && v.withdrawal_stage.is_none());
+        assert_eq!(v.pending_withdrawal, queued);
+        assert!(!v.is_withdrawal_retry_armed());
+        assert_eq!(
+            v.last_withdrawal_outcome,
+            Some(WithdrawalOutcome::Failed {
+                withdrawal_id: id,
+                reason: "the asset is not in the mandate".into(),
+            })
         );
     }
 

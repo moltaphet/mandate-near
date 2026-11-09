@@ -40,6 +40,7 @@ fn mandate(max_slippage_bps: u16) -> Value {
         "min_trade_interval_sec": 300,
         "max_price_age_sec": 60,
         "allowed_model_ids": ["manual-v1", "rebalance-v1", "fixture-model"],
+        "withdrawal_limits": [],
     })
 }
 
@@ -65,9 +66,16 @@ async fn setup() -> testresult::TestResult<Env> {
     let stranger = create_account(&sandbox, "stranger.sandbox").await?;
     let vault_id = create_account(&sandbox, "vault.sandbox").await?;
 
+    // Keep initialization coverage for legacy JSON that omits the new optional
+    // ceiling field; public views must still return the complete current schema.
+    let mut legacy_mandate = mandate(100);
+    assert_eq!(
+        legacy_mandate.as_object_mut().unwrap().remove("withdrawal_limits"),
+        Some(json!([]))
+    );
     Contract::deploy(vault_id.clone())
         .use_code(wasm)
-        .with_init_call("new", json!({ "owner": owner, "mandate": mandate(100) }))?
+        .with_init_call("new", json!({ "owner": owner, "mandate": legacy_mandate }))?
         .with_signer(signer.clone())
         .send_to(&network)
         .await?
@@ -268,6 +276,7 @@ async fn wasm_migration_consumes_historical_state_and_writes_current_state()
         "min_trade_interval_sec": 300,
         "max_price_age_sec": 60,
         "allowed_model_ids": [],
+        "withdrawal_limits": [],
     });
     let mut queued_mandate = original_mandate.clone();
     queued_mandate["max_trade_usd"] = json!("75000000");
@@ -384,8 +393,10 @@ async fn wasm_migration_consumes_actual_pre_model_voucher_goldens() -> testresul
         let active = e.view("get_mandate").await;
         let queued = e.view("get_pending_mandate").await;
         assert_eq!(active["allowed_model_ids"], json!([]));
+        assert_eq!(active["withdrawal_limits"], json!([]));
         assert_eq!(active["max_trade_usd"], json!("50000000"));
         assert_eq!(queued["mandate"]["allowed_model_ids"], json!([]));
+        assert_eq!(queued["mandate"]["withdrawal_limits"], json!([]));
         assert_eq!(queued["mandate"]["max_trade_usd"], json!("75000000"));
         assert_eq!(queued["effective_sec"], json!(1_793_534_400_u64));
         assert_eq!(e.view("get_pending_proposal").await, Value::Null);

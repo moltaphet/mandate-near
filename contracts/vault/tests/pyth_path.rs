@@ -209,6 +209,8 @@ async fn pyth_twenty_asset_callback_chain_fits_gas_and_checks_every_held_feed()
 -> testresult::TestResult<()> {
     let w = world_with_pyth(18).await?;
     assert_eq!(w.extra + 2, mandate_vault::mandate::MAX_ASSETS);
+    let policy = view(&w.vault, &w.network, "get_mandate", json!({})).await;
+    assert_eq!(policy["withdrawal_limits"].as_array().unwrap().len(), 20);
     register_key(&w).await?;
     fund_vault(&w, 10_000_000).await?;
     fund_extra_assets(&w, 1_000_000).await?;

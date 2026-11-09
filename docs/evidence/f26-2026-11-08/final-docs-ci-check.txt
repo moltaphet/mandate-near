@@ -1,0 +1,27 @@
+UTC: 2026-11-08T15:37:48.048481+00:00
+
+Workflow SHA256: f00f9fa241bdf71a87b705ce5e04310944355c31ebfe53e1881c4d4f574c5464
+
+CI YAML parsed; inline Python compiled; every Bash step passed syntax validation. No network/CI execution.
+
+Command: bash -n scripts/verify.sh
+Exit: 0
+
+
+Command: bash scripts/check-claims.sh
+Exit: 0
+Allowed local references checked. External citations and security claims are not verified; no tests were run.
+
+
+Command: python3 -B scripts/build-web.py --check
+Exit: 0
+Site audit asset matches the tested shared reader.
+
+
+Command: git diff --check
+Exit: 0
+
+
+All local Markdown links in 15 reviewed documents exist.
+
+Pending full verification log is absent; no full-run result claimed.

@@ -38,6 +38,7 @@ fn agent(w: &World) -> Agent {
 
 fn keeper(w: &World) -> Keeper {
     Keeper {
+        expected_chain_id: None,
         network: w.network.clone(),
         vault: w.vault.account_id().clone(),
         account: w.stranger.clone(),

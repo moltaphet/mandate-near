@@ -5,8 +5,10 @@ only. Mainnet decisions are separate and stay open.
 
 ## Evidence
 
-Read-only queries to `https://rpc.testnet.near.org`, 7 November 2026. No
-transaction was sent.
+The table below records read-only prerequisite queries to
+`https://rpc.testnet.near.org` on 7 November 2026; those queries sent no
+transactions. The later deployment and owner calls have separate
+[transaction evidence](../evidence/testnet-run-2026-11-07/README.md).
 
 | Account | Result |
 |---|---|
@@ -24,15 +26,21 @@ transaction was sent.
 | D2 owner | A Sputnik DAO v2 created through `sputnikv2.testnet`, with a single-member council for the testnet run. Mainnet needs a multisig DAO with hardware keys. |
 | D3 Intents on testnet | Deploy the supplied Intents verifier fixture (`contracts/vault/tests/fixtures/intents-near-mainnet.wasm`, SHA256 `a1afab98916d9f213746544dcf8e4e6bdb22c0be6bc5dfbd8ea8814c9922b547`) to a testnet account we own, with `contracts/mock-ft` tokens. It is a fixture, not the real NEAR Intents. |
 | D4 signer | `v1.signer-prod.testnet`, domain 1. |
-| D5 F26 | Accepted for the testnet run. No contract change before the run. The recovery design is written after the run and implemented only after review. |
-| D6 withdrawal test | One withdrawal of a mock token after a real 86,400-second delay. |
+| D5 F26 | Accepted for the current prototype/testnet scope only. The implementation retains the unknown-result guard until authenticated proof resolves it. Historical abandon proposals are unapproved; any protocol change needs separate review. |
+| D6 withdrawal test | Planned: one withdrawal of a mock token after a real 86,400-second delay. Queueing and early refusal were observed; delivery and recovery remain unverified in the recorded run. |
 | D7 model provider | Not part of the testnet run. |
 | D8 accounts | One funded testnet operator account supplied by the owner. Every other account is a sub-account of it, so the vault, agent, Intents fixture, oracle and tokens share one namespace. The vault name must stay at most 62 bytes, and `s.<vault>` and `c.<vault>` must not exist. |
 
-## What the run proves and does not prove
+## What the recorded run shows
 
-It proves the vault's gates, the real testnet MPC signature path, delayed
-withdrawal timing and recovery behaviour on a real chain. It does not prove
-behaviour against the real NEAR Intents contracts or a production oracle,
-because those are replaced by labelled fixtures on testnet. Any claim made from
-this run must say so.
+The [7 November run](../evidence/testnet-run-2026-11-07/README.md) records keyless
+deployment, DAO owner calls, key registration and a verifiable real testnet MPC
+signature. It also records a withdrawal queued with a 24-hour maturity and an
+early-apply refusal. The execute transaction hash was not captured; its retained
+outcome and exact signature were checked separately.
+
+The recorded withdrawal remained pending. Elapsed-delay delivery, receiver/ledger
+changes and recovery after a lost callback were not demonstrated. Matched funded
+settlement and production-oracle behavior remain unverified because the run used
+labelled Intents, token and oracle fixtures. These results apply to that historical
+testnet artifact, not the 8 November hardening candidate or a mainnet release.

@@ -10,14 +10,14 @@ use std::time::Duration;
 
 use mandate_agent::autonomous::{AutonomousConfig, Preparation};
 use mandate_agent::decision::{
-    Decision, DecisionSource, MANUAL_SOURCE_ID, ManualDecision, REBALANCE_SOURCE_ID,
-    RebalanceDecision,
+    Decision, DecisionSource, MANUAL_SOURCE_ID, ManualDecision, PreparationAttempt,
+    PreparationLoop, REBALANCE_SOURCE_ID, RebalanceDecision,
 };
 use mandate_agent::model::{HttpChatClient, ModelDecision};
 use mandate_agent::provenance::{ModelRecord, parse_signature_proof, verify_signature};
 use mandate_agent::relay::Relay;
 use mandate_agent::transport::{
-    JsonRpc, PublicReader, create_public_dir, read_public_bytes, read_public_json, write_public,
+    PublicReader, create_public_dir, read_public_bytes, read_public_json, write_public,
     write_public_bounded,
 };
 use mandate_agent::{Agent, AgentError, Plan, wait};
@@ -28,8 +28,29 @@ fn setting(name: &str) -> Result<String, AgentError> {
     std::env::var(name).map_err(|_| format!("required setting {name} is absent").into())
 }
 
-fn signed_agent(rpc_url: &str, vault_id: &str) -> Result<Agent, AgentError> {
-    JsonRpc::new(rpc_url, None, 1024 * 1024)?;
+fn expected_chain() -> Result<Option<String>, AgentError> {
+    let optional = |name| match std::env::var(name) {
+        Ok(value) => Ok(Some(value)),
+        Err(std::env::VarError::NotPresent) => Ok(None),
+        Err(_) => Err("invalid expected chain configuration"),
+    };
+    let shared = optional("NEAR_CHAIN_ID")?;
+    let explicit = optional("EXPECTED_CHAIN_ID")?;
+    if shared.as_ref().zip(explicit.as_ref()).is_some_and(|(a, b)| a != b) {
+        return Err("agent expected chain environment settings differ".into());
+    }
+    Ok(shared.or(explicit))
+}
+
+async fn signed_agent(rpc_url: &str, vault_id: &str) -> Result<Agent, AgentError> {
+    PublicReader::new(rpc_url, vault_id)?
+        .with_chain(expected_chain()?.as_deref())?
+        .final_time()
+        .await?;
+    authenticated_agent(rpc_url, vault_id)
+}
+
+fn authenticated_agent(rpc_url: &str, vault_id: &str) -> Result<Agent, AgentError> {
     let account =
         setting("AGENT_ACCOUNT")?.parse().map_err(|_| "invalid agent account configuration")?;
     let parsed =
@@ -170,7 +191,7 @@ async fn main() -> Result<(), AgentError> {
         let dry = args.get(1).is_some_and(|arg| arg == "--dry-run");
         let rpc_url = setting("NEAR_RPC_URL")?;
         let vault_id = setting("VAULT_ID")?;
-        let expected_chain = std::env::var("NEAR_CHAIN_ID").ok();
+        let expected_chain = expected_chain()?;
         let reader =
             PublicReader::new(&rpc_url, &vault_id)?.with_chain(expected_chain.as_deref())?;
         let snapshot = match mandate_agent::autonomous::Snapshot::read(&reader, false).await {
@@ -244,7 +265,7 @@ async fn main() -> Result<(), AgentError> {
                     println!("no trade: {}", error.code());
                     return Ok(());
                 }
-                let agent = signed_agent(&rpc_url, &vault_id)?;
+                let agent = signed_agent(&rpc_url, &vault_id).await?;
                 if fresh.agent_id.as_deref() != Some(agent.account.as_str()) {
                     return Err("configured account is not this vault's agent".into());
                 }
@@ -280,23 +301,46 @@ async fn main() -> Result<(), AgentError> {
         }
         let dry = args.get(2).is_some_and(|arg| arg == "--dry-run");
         let repeat = args.get(2).is_some_and(|arg| arg == "--loop");
-        let config: AutonomousConfig = read_public_json(Path::new(path))?;
+        let mut config: AutonomousConfig = read_public_json(Path::new(path))?;
+        let environment_chain = expected_chain()?;
+        if config
+            .expected_chain_id
+            .as_ref()
+            .zip(environment_chain.as_ref())
+            .is_some_and(|(a, b)| a != b)
+        {
+            return Err("agent environment and autonomous expected chains differ".into());
+        }
+        config.expected_chain_id = config.expected_chain_id.or(environment_chain);
         config.validate()?;
         // Authentication is loaded only for explicitly executing autonomous mode.
         let auth = if dry { None } else { std::env::var("RELAY_AUTH").ok() };
         let relay = Relay::new(&config.relay_url, auth.as_deref())?;
         let source = RebalanceDecision::new(config.clone(), relay);
-        loop {
+        if dry {
             let prepared = source.prepare().await?;
-            if dry {
-                println!("{}", serde_json::to_string_pretty(&prepared)?);
-                return Ok(());
-            }
+            println!("{}", serde_json::to_string_pretty(&prepared)?);
+            return Ok(());
+        }
+        let mut preparation = PreparationLoop::new(repeat);
+        loop {
+            let prepared = match preparation.next(&source).await? {
+                PreparationAttempt::Ready(prepared) => prepared,
+                PreparationAttempt::Retry { after } => {
+                    // Provider errors can contain untrusted data. Log only the
+                    // operation and bounded delay, never their response text.
+                    eprintln!("autonomous preparation failed; retry in {}s", after.as_secs());
+                    tokio::time::sleep(after).await;
+                    continue;
+                }
+            };
             match prepared {
                 Preparation::NoTrade { reason } => println!("no trade: {reason}"),
                 Preparation::Trade { prepared } => {
-                    let prepared = source.refresh(*prepared).await?;
-                    let agent = signed_agent(&config.rpc_url, &config.vault_id)?;
+                    // Public preparation is complete. Errors beyond this point
+                    // stop the process: a missing send result must be reconciled
+                    // before another proposal is submitted.
+                    let agent = authenticated_agent(&config.rpc_url, &config.vault_id)?;
                     if agent.account.as_str() != prepared.agent_id {
                         return Err("configured account is not this vault's agent".into());
                     }
@@ -322,7 +366,7 @@ async fn main() -> Result<(), AgentError> {
     }
     let plan: Plan = read_public_json(Path::new(&args[0]))?;
     let plan = ManualDecision::new(plan).validated_plan()?;
-    let agent = signed_agent(&setting("NEAR_RPC_URL")?, &setting("VAULT_ID")?)?;
+    let agent = signed_agent(&setting("NEAR_RPC_URL")?, &setting("VAULT_ID")?).await?;
     let outbox = create_public_dir(&PathBuf::from(setting("AGENT_OUTBOX")?))?;
     let id = submit(&agent, &plan, &outbox, MANUAL_SOURCE_ID).await?;
     record_outcome(&agent, id, &plan, &outbox).await

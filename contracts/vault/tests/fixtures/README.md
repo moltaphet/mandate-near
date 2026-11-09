@@ -27,6 +27,10 @@ The script checks downloaded bytes against the reported chain code hash.
 Compare that download with this pinned fixture before relying on a live identity.
 An upstream source/audit mapping and privileged-role review are separate checks.
 Preserve the existing fixture and evidence when testing a changed deployment.
+Without an output argument, fetching writes a separate temporary comparison
+file and prints its path. Refreshing the reviewed fixture requires explicitly
+passing its path and updating the reviewed size/digest; integration setup and
+the fast verification script refuse a different fixture before deployment.
 
 Historical vault STATE fixtures and their independent generator are documented
 in [legacy-state-fixtures.md](legacy-state-fixtures.md).
