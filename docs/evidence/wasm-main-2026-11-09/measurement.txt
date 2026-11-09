@@ -1,0 +1,8 @@
+# Vault WASM measurement, main 0976865 (09 Nov 2026)
+# Build: cargo near build non-reproducible-wasm --locked --no-abi, run in contracts/vault
+# Local host build. ABI generation fails on this Mac (mis-aligned LINKEDIT), so the
+# ABI-bearing artifact is not measured here; CI or a machine with a working ABI must record it.
+# Reproducible-build proof is not claimed.
+size_bytes=459584
+sha256=a7dec54d8f5687db29b903e2f12c91e0d5eb5b3294d9487d178be37b4cbe6fe9
+source_commit=0976865d47fa05554fb1e183ae60d4f2b80c3893
