@@ -1,0 +1,35 @@
+• Collecting cargo project metadata...
+• done
+
+• Checking rustc version...
+INFO: contract's near-sdk targets protocol version 88; rustc 1.95.0 accepted (bulk-memory opcodes supported by nearcore VM)
+• done
+
+• Checking the host environment...
+• done
+
+• Building contract
+ │    Compiling mandate-withdrawal-journal v0.1.0 (/Users/ehs4n/mandate-near/crates/withdrawal-journal)
+ │    Compiling mandate-vault v0.1.0 (/Users/ehs4n/mandate-near/contracts/vault)
+ │     Finished `release` profile [optimized] target(s) in 5.56s
+
+Modification timestamps of:
+ |    "/Users/ehs4n/mandate-near/target/wasm32-unknown-unknown/release/mandate_vault.wasm" = SystemTime { tv_sec: 1794215346, tv_nsec: 97832549 }
+ |    "/Users/ehs4n/mandate-near/target/near/mandate_vault/mandate_vault.wasm" = SystemTime { tv_sec: 1794147017, tv_nsec: 525589123 }
+
+• Running an optimize for size post-step with wasm-opt --enable-nontrapping-float-to-int --enable-bulk-memory...
+    Finished wasm-opt -O in 574ms
+• done
+
+✓ Contract successfully built! (in CARGO_NEAR_BUILD_ENVIRONMENT=host)
+     -                Binary: /Users/ehs4n/mandate-near/target/near/mandate_vault/mandate_vault.wasm
+     -                  Size: 459.6 KB (459584 bytes)
+     - SHA-256 checksum hex : a7dec54d8f5687db29b903e2f12c91e0d5eb5b3294d9487d178be37b4cbe6fe9
+     - SHA-256 checksum bs58: CJJ76UVtYxmaPtDtBU2py3PEJLgsXkZK6c9wTnkYpZEG
+    Finished cargo near build in 7s
+Here is the console command if you ever need to re-run it again:
+cargo near build non-reproducible-wasm --locked --no-abi
+
+cargo-near has a new update available 0.22.0 → 0.23.0
+To update run: /Users/ehs4n/.cargo/bin/cargo-near near self-update
+exit=0
