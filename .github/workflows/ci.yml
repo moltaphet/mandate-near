@@ -9,7 +9,46 @@ permissions:
   contents: read
 
 jobs:
+  # Runs on every pull request. Docs-only changes finish here in about a minute.
+  docs-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Claim and link references
+        run: bash scripts/check-claims.sh
+
+  # Decides whether a pull request changes anything besides documentation.
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.classify.outputs.code }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - id: classify
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "code=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          base="${{ github.event.pull_request.base.sha }}"
+          head="${{ github.event.pull_request.head.sha }}"
+          # Any path outside documentation counts as code, including workflows and scripts.
+          if git diff --name-only "$base" "$head" \
+             | grep -vE '^(docs/|README\.md$|SECURITY\.md$|THREAT_MODEL\.md$|\.gitleaksignore$)' \
+             | grep -q .; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "code=false" >> "$GITHUB_OUTPUT"
+          fi
+
   verify:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     env:
       # The runner context is not available in job-level env, so use a fixed temp path.
