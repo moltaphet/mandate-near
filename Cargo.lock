@@ -2110,6 +2110,7 @@ dependencies = [
  "bs58 0.5.1",
  "cargo-near-build",
  "chrono",
+ "ed25519-dalek",
  "mandate-agent",
  "mandate-keeper",
  "mandate-withdrawal-journal",

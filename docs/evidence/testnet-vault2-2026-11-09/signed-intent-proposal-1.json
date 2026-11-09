@@ -1,0 +1,13 @@
+{
+  "vault": "vault2.mandate-t1.testnet",
+  "intents": "intents.mandate-t1.testnet",
+  "signed_intent": {
+    "proposal_id": "1",
+    "payload": "{\"deadline\":\"2026-11-09T12:22:59Z\",\"intents\":[{\"diff\":{\"nep141:usdc.mandate-t1.testnet\":\"-2000000\",\"nep141:wrap.testnet\":\"450000000000000000000000\"},\"intent\":\"token_diff\"}],\"nonce\":\"Vij2xgBNSyPkAJ63Ye5f5hhzTbPwGK/6P+DxERA1iq4=\",\"signer_id\":\"vault2.mandate-t1.testnet\",\"verifying_contract\":\"intents.mandate-t1.testnet\"}",
+    "public_key": "ed25519:8Koci3SxY958XhWmGsGmY8PSCSwwzCdNR6zSkKD3k6n9",
+    "signature": "ed25519:6trQrrUWuDBQj7tuqAEWy6zWueZKfhy4F477JUWMtpRzV4VVqDtsKcg6zceJmyEdoZvXjYrAZ4KdrrAC1jtTtpt",
+    "expires_sec": 1794226979
+  },
+  "derived_public_key": "ed25519:8Koci3SxY958XhWmGsGmY8PSCSwwzCdNR6zSkKD3k6n9",
+  "note": "Read from testnet RPC on 9 Nov 2026. Proposal 1 on vault2; intent expired at 12:22:59 UTC."
+}
