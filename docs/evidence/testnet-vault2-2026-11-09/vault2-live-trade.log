@@ -1,0 +1,12 @@
+WROTE | target/live-prices.json
+PRICE | NEAR $3.600000 (wNEAR e8 360000000) | USDC $0.999587 (e8 99958700)
+NOT SENT | no chain transaction was made. To write these to the testnet oracle, run the
+           driver's price step with MANDATE_PRICE_JSON=target/live-prices.json, after approval.
+PRICE | wNEAR 360000000 | USDC 99958700 | e8 units | source live: CoinGecko simple/price (public, no key), fetched 5 s ago
+TX | set_report on oracle.mandate-t1.testnet by mandate-t1.testnet | hash 6ZpBUv2Cod5nX5tCpL6cj3eHvjKKBRiPmcUu4rLLevfG | receipt failures: 0
+TX | set_report on oracle.mandate-t1.testnet by mandate-t1.testnet | hash 8aqjmmseMMyY25Knr1ngKRuU64xEfybGnNxNseQ8jr8 | receipt failures: 0
+TARGET | vault vault2
+TX | propose on vault2.mandate-t1.testnet by agent.mandate-t1.testnet | hash V6rQUkKZg9Xm5Svfy7V5jGuyZkYcho5EdBsgR4nquWt | receipt failures: 0
+TARGET | vault vault2
+TX | execute on vault2.mandate-t1.testnet by mandate-t1.testnet | hash GX3H8soziLDsfb9F71zM6LunC11Ff48GL5rTS68ic4tQ | receipt failures: 0
+chain-steps rc=0
