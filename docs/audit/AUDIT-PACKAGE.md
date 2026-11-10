@@ -3,6 +3,39 @@
 For an external reviewer of the Mandate vault. This is a starting kit, not an audit
 result. Mandate has **not** been independently audited.
 
+## 0. Current candidate, 10 November 2026
+
+Sections 1 to 3 describe the historical revision `2b043ba`. The current vault code is newer.
+Use this section for the present candidate.
+
+| Item | Value |
+|---|---|
+| `main` at the time of writing | `b2bdf49` (merge of PR #38) |
+| Last commit touching `contracts/vault/src` | `71ae686` (withdrawal ceiling and journal withdrawal protocol) |
+| Vault source the measured WASM was built from | `0976865` |
+| Vault WASM (no-ABI host build, 459,584 bytes) | SHA256 `a7dec54d8f5687db29b903e2f12c91e0d5eb5b3294d9487d178be37b4cbe6fe9` |
+| Testnet vault deployed with this WASM | `vault2.mandate-t1.testnet`, [evidence](../evidence/testnet-vault2-2026-11-09/README.md) |
+
+Before you rely on these values, confirm that `contracts/vault/src` has not changed since
+`71ae686`, and rebuild the WASM and compare its hash. The measurement is a local host
+build without ABI. It is not a reproducible-build proof.
+
+What the testnet run on vault2 exercised:
+
+- A per-request withdrawal ceiling of 5 USDC, stored in the mandate and read back with `get_mandate`.
+- One trade through `propose` and `execute`, with the outcome `Executed`.
+- A 1 USDC withdrawal queued, then applied after its 86,400-second delay. The outcome was `Delivered`
+  (transaction `3W3xycheutTk9xixMubbPLTP9JFEhzhYDug4BPXG9JBE`, 0 receipt failures).
+
+What it does not exercise: a real oracle, the real Intents contract, a matched settlement with
+a real counterparty, F26 recovery after a lost callback, and any failure path of the withdrawal
+protocol on chain. The vault2 run used stand-ins for the Intents verifier, oracle and token.
+
+Still open before an external review can conclude: an independent audit (none has been commissioned),
+F26 real-fund resolution, an oracle selection, an owner multisig rehearsal, and the reproducible build.
+Mainnet remains NO-GO. [MAINNET-GATES.md](../MAINNET-GATES.md) lists all fourteen gates, which are
+still PENDING.
+
 ## 1. What to freeze
 
 Pick one merge commit on `main` and record it in the engagement. Everything below
