@@ -1,0 +1,2 @@
+TARGET | vault vault2
+TX | apply_pending_withdrawal on vault2.mandate-t1.testnet by mandate-t1.testnet | hash 3W3xycheutTk9xixMubbPLTP9JFEhzhYDug4BPXG9JBE | receipt failures: 0

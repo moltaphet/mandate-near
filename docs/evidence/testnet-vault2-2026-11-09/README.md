@@ -45,9 +45,17 @@ Each state-changing step printed its hash and reported zero receipt failures.
 | `execute` | outcome `Executed`, signed intent retained | `69rmz6bKWFBdE5CQdxui7vU65qNU9pvXSYg81xzMU96W` |
 | `request_withdrawal` of 1 USDC through DAO proposal 4 | queued, `effective_sec` 1794313426 | `FhkaxboXGSqCkG85yU2KjVjyN1PyCoRqdR74vKDrcQxf` (add), `BRSRDKmnAsbg3Di1N4TAzinGE6eR8UHpJe4BJk3Kp8ec` (approve) |
 
-The withdrawal is queued but not applied. `apply_pending_withdrawal` can run only after the
-delay, which is about 24 hours from the queue (`2026-11-10 12:23 UTC`). Its result will be
-recorded in this folder when it runs.
+The withdrawal was queued until `2026-11-10 12:23:46 UTC`. It was applied on 10 November 2026,
+after that time, with `withdraw-apply` (log: [vault2-withdraw-apply.log](vault2-withdraw-apply.log)).
+
+| Step | Result | Hash / evidence |
+|---|---|---|
+| `apply_pending_withdrawal` on vault2 | receipt failures 0; outcome `Delivered`, withdrawal id 1, 1,000,000 base units (1 USDC) | `3W3xycheutTk9xixMubbPLTP9JFEhzhYDug4BPXG9JBE` |
+
+After the apply, `get_pending_withdrawal` and `get_withdrawal_status` return null, and
+`get_last_withdrawal_outcome` returns `Delivered`. The receiver `mandate-t1.testnet` holds
+2,000,000 base units of the testnet USDC stand-in (`usdc.mandate-t1.testnet`). The balance before
+the withdrawal is not recorded in this folder.
 
 ## Incident: a trade ran on the wrong vault
 
