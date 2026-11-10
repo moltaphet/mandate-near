@@ -80,6 +80,29 @@ accepts a price only if it is 60 seconds old or less. A new `set_report` is need
 The stand-in price of $4.50 for wNEAR, used by the earlier trade in this folder, was about 27% above the
 CoinGecko price on that day. That trade therefore priced against the stand-in, not the market.
 
+## Trade on vault2 at the live price, 10 November 2026
+
+Written in one run, [vault2-live-trade.log](vault2-live-trade.log): prices written, then `propose`, then `execute`.
+
+| Step | Result | Hash / evidence |
+|---|---|---|
+| `set_report` for `wrap.testnet` at $3.60 | receipt failures 0 | `6ZpBUv2Cod5nX5tCpL6cj3eHvjKKBRiPmcUu4rLLevfG` |
+| `set_report` for `usdc` at $0.999587 | receipt failures 0 | `8aqjmmseMMyY25Knr1ngKRuU64xEfybGnNxNseQ8jr8` |
+| `propose` by the agent: 2 USDC for at least 0.55 wNEAR, `manual-v1` | proposal 2 | `V6rQUkKZg9Xm5Svfy7V5jGuyZkYcho5EdBsgR4nquWt` |
+| `execute` | outcome `Executed`, proposal 2 | `GX3H8soziLDsfb9F71zM6LunC11Ff48GL5rTS68ic4tQ` |
+
+The minimum was set to 0.55 wNEAR, not the 0.45 used in proposal 1. The 0.45 minimum was for the $4.50
+stand-in. At $3.60, 0.45 wNEAR is worth $1.62, below the 1% slippage floor of about $1.98 on $2 of USDC,
+so the vault would refuse it. The vault checks slippage against the oracle before it signs, so an
+attempted trade at 0.45 was not made.
+
+The signed intent for proposal 2 is `token_diff` with USDC −2,000,000 and wNEAR +550,000,000,000,000,000,000,000.
+After the run, `get_pending_proposal` is null, strikes are 0, the vault is not paused, and nothing is in flight.
+
+What this run does not show: `execute` records the vault's signature. As in proposal 1, no solver filled
+the intent in this run, so the balances on the Intents stand-in were not changed by a counterparty.
+The prices are operator-fed testnet values, as described above.
+
 ## Incident: a trade ran on the wrong vault
 
 The first `propose` and `execute` on 9 November 2026 ran on `vault.mandate-t1.testnet`, the

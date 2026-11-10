@@ -384,6 +384,9 @@ async fn step(cx: &Ctx, name: &str, rest: &[String]) -> R<()> {
         }
         // 10. The agent proposes one trade; a permissionless caller executes it.
         "propose" => {
+            // Default: 0.45 wNEAR for 2 USDC (the stand-in price). An optional argument
+            // sets min_amount_out in yoctoWNEAR, for a live price.
+            let min_out = rest.first().map(String::as_str).unwrap_or("450000000000000000000000");
             call(
                 cx,
                 &vault_id(),
@@ -393,7 +396,7 @@ async fn step(cx: &Ctx, name: &str, rest: &[String]) -> R<()> {
                     "asset_in": usdc_asset(),
                     "asset_out": WNEAR,
                     "amount_in": "2000000",
-                    "min_amount_out": "450000000000000000000000",
+                    "min_amount_out": min_out,
                     "reason_hash": REASON,
                     "model_id": "manual-v1",
                 }),
