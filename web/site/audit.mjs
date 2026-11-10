@@ -5,8 +5,8 @@ const ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 const HASH = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 export const MAX_RESPONSE_BYTES = 65536;
 export const NETWORKS = Object.freeze({
-  mainnet: { rpc: "https://rpc.mainnet.near.org", explorer: "https://nearblocks.io", chain: "mainnet" },
-  testnet: { rpc: "https://rpc.testnet.near.org", explorer: "https://testnet.nearblocks.io", chain: "testnet" },
+  mainnet: { rpc: "https://free.rpc.fastnear.com", explorer: "https://nearblocks.io", chain: "mainnet" },
+  testnet: { rpc: "https://test.rpc.fastnear.com", explorer: "https://testnet.nearblocks.io", chain: "testnet" },
   "local-fixture": { rpc: "http://127.0.0.1:8124", explorer: null, chain: "local-fixture" },
 });
 

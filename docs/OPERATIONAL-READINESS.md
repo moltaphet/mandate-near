@@ -7,7 +7,7 @@ deployment.
 
 ## Read-only review
 
-Run `python3 -B scripts/inspect-deployment.py --network mainnet --rpc https://rpc.mainnet.near.org --vault PUBLIC_ACCOUNT --expected-wasm-sha256 REVIEWED_WASM_SHA256`.
+Run `python3 -B scripts/inspect-deployment.py --network mainnet --rpc https://free.rpc.fastnear.com --vault PUBLIC_ACCOUNT --expected-wasm-sha256 REVIEWED_WASM_SHA256`.
 Replace the two placeholders with public account and reviewed artifact values.
 The inspector records RPC-reported network identity, anchors one final block, checks returned WASM bytes against their
 reported Base58 hash and account metadata, validates hash/height consistency, refuses redirects, and reads control views and external

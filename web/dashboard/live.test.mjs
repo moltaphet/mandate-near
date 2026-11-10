@@ -5,7 +5,7 @@ import { createRpcClient, createSnapshotLoader, deadlineState, formatUnits, MAX_
 
 const BLOCK = "3".repeat(44), CODE = "5".repeat(44), OTHER = "6".repeat(44);
 const NOW = 1793980800;
-const config = { account: "vault.near", network: "mainnet", rpc: "https://rpc.mainnet.near.org", expectedCodeHash: CODE };
+const config = { account: "vault.near", network: "mainnet", rpc: "https://free.rpc.fastnear.com", expectedCodeHash: CODE };
 const rules = () => ({ assets: [
   { asset_id: "nep141:usdc.near", decimals: 6, price_feed_id: "usdc" },
   { asset_id: "nep141:wrap.near", decimals: 24, price_feed_id: "near" },

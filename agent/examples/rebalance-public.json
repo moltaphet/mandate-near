@@ -1,5 +1,5 @@
 {
-  "rpc_url": "https://rpc.mainnet.near.org",
+  "rpc_url": "https://free.rpc.fastnear.com",
   "expected_chain_id": "mainnet",
   "vault_id": "mandate-demo.near",
   "relay_url": "https://solver-relay-v2.chaindefuser.com/rpc",
