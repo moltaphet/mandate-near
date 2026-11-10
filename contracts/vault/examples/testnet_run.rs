@@ -342,7 +342,34 @@ async fn step(cx: &Ctx, name: &str, rest: &[String]) -> R<()> {
         }
         // 9. Fresh oracle reports: wNEAR at $4.50 and USDC at $1.00.
         "price" => {
-            for (feed, mult) in [(WNEAR_FEED, "450000000"), (USDC_FEED, "100000000")] {
+            // Default: the fixed stand-in prices (wNEAR $4.50, USDC $1.00).
+            // MANDATE_PRICE_JSON: a file written by scripts/live-price-feed.py. It is
+            // refused when older than 60 s, because the vault's price age limit is 60 s.
+            let (wnear_e8, usdc_e8, source) = match std::env::var("MANDATE_PRICE_JSON") {
+                Ok(path) => {
+                    let v: Value = near_sdk::serde_json::from_slice(&std::fs::read(&path)?)?;
+                    let fetched =
+                        v["fetched_at"].as_u64().ok_or("price file: fetched_at missing")?;
+                    let age = now_sec().saturating_sub(fetched);
+                    if age > 60 {
+                        return Err(format!(
+                            "price file {path} is {age} s old (limit 60 s); refetch"
+                        )
+                        .into());
+                    }
+                    let w = v["wnear_usd_e8"].as_str().ok_or("price file: wnear_usd_e8 missing")?;
+                    let u = v["usdc_usd_e8"].as_str().ok_or("price file: usdc_usd_e8 missing")?;
+                    let src = v["source"].as_str().unwrap_or("unknown");
+                    (w.to_string(), u.to_string(), format!("live: {src}, fetched {age} s ago"))
+                }
+                Err(_) => (
+                    "450000000".to_string(),
+                    "100000000".to_string(),
+                    "stand-in constants (not market prices)".to_string(),
+                ),
+            };
+            println!("PRICE | wNEAR {wnear_e8} | USDC {usdc_e8} | e8 units | source {source}");
+            for (feed, mult) in [(WNEAR_FEED, wnear_e8), (USDC_FEED, usdc_e8)] {
                 call(
                     cx,
                     &sub("oracle"),

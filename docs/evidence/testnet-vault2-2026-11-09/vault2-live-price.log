@@ -1,0 +1,3 @@
+PRICE | wNEAR 360000000 | USDC 99956500 | e8 units | source live: CoinGecko simple/price (public, no key), fetched 4 s ago
+TX | set_report on oracle.mandate-t1.testnet by mandate-t1.testnet | hash AAo7JxME8NnrZnPY711kmSnv7pzhmCZJL4U2V5kykYnt | receipt failures: 0
+TX | set_report on oracle.mandate-t1.testnet by mandate-t1.testnet | hash 8fvCSWv5kBV6qGiSmGwoMS5fktKVzJGdTBEzmTvxUQq2 | receipt failures: 0

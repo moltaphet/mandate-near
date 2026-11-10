@@ -57,6 +57,29 @@ After the apply, `get_pending_withdrawal` and `get_withdrawal_status` return nul
 2,000,000 base units of the testnet USDC stand-in (`usdc.mandate-t1.testnet`). The balance before
 the withdrawal is not recorded in this folder.
 
+## Operator-fed prices on the testnet oracle, 10 November 2026
+
+The oracle is the testnet stand-in `oracle.mandate-t1.testnet` (`contracts/mock-oracle`). Its
+`set_report` accepts a report from any caller, so these values are operator-fed testnet prices.
+They are not a verified oracle, and [gate 3 in MAINNET-GATES.md](../../MAINNET-GATES.md) stays PENDING.
+
+The prices came from the public CoinGecko `simple/price` endpoint through
+[scripts/live-price-feed.py](../../../scripts/live-price-feed.py), then were written by the driver's
+`price` step with `MANDATE_PRICE_JSON`. The driver refuses a file older than 60 seconds, which matches the
+vault's `max_price_age_sec` of 60.
+
+| Step | Result | Hash / evidence |
+|---|---|---|
+| `set_report` for `wrap.testnet`, 360,000,000 at 8 decimals (wNEAR $3.60) | receipt failures 0 | `AAo7JxME8NnrZnPY711kmSnv7pzhmCZJL4U2V5kykYnt` |
+| `set_report` for `usdc`, 99,956,500 at 8 decimals (USDC $0.999565) | receipt failures 0 | `8fvCSWv5kBV6qGiSmGwoMS5fktKVzJGdTBEzmTvxUQq2` |
+
+The full log is in [vault2-live-price.log](vault2-live-price.log). A read-only `get_price_data` on the
+oracle returned both values. The `recency_duration_sec` the oracle reports is 600 seconds, but the vault
+accepts a price only if it is 60 seconds old or less. A new `set_report` is needed before each trade.
+
+The stand-in price of $4.50 for wNEAR, used by the earlier trade in this folder, was about 27% above the
+CoinGecko price on that day. That trade therefore priced against the stand-in, not the market.
+
 ## Incident: a trade ran on the wrong vault
 
 The first `propose` and `execute` on 9 November 2026 ran on `vault.mandate-t1.testnet`, the
