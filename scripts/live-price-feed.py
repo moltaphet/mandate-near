@@ -22,7 +22,8 @@ import urllib.request
 
 API = "https://api.coingecko.com/api/v3/simple/price"
 IDS = "near,usd-coin"
-MAX_QUOTE_AGE_SEC = 300  # the source's own timestamp must be this recent
+MAX_QUOTE_AGE_SEC = 60  # the vault's max_price_age_sec on vault2; a quote older than this is useless to it
+MAX_CLOCK_SKEW_SEC = 5  # a source timestamp this far in the future is refused, not written
 NEAR_RANGE = (0.01, 1000.0)  # sanity bounds in USD
 USDC_RANGE = (0.95, 1.05)  # a stablecoin outside this band is refused, not written
 
@@ -43,6 +44,8 @@ def check_price(name: str, entry: dict, bounds: tuple, now: int) -> float:
         raise ValueError(f"{name}: price {price} outside sanity bounds {bounds}")
     if not isinstance(updated, int):
         raise ValueError(f"{name}: source timestamp missing")
+    if updated > now + MAX_CLOCK_SKEW_SEC:
+        raise ValueError(f"{name}: source timestamp is {updated - now} s in the future")
     if now - updated > MAX_QUOTE_AGE_SEC:
         raise ValueError(f"{name}: source quote is {now - updated} s old (limit {MAX_QUOTE_AGE_SEC} s)")
     return float(price)

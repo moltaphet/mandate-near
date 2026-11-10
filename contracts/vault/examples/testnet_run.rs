@@ -137,6 +137,22 @@ fn now_sec() -> u64 {
     std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).expect("clock").as_secs()
 }
 
+/// The source timestamp of one feed in a price file. Refused when it is dated in the
+/// future (beyond 5 s of clock skew) or is older than 60 s, the vault's price age limit.
+fn feed_timestamp(v: &Value, key: &str, now: u64) -> R<u64> {
+    let ts = v["source_updated_at"][key]
+        .as_u64()
+        .ok_or_else(|| format!("price file: source_updated_at.{key} missing"))?;
+    if ts > now + 5 {
+        return Err(format!("{key} quote is {} s in the future; refused", ts - now).into());
+    }
+    let age = now.saturating_sub(ts);
+    if age > 60 {
+        return Err(format!("{key} quote is {age} s old (limit 60 s); refetch").into());
+    }
+    Ok(ts)
+}
+
 fn mandate() -> Value {
     json!({
         "assets": [
@@ -342,40 +358,48 @@ async fn step(cx: &Ctx, name: &str, rest: &[String]) -> R<()> {
         }
         // 9. Fresh oracle reports: wNEAR at $4.50 and USDC at $1.00.
         "price" => {
-            // Default: the fixed stand-in prices (wNEAR $4.50, USDC $1.00).
-            // MANDATE_PRICE_JSON: a file written by scripts/live-price-feed.py. It is
-            // refused when older than 60 s, because the vault's price age limit is 60 s.
-            let (wnear_e8, usdc_e8, source) = match std::env::var("MANDATE_PRICE_JSON") {
-                Ok(path) => {
-                    let v: Value = near_sdk::serde_json::from_slice(&std::fs::read(&path)?)?;
-                    let fetched =
-                        v["fetched_at"].as_u64().ok_or("price file: fetched_at missing")?;
-                    let age = now_sec().saturating_sub(fetched);
-                    if age > 60 {
-                        return Err(format!(
-                            "price file {path} is {age} s old (limit 60 s); refetch"
-                        )
-                        .into());
+            // Default: the fixed stand-in prices (wNEAR $4.50, USDC $1.00), stamped now.
+            // MANDATE_PRICE_JSON: a file from scripts/live-price-feed.py. Each feed is stamped
+            // with its SOURCE time, so the vault's 60 s age limit applies to the real age.
+            let now = now_sec();
+            let (wnear_e8, usdc_e8, wnear_ts, usdc_ts, source) =
+                match std::env::var("MANDATE_PRICE_JSON") {
+                    Ok(path) => {
+                        let v: Value = near_sdk::serde_json::from_slice(&std::fs::read(&path)?)?;
+                        let wts = feed_timestamp(&v, "NEAR", now)?;
+                        let uts = feed_timestamp(&v, "USDC", now)?;
+                        let w =
+                            v["wnear_usd_e8"].as_str().ok_or("price file: wnear_usd_e8 missing")?;
+                        let u =
+                            v["usdc_usd_e8"].as_str().ok_or("price file: usdc_usd_e8 missing")?;
+                        let src = v["source"].as_str().unwrap_or("unknown");
+                        let src = format!(
+                            "live: {src}; NEAR quote {} s old, USDC quote {} s old",
+                            now.saturating_sub(wts),
+                            now.saturating_sub(uts)
+                        );
+                        (w.to_string(), u.to_string(), wts, uts, src)
                     }
-                    let w = v["wnear_usd_e8"].as_str().ok_or("price file: wnear_usd_e8 missing")?;
-                    let u = v["usdc_usd_e8"].as_str().ok_or("price file: usdc_usd_e8 missing")?;
-                    let src = v["source"].as_str().unwrap_or("unknown");
-                    (w.to_string(), u.to_string(), format!("live: {src}, fetched {age} s ago"))
-                }
-                Err(_) => (
-                    "450000000".to_string(),
-                    "100000000".to_string(),
-                    "stand-in constants (not market prices)".to_string(),
-                ),
-            };
-            println!("PRICE | wNEAR {wnear_e8} | USDC {usdc_e8} | e8 units | source {source}");
-            for (feed, mult) in [(WNEAR_FEED, wnear_e8), (USDC_FEED, usdc_e8)] {
+                    Err(_) => (
+                        "450000000".to_string(),
+                        "100000000".to_string(),
+                        now,
+                        now,
+                        "stand-in constants (not market prices)".to_string(),
+                    ),
+                };
+            println!(
+                "PRICE | wNEAR {wnear_e8} @ {wnear_ts} | USDC {usdc_e8} @ {usdc_ts} | e8 units | source {source}"
+            );
+            for (feed, mult, ts) in
+                [(WNEAR_FEED, wnear_e8, wnear_ts), (USDC_FEED, usdc_e8, usdc_ts)]
+            {
                 call(
                     cx,
                     &sub("oracle"),
                     &parent,
                     "set_report",
-                    json!({ "asset_id": feed, "multiplier": mult, "decimals": 8, "timestamp_sec": now_sec().to_string() }),
+                    json!({ "asset_id": feed, "multiplier": mult, "decimals": 8, "timestamp_sec": ts.to_string() }),
                     30,
                     NearToken::from_yoctonear(0),
                 )

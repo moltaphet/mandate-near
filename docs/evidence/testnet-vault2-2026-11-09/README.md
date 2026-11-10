@@ -65,8 +65,13 @@ They are not a verified oracle, and [gate 3 in MAINNET-GATES.md](../../MAINNET-G
 
 The prices came from the public CoinGecko `simple/price` endpoint through
 [scripts/live-price-feed.py](../../../scripts/live-price-feed.py), then were written by the driver's
-`price` step with `MANDATE_PRICE_JSON`. The driver refuses a file older than 60 seconds, which matches the
-vault's `max_price_age_sec` of 60.
+`price` step with `MANDATE_PRICE_JSON`.
+
+**Correction for the two writes above and the trade below.** Those writes stamped each report with the
+write time, not the source's own time, so the vault's 60-second age check could not see how old the
+quote was. The quotes were a few seconds old at write time, so the values are not wrong, but the stamp
+hid the age. From the next write on, the driver stamps each feed with its source timestamp and refuses
+any quote older than 60 seconds or dated in the future.
 
 | Step | Result | Hash / evidence |
 |---|---|---|
