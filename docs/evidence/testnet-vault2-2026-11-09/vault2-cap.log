@@ -1,0 +1,11 @@
+TX | mint on usdc.mandate-t1.testnet by mandate-t1.testnet | hash 3XMkRBUE71rwnbCJrkHK6XeV4Lg9dQzS3vRkygEVvwcR | receipt failures: 0
+TARGET | vault vault2
+TX | ft_transfer_call on usdc.mandate-t1.testnet by mandate-t1.testnet | hash 8HxEpoX6ADRr7bkZHKiNw6op2vR5PAukxR3UZEwzXvih | receipt failures: 0
+PRICE | wNEAR 362000000 @ 1794383941 | USDC 99947400 @ 1794383941 | e8 units | source live: CoinGecko simple/price (public, no key); NEAR quote 24 s old, USDC quote 24 s old
+TX | set_report on oracle.mandate-t1.testnet by mandate-t1.testnet | hash 5YRs2UHEK15TrPk4WMEmHa84pvnd1UdaXs9knEEifSNe | receipt failures: 0
+TX | set_report on oracle.mandate-t1.testnet by mandate-t1.testnet | hash 4sGusYnLeuG7tgNMGEvZhqvrQt3WEC75rKQybL18i4TW | receipt failures: 0
+TARGET | vault vault2
+TX | propose on vault2.mandate-t1.testnet by agent.mandate-t1.testnet | hash Fgv7ad46RhNGddAJsVoC4s6S3Qk9teAWPxzsBKiLvp6X | receipt failures: 0
+TARGET | vault vault2
+TX | execute on vault2.mandate-t1.testnet by mandate-t1.testnet | hash J4RvGERYiuFv2hfninTCFWxqjw4HikG6rXH7VRSsDjBM | receipt failures: 0
+steps rc=0

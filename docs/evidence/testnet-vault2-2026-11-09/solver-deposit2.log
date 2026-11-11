@@ -1,0 +1,3 @@
+TX | storage_deposit on wrap.testnet by mandate-t1.testnet | hash Fv2YpJTRF5SLweCT9od2b75Xcuj9BoEee9CcnwL1hDPZ | receipt failures: 0
+TX | ft_transfer_call on wrap.testnet by solver.mandate-t1.testnet | hash D6y8Noj9WFXVvsCLf6ZnuLG5pLYEjYtt9qUz1PJW5xt4 | receipt failures: 0
+SOLVER | solver.mandate-t1.testnet deposited 0.99 wNEAR into the verifier

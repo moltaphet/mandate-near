@@ -1,0 +1,2 @@
+TX | ft_transfer on wrap.testnet by mandate-t1.testnet | hash AQiJStNqCd6AVgs6XMYnQQAwQv82fQ8T3DiG93vAUMVR | receipt failures: 0
+Error: TransactionError(Critical(ServerError(InvalidTransaction({}))))
