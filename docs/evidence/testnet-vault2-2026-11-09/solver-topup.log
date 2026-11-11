@@ -1,0 +1,11 @@
+TX | mint on usdc.mandate-t1.testnet by mandate-t1.testnet | hash Q4tUjTajTUyii6pxB1qfEg3LHokDGf9L58K6HSq3eUw | receipt failures: 0
+TX | ft_transfer_call on usdc.mandate-t1.testnet by mandate-t1.testnet | hash DGgVUpW1vCK5rX9hxQJHgvo4efzp2jHEvhmvNt5Y4y1U | receipt failures: 0
+TX | near_deposit on wrap.testnet by mandate-t1.testnet | hash Bho28s955Mg1K9pVaAji2wDrN3FDFQZ1SgQXcw7UGXUe | receipt failures: 0
+Error: TransactionError(Critical(ServerError(InvalidTransaction({}))))
+Error: TransactionError(Critical(ServerError(InvalidTransaction({}))))
+TX | ft_transfer_call on wrap.testnet by mandate-t1.testnet | hash 3nc47MuhQHyRVoG94t6K33UcyeGZ97Qb72EErs9bAjHL | receipt failures: 0
+TARGET | vault vault2
+BALANCE | after wNEAR deposit | vault2.mandate-t1.testnet | nep141:usdc.mandate-t1.testnet | "67000000"
+BALANCE | after wNEAR deposit | vault2.mandate-t1.testnet | nep141:wrap.testnet | "550000000000000000000000"
+BALANCE | after wNEAR deposit | solver.mandate-t1.testnet | nep141:usdc.mandate-t1.testnet | "22000000"
+BALANCE | after wNEAR deposit | solver.mandate-t1.testnet | nep141:wrap.testnet | "740000000000000000000000"
