@@ -1554,13 +1554,24 @@ impl Vault {
     /// A failure before requesting signing: keeps the proposal, counts nothing.
     fn failed(&mut self, reason: &str) -> ExecutionOutcome {
         self.in_flight = None;
-        ExecutionOutcome::Failed { reason: reason.to_string() }
+        self.record_failure(reason)
     }
 
     /// A failure after the signer may have answered. The lock stays until it runs out, so a
     /// second intent for the proposal is not built while the first one could still settle.
     fn failed_holding_lock(&mut self, reason: &str) -> ExecutionOutcome {
-        ExecutionOutcome::Failed { reason: reason.to_string() }
+        self.record_failure(reason)
+    }
+
+    /// Records a failed attempt as the last outcome of the pending proposal, so the last
+    /// outcome never shows an older proposal while this one is still pending.
+    fn record_failure(&mut self, reason: &str) -> ExecutionOutcome {
+        let outcome = ExecutionOutcome::Failed { reason: reason.to_string() };
+        if let Some(pending) = &self.pending {
+            self.last_proposal_outcome =
+                Some(ProposalOutcome { proposal_id: pending.id, outcome: outcome.clone() });
+        }
+        outcome
     }
 
     /// True while the execution holding the lock may still build and sign an intent.
