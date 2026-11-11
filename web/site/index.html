@@ -1282,7 +1282,7 @@ td {
 .flow .glow{fill:none;stroke:var(--pass);stroke-width:3;stroke-linecap:round;stroke-dasharray:14 86;stroke-dashoffset:0;filter:drop-shadow(0 0 6px rgba(61,220,151,.7));animation:flow-run 4.8s linear infinite}
 .flow .refuse{fill:none;stroke:var(--block);stroke-width:2;stroke-dasharray:4 4;opacity:.8}
 .flow .node circle{fill:var(--paper);stroke:var(--pass);stroke-width:2}
-.flow .node:nth-child(3) circle{animation:flow-pulse 4.8s ease-in-out infinite}
+
 .flow .block circle{fill:var(--block)}
 .flow text{font-family:var(--mono);font-size:26px;fill:var(--soft);text-anchor:middle}
 .flow .block text{fill:var(--block);text-anchor:start;font-size:20px}
@@ -1390,7 +1390,7 @@ td {
 .flow .node:nth-child(2){animation-delay:.15s}
 .flow .node:nth-child(3){animation-delay:.3s}
 .flow .node:nth-child(4){animation-delay:.45s}
-.flow .node:nth-child(3) circle{animation:flow-pulse 4.8s ease-in-out infinite}
+
 @keyframes boundary-in{from{opacity:0;transform:translateY(18px) scale(.985)}to{opacity:1;transform:none}}
 @keyframes step-in{from{opacity:0;transform:translateX(14px)}to{opacity:1;transform:none}}
 @keyframes arrow-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(4px)}}
@@ -1399,6 +1399,27 @@ td {
 @media (prefers-reduced-motion:reduce){
   .boundary,.boundary::before,.boundary li,.boundary .arrow,.flow .node,.flow .node:nth-child(3) circle{animation:none!important}
   .boundary:hover{transform:none}
+}
+
+/* Diagram state: one proposal travels Propose to Settle, lighting each step; a refusal packet
+   branches from Check in its own window of the same 9-second cycle. Hidden under reduced motion. */
+.flow .packet{fill:var(--pass);filter:drop-shadow(0 0 8px rgba(61,220,151,.9))}
+.flow .rpacket{fill:var(--block);filter:drop-shadow(0 0 8px rgba(255,125,98,.9));animation:rwindow 9s linear infinite}
+.flow .n1 circle{animation:lit-1 9s linear infinite}
+.flow .n2 circle{animation:lit-2 9s linear infinite}
+.flow .n3 circle{animation:lit-3 9s linear infinite}
+.flow .n4 circle{animation:lit-4 9s linear infinite}
+.flow .block text{animation:bwindow 9s linear infinite}
+@keyframes lit-1{0%,100%{fill:var(--pass)}}
+@keyframes lit-2{0%,30%{fill:var(--paper)}34%,100%{fill:var(--pass)}}
+@keyframes lit-3{0%,63%{fill:var(--paper)}67%,100%{fill:var(--pass)}}
+@keyframes lit-4{0%,96%{fill:var(--paper)}99%,100%{fill:var(--pass)}}
+@keyframes rwindow{0%,32%{opacity:0}34%,64%{opacity:1}66%,100%{opacity:0}}
+@keyframes bwindow{0%,32%{opacity:.25}36%,64%{opacity:1}68%,100%{opacity:.25}}
+@media (prefers-reduced-motion:reduce){
+  .flow .packet,.flow .rpacket{display:none}
+  .flow .n1 circle,.flow .n2 circle,.flow .n3 circle,.flow .n4 circle,.flow .block text{animation:none}
+  .flow .node circle{fill:var(--paper)}
 }
 </style>
 </head>
@@ -1436,10 +1457,12 @@ td {
        <path class="track" d="M70 60 H490" pathLength="100"/>
        <path class="glow" d="M70 60 H490" pathLength="100"/>
        <path class="refuse" d="M210 70 V146 H236" pathLength="100"/>
-       <g class="node"><circle cx="70" cy="60" r="10"/><text x="70" y="34">Propose</text></g>
-       <g class="node"><circle cx="210" cy="60" r="10"/><text x="210" y="34">Check</text></g>
-       <g class="node"><circle cx="350" cy="60" r="10"/><text x="350" y="34">Sign</text></g>
-       <g class="node"><circle cx="490" cy="60" r="10"/><text x="490" y="34">Settle</text></g>
+       <g class="node n1"><circle cx="70" cy="60" r="10"/><text x="70" y="34">Propose</text></g>
+       <g class="node n2"><circle cx="210" cy="60" r="10"/><text x="210" y="34">Check</text></g>
+       <g class="node n3"><circle cx="350" cy="60" r="10"/><text x="350" y="34">Sign</text></g>
+       <g class="node n4"><circle cx="490" cy="60" r="10"/><text x="490" y="34">Settle</text></g>
+       <circle class="packet" r="6"><animateMotion dur="9s" repeatCount="indefinite" path="M70 60 H490"/></circle>
+       <circle class="rpacket" r="5"><animateMotion dur="9s" repeatCount="indefinite" calcMode="linear" keyTimes="0;0.33;0.5;1" keyPoints="0;0;1;1" path="M210 60 V146 H236"/></circle>
        <g class="block"><text x="244" y="151">Refused · TradeTooLarge</text></g>
       </svg>
       <figcaption>One proposal, checked on-chain before a signature.</figcaption>
