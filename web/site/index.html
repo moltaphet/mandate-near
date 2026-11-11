@@ -1370,6 +1370,36 @@ td {
   .ledger dd.moved{animation:none}
   .step,.play{transition:none}
 }
+
+/* Hero boundary panel: entrance, staggered steps, an edge glow, moving arrows and node pulses.
+   Decorative only; the content is fully visible without animation. Reduced motion turns all of it off. */
+.boundary{position:relative;isolation:isolate;animation:boundary-in .9s cubic-bezier(.2,.7,.2,1) backwards .15s}
+.boundary::before{content:"";position:absolute;inset:-1px;border-radius:inherit;padding:1px;background:linear-gradient(120deg,transparent 30%,rgba(61,220,151,.9) 50%,transparent 70%) 0 0/250% 100%;-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none;z-index:-1;opacity:.55;animation:edge-sweep 7s linear infinite}
+.boundary:hover{transform:translateY(-3px);box-shadow:0 22px 60px rgba(61,220,151,.14)}
+.boundary li{animation:step-in .7s cubic-bezier(.2,.7,.2,1) both}
+.boundary li:nth-child(1){animation-delay:.45s}
+.boundary li:nth-child(2){animation-delay:.6s}
+.boundary li:nth-child(3){animation-delay:.75s}
+.boundary li:nth-child(4){animation-delay:.9s}
+.boundary .arrow{display:inline-block;animation:arrow-bob 2.4s ease-in-out infinite}
+.boundary li:nth-child(2) .arrow{animation-delay:.3s}
+.boundary li:nth-child(3) .arrow{animation-delay:.6s}
+.boundary .number{transition:color .3s,transform .3s}
+.boundary li:hover .number{color:var(--pass-ink);transform:translateX(3px)}
+.flow .node{animation:node-in .6s cubic-bezier(.2,.7,.2,1) both}
+.flow .node:nth-child(2){animation-delay:.15s}
+.flow .node:nth-child(3){animation-delay:.3s}
+.flow .node:nth-child(4){animation-delay:.45s}
+.flow .node:nth-child(3) circle{animation:flow-pulse 4.8s ease-in-out infinite}
+@keyframes boundary-in{from{opacity:0;transform:translateY(18px) scale(.985)}to{opacity:1;transform:none}}
+@keyframes step-in{from{opacity:0;transform:translateX(14px)}to{opacity:1;transform:none}}
+@keyframes arrow-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(4px)}}
+@keyframes edge-sweep{from{background-position:100% 0}to{background-position:-150% 0}}
+@keyframes node-in{from{opacity:0;transform:scale(.4)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){
+  .boundary,.boundary::before,.boundary li,.boundary .arrow,.flow .node,.flow .node:nth-child(3) circle{animation:none!important}
+  .boundary:hover{transform:none}
+}
 </style>
 </head>
 <body>
