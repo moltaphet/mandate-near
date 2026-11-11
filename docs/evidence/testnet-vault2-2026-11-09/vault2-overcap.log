@@ -1,0 +1,8 @@
+PRICE | wNEAR 361000000 @ 1794383840 | USDC 99947900 @ 1794383840 | e8 units | source live: CoinGecko simple/price (public, no key); NEAR quote 14 s old, USDC quote 14 s old
+TX | set_report on oracle.mandate-t1.testnet by mandate-t1.testnet | hash HVq5STkPKYyWy1jS2AZSyQgP45SakQnGvLoB449gWiTd | receipt failures: 0
+TX | set_report on oracle.mandate-t1.testnet by mandate-t1.testnet | hash HND6fizCzDaQ47tRLNsMToX2pjh4Z3YQtkbD1Byenafm | receipt failures: 0
+TARGET | vault vault2
+TX | propose on vault2.mandate-t1.testnet by agent.mandate-t1.testnet | hash ALsNp7NuLAA5cJWdRxSYVsbnPNinqrBMrCsmtytG7mYN | receipt failures: 0
+TARGET | vault vault2
+TX | execute on vault2.mandate-t1.testnet by mandate-t1.testnet | hash GoUU2JWXjPSWdbf5tZU2F8ypFQvxrYkPBGnuWSSNyXbc | receipt failures: 0
+steps rc=0

@@ -174,6 +174,75 @@ fn mandate() -> Value {
 
 /// An owner call: the DAO is the vault owner, so the call goes through a DAO proposal that
 /// the single council member approves. The vault sees the DAO as the predecessor.
+/// The counterparty that fills the vault's intent on testnet. Its key is kept outside the
+/// repository, in ~/.near-credentials/testnet/<SOLVER>.json, and is never printed.
+const SOLVER: &str = "solver.mandate-t1.testnet";
+const WRAP: &str = "wrap.testnet";
+const SOLVER_WNEAR: &str = "990000000000000000000000";
+
+fn solver_secret() -> R<SecretKey> {
+    let home = std::env::var("HOME")?;
+    let path = format!("{home}/.near-credentials/testnet/{SOLVER}.json");
+    let file: Value = near_sdk::serde_json::from_slice(&std::fs::read(path)?)?;
+    Ok(file["private_key"].as_str().ok_or("solver key missing")?.parse()?)
+}
+
+/// Like `call`, but signed by the given key for the given caller.
+async fn call_as(
+    cx: &Ctx,
+    caller: &AccountId,
+    signer: Arc<Signer>,
+    contract: &AccountId,
+    method: &str,
+    args: Value,
+    tgas: u64,
+    deposit: NearToken,
+) -> R<()> {
+    let result = Contract(contract.clone())
+        .call_function(method, args)
+        .transaction()
+        .gas(NearGas::from_tgas(tgas))
+        .deposit(deposit)
+        .with_signer(caller.clone(), signer)
+        .send_to(&cx.net)
+        .await?;
+    let hash = result.transaction().get_hash();
+    let success = result.into_result().map_err(|e| format!("{method} failed: {e:?}"))?;
+    println!(
+        "TX | {method} on {contract} by {caller} | hash {hash} | receipt failures: {}",
+        success.receipt_failures().len()
+    );
+    Ok(())
+}
+
+/// The solver's 64-byte ed25519 key (seed followed by public key), decoded from the key file.
+fn solver_key_bytes() -> R<[u8; 64]> {
+    let home = std::env::var("HOME")?;
+    let path = format!("{home}/.near-credentials/testnet/{SOLVER}.json");
+    let file: Value = near_sdk::serde_json::from_slice(&std::fs::read(path)?)?;
+    let text = file["private_key"].as_str().ok_or("solver key missing")?;
+    let raw = bs58::decode(text.trim_start_matches("ed25519:")).into_vec()?;
+    Ok(raw.try_into().map_err(|_| "solver key must decode to 64 bytes")?)
+}
+
+/// Prints the verifier ledgers of the vault and of the solver. Read-only.
+async fn print_balances(cx: &Ctx, label: &str) -> R<()> {
+    let intents = sub("intents");
+    for who in [vault_id(), id(SOLVER)] {
+        for token in [usdc_asset(), WNEAR.to_string()] {
+            let v = view(
+                cx,
+                &intents,
+                "mt_balance_of",
+                json!({ "account_id": who.as_str(), "token_id": token }),
+            )
+            .await?;
+            println!("BALANCE | {label} | {who} | {token} | {v}");
+        }
+    }
+    Ok(())
+}
+
 async fn owner_call(cx: &Ctx, method: &str, args: Value, desc: &str) -> R<()> {
     let council = id(PARENT);
     let action = json!({
@@ -314,6 +383,201 @@ async fn step(cx: &Ctx, name: &str, rest: &[String]) -> R<()> {
             owner_call(cx, "set_agent", json!({ "agent": sub("agent") }), "Set the vault agent")
                 .await?;
         }
+        // The counterparty: one account we control, funded with 1 wNEAR on the verifier so it can
+        // deliver the other side of a matched trade. Nothing here touches the vault.
+        "solver-setup" => {
+            let solver = id(SOLVER);
+            let secret = solver_secret()?;
+            let spk = secret.public_key();
+            let solver_signer = Signer::from_secret_key(secret)?;
+            let intents = sub("intents");
+            let wrap = id(WRAP);
+            // 1. Create the account, funded by the parent, with the solver's key.
+            let r = Account::create_account(solver.clone())
+                .fund_myself(parent.clone(), NearToken::from_millinear(200))
+                .with_public_key(spk.clone())
+                .with_signer(cx.signer.clone())
+                .send_to(&cx.net)
+                .await?;
+            println!("TX | create {solver} | hash {}", r.transaction().get_hash());
+            r.assert_success();
+            // 2. Register the solver's key on the intents verifier (signed by the solver).
+            call_as(
+                cx,
+                &solver,
+                solver_signer.clone(),
+                &intents,
+                "add_public_key",
+                json!({ "public_key": spk.to_string() }),
+                30,
+                NearToken::from_yoctonear(1),
+            )
+            .await?;
+            // 3. The parent wraps 1 NEAR, pays the solver's storage on wrap.testnet and sends
+            //    it 1 wNEAR.
+            call(cx, &wrap, &parent, "near_deposit", json!({}), 30, NearToken::from_near(1))
+                .await?;
+            call(
+                cx,
+                &wrap,
+                &parent,
+                "storage_deposit",
+                json!({ "account_id": solver.as_str() }),
+                10,
+                NearToken::from_millinear(2),
+            )
+            .await?;
+        }
+        // The funding half of the setup, run after solver-setup. The parent's wNEAR is
+        // 0.99875 after the storage deposit, so the transfer is 0.99 wNEAR.
+        "solver-fund" => {
+            let solver = id(SOLVER);
+            let wrap = id(WRAP);
+            call(
+                cx,
+                &wrap,
+                &parent,
+                "ft_transfer",
+                json!({ "receiver_id": solver.as_str(), "amount": SOLVER_WNEAR }),
+                30,
+                NearToken::from_yoctonear(1),
+            )
+            .await?;
+            println!("SOLVER | {solver} received 0.99 wNEAR on wrap.testnet (deposit is next)");
+        }
+        // The solver deposits its wNEAR into the verifier. Its own key signs this step.
+        "solver-deposit" => {
+            let solver = id(SOLVER);
+            let solver_signer = Signer::from_secret_key(solver_secret()?)?;
+            let intents = sub("intents");
+            let wrap = id(WRAP);
+            // The verifier must itself be registered on wrap.testnet before it can receive
+            // wNEAR ("account ... is not registered"). The parent pays that storage; repeating
+            // it is harmless because the excess deposit is refunded.
+            call(
+                cx,
+                &wrap,
+                &parent,
+                "storage_deposit",
+                json!({ "account_id": intents.as_str() }),
+                10,
+                NearToken::from_millinear(2),
+            )
+            .await?;
+            call_as(
+                cx,
+                &solver,
+                solver_signer,
+                &wrap,
+                "ft_transfer_call",
+                json!({
+                    "receiver_id": intents.as_str(),
+                    "amount": SOLVER_WNEAR,
+                    "msg": json!({ "receiver_id": solver.as_str() }).to_string(),
+                }),
+                100,
+                NearToken::from_yoctonear(1),
+            )
+            .await?;
+            println!("SOLVER | {solver} deposited 0.99 wNEAR into the verifier");
+        }
+        // Read-only: the verifier ledgers of the vault and the solver.
+        "balances" => {
+            print_balances(cx, "now").await?;
+        }
+        // Settles the vault's signed trade. The solver signs the opposite side with its own key,
+        // the parent submits both signed intents in one execute_intents call, and the ledgers are
+        // printed before and after. Refuses if the vault's intent has expired or does not match.
+        "settle" => {
+            use ed25519_dalek::Signer as _;
+            let intents = sub("intents");
+            let signed = view(cx, &vault_id(), "get_signed_intent", json!({})).await?;
+            if signed.is_null() {
+                return Err("the vault has no signed intent to settle".into());
+            }
+            let vault_payload =
+                signed["payload"].as_str().ok_or("signed payload missing")?.to_string();
+            let vault_json: Value = near_sdk::serde_json::from_str(&vault_payload)?;
+            let deadline_sec = match &signed["expires_sec"] {
+                Value::Number(n) => n.as_u64(),
+                Value::String(s) => s.parse().ok(),
+                _ => None,
+            }
+            .ok_or("expires_sec missing")?;
+            let now = now_sec();
+            if now >= deadline_sec {
+                return Err(format!(
+                    "the signed intent expired {} s ago; propose again",
+                    now - deadline_sec
+                )
+                .into());
+            }
+            let salt_hex = view(cx, &intents, "current_salt", json!({})).await?;
+            let salt_hex = salt_hex.as_str().ok_or("salt missing")?.to_string();
+            let mut salt = [0u8; 4];
+            for (i, byte) in salt.iter_mut().enumerate() {
+                *byte = u8::from_str_radix(&salt_hex[i * 2..i * 2 + 2], 16)?;
+            }
+            let mut random = [0u8; 15];
+            random[..8].copy_from_slice(&now.to_be_bytes());
+            let nonce = mandate_vault::intent::v1_nonce(salt, deadline_sec, random)
+                .map_err(|e| e.to_string())?;
+            let usdc = usdc_asset();
+            let solver_payload =
+                mandate_vault::intent::token_diff_payload(&mandate_vault::intent::TokenDiff {
+                    signer_id: SOLVER,
+                    verifying_contract: intents.as_str(),
+                    deadline_sec,
+                    nonce,
+                    asset_in: WNEAR,
+                    amount_in: 550_000_000_000_000_000_000_000,
+                    asset_out: &usdc,
+                    min_amount_out: 2_000_000,
+                })
+                .map_err(|e| e.to_string())?;
+            // The solver's intent must mirror the vault's: same deadline, opposite diffs.
+            let built: Value = near_sdk::serde_json::from_str(&solver_payload)?;
+            if built["deadline"] != vault_json["deadline"] {
+                return Err(
+                    "deadline mismatch between the vault and solver intents; refusing to sign"
+                        .into(),
+                );
+            }
+            let diff = &built["intents"][0]["diff"];
+            if diff[WNEAR] != json!("-550000000000000000000000")
+                || diff[usdc.as_str()] != json!("2000000")
+            {
+                return Err(format!("solver diff is not the mirror of the vault's: {diff}").into());
+            }
+            let raw = solver_key_bytes()?;
+            let seed: [u8; 32] = raw[..32].try_into()?;
+            let signature =
+                ed25519_dalek::SigningKey::from_bytes(&seed).sign(solver_payload.as_bytes());
+            let solver_entry = json!({
+                "standard": "raw_ed25519",
+                "payload": solver_payload,
+                "public_key": format!("ed25519:{}", bs58::encode(&raw[32..]).into_string()),
+                "signature": format!("ed25519:{}", bs58::encode(signature.to_bytes()).into_string()),
+            });
+            let vault_entry = json!({
+                "standard": "raw_ed25519",
+                "payload": vault_payload,
+                "public_key": signed["public_key"],
+                "signature": signed["signature"],
+            });
+            print_balances(cx, "before").await?;
+            call(
+                cx,
+                &intents,
+                &parent,
+                "execute_intents",
+                json!({ "signed": [vault_entry, solver_entry] }),
+                300,
+                NearToken::from_yoctonear(0),
+            )
+            .await?;
+            print_balances(cx, "after").await?;
+        }
         // Admit one model ID to the allowlist (through the DAO). This is a loosening, so the
         // vault queues it for the mandate delay. Everything else in the mandate is unchanged.
         "admit-model" => {
@@ -443,7 +707,9 @@ async fn step(cx: &Ctx, name: &str, rest: &[String]) -> R<()> {
         "propose" => {
             // Default: 0.45 wNEAR for 2 USDC (the stand-in price). An optional argument
             // sets min_amount_out in yoctoWNEAR, for a live price.
+            // A second optional argument sets amount_in in USDC base units (default 2 USDC).
             let min_out = rest.first().map(String::as_str).unwrap_or("450000000000000000000000");
+            let amount_in = rest.get(1).map(String::as_str).unwrap_or("2000000");
             call(
                 cx,
                 &vault_id(),
@@ -452,7 +718,7 @@ async fn step(cx: &Ctx, name: &str, rest: &[String]) -> R<()> {
                 json!({
                     "asset_in": usdc_asset(),
                     "asset_out": WNEAR,
-                    "amount_in": "2000000",
+                    "amount_in": amount_in,
                     "min_amount_out": min_out,
                     "reason_hash": REASON,
                     "model_id": "manual-v1",

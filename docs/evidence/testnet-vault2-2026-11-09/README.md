@@ -5,6 +5,41 @@ A second, fresh testnet vault, `vault2.mandate-t1.testnet`, deployed with the te
 `MANDATE_VAULT=vault2`). It exists to show the withdrawal ceiling on a new deployment. Testnet
 only. Mainnet remains NO-GO; see [MAINNET-GATES.md](../../MAINNET-GATES.md).
 
+## Transaction index
+
+Every transaction on vault2 in this folder, in order. Each one has a receipt with 0 failures unless noted. The
+detailed tables and logs are in the sections below.
+
+| # | Date (UTC) | Action | Hash | Result |
+|---|---|---|---|---|
+| 1 | 9 Nov | Deploy and initialise vault2 | `AsmzwyXrx6abvNDHS5pJySoqDabQ4RmxvYe44nKiwBP4` | ok |
+| 2 | 9 Nov | `set_agent` via DAO (proposal 3) | `LCV3ZuM5…`, `Djkv8xPB…` | ok |
+| 3 | 9 Nov | `register_intents_key` | `A9BJn1HF…` | ok |
+| 4 | 9 Nov | `mint` 10 USDC, deposit to verifier | `jBY7aUFa…`, `8KkUtE6F…` | ok |
+| 5 | 9 Nov | `set_report` ×2 (stand-in $4.50 / $1.00) | `BTuFayd1…`, `EXDr9xUk…` | ok |
+| 6 | 9 Nov | `propose` 2 USDC for 0.45 wNEAR (proposal 1) | `7Z79APfD…` | ok |
+| 7 | 9 Nov | `execute` proposal 1 | `69rmz6bK…` | Executed |
+| 8 | 9 Nov | `request_withdrawal` 1 USDC via DAO (proposal 4) | `FhkaxboX…`, `BRSRDKmn…` | queued |
+| 9 | 10 Nov | `set_report` ×2 (CoinGecko, live) | `AAo7JxME…`, `8fvCSWv5…` | ok |
+| 10 | 10 Nov | `apply_pending_withdrawal` 1 USDC | `3W3xycheutTk9xixMubbPLTP9JFEhzhYDug4BPXG9JBE` | Delivered |
+| 11 | 10 Nov | `set_report` ×2 (live, $3.60) | `6ZpBUv2C…`, `8aqjmmse…` | ok |
+| 12 | 10 Nov | `propose` 2 USDC for 0.55 wNEAR (proposal 2) | `V6rQUkKZ…` | ok |
+| 13 | 10 Nov | `execute` proposal 2 | `GX3H8soz…` | Executed |
+| 14 | 11 Nov | DAO `set_mandate`: admit `gemini-3.1-flash-lite` (proposal 5 of the DAO) | `4sFspKrx…`, `Gd6WPZus…` | queued to 12 Nov 07:37 UTC |
+| 15 | 11 Nov | Solver account created, key registered on verifier | `9jUQk8uq…`, `A1UQ2QYN…` | ok |
+| 16 | 11 Nov | Solver: wrap 1 NEAR, storage, verifier storage, deposit 0.99 wNEAR | `7z4LM6BU…`, `99KkXHo4…`, `Fv2YpJTR…`, `D6y8Noj9…` | ok (two earlier attempts failed, not counted) |
+| 17 | 11 Nov | `set_report` ×2, `propose` 2 USDC for 0.55 wNEAR (proposal 3), `execute` | `BWoaDazW…`, `H5QEezqw…`, `5ptybytM…`, `4a6qSdVN…` | Executed |
+| 18 | 11 Nov | `execute_intents`: vault and solver intents settled | `B8nYgKKY…` | ledgers changed as listed |
+| 19 | 11 Nov | `set_report` ×2, `propose` 60 USDC (proposal 4), `execute` | `HVq5STkP…`, `HND6fizC…`, `ALsNp7Nu…`, `GoUU2JWX…` | Rejected: InsufficientBalance |
+| 20 | 11 Nov | `mint` 60 USDC, deposit to verifier | `3XMkRBUE…`, `8HxEpoX6…` | ok |
+| 21 | 11 Nov | `set_report` ×2, `propose` 60 USDC (proposal 5), `execute` | `5YRs2UHE…`, `4sGusYnL…`, `Fgv7ad46…`, `J4RvGERY…` | Rejected: TradeTooLarge |
+
+**Net state at the end:** after step 18, vault2 holds 7 USDC and 0.55 wNEAR on the verifier, and the solver holds
+2 USDC and 0.44 wNEAR. Step 20 adds 60 USDC, so vault2 holds 67 USDC. Steps 19 and 21 are refused and move nothing.
+The strike count is 2, no proposal is pending, and the vault is not paused.
+
+Abbreviations: a hash ending in `…` is shortened here. The full hash is in the section named in the table.
+
 ## Build
 
 `build.log` records the no-ABI build of the vault from source. The vault WASM is 459,584
@@ -142,3 +177,76 @@ which `simulate_mandate_change` confirmed read-only. The change is queued for th
 
 The queued change takes effect at `effective_sec` 1794469069. The log is in [vault2-admit-model.log](vault2-admit-model.log).
 The allowlist stays `["manual-v1"]` until `mandate-apply` runs after that time.
+
+## Settled trade on vault2 with a matched counterparty, 11 November 2026
+
+This is the first trade in this folder whose ledgers changed on both sides. The vault's signed intent
+(proposal 3) and a matching intent from a counterparty we control were submitted together to the Intents
+verifier in one `execute_intents` call. Its log is in [vault2-settlement.log](vault2-settlement.log).
+
+The counterparty is `solver.mandate-t1.testnet`. Its key was generated locally, kept outside the repository,
+and registered on the verifier. Setup logs: [solver-setup.log](solver-setup.log), [solver-fund.log](solver-fund.log),
+[solver-deposit.log](solver-deposit.log), and [solver-deposit2.log](solver-deposit2.log). The first two
+deposit attempts did not succeed. They are kept as a record.
+
+| Step | Result | Hash / evidence |
+|---|---|---|
+| `set_report` wNEAR at $3.60 (quote 8 s old) | receipt failures 0 | `BWoaDazWtSbyJfpaf7pyVNzcw3jSDDMWAjkf3NFqp8G7` |
+| `set_report` USDC at $0.999472 (quote 16 s old) | receipt failures 0 | `H5QEezqw8TpgZCEmGYrh2rFSSkfH16MJHf6YupF5mxXA` |
+| `propose` by the agent: 2 USDC for at least 0.55 wNEAR, `manual-v1` | proposal 3 | `5ptybytM9ikj2ibkM4J1yYxvP8ZoaPdZLRGVBdZEDKVu` |
+| `execute` | outcome `Executed`, proposal 3 | `4a6qSdVNhitAEVttjUdDUHHrPLSwMJFzEazwvdFrYY4R` |
+| `execute_intents` with both signed intents | receipt failures 0 | `B8nYgKKYcNCrYEuG9QZ92KUJe3vj641ZhvZTzy9VzXo5` |
+
+Verifier ledgers, before and after the settlement:
+
+| Account | Token | Before | After | Change |
+|---|---|---|---|---|
+| vault2 | USDC | 9.000000 | 7.000000 | −2 USDC |
+| vault2 | wNEAR | 0 | 0.55 | +0.55 wNEAR |
+| solver | USDC | 0 | 2.000000 | +2 USDC |
+| solver | wNEAR | 0.99 | 0.44 | −0.55 wNEAR |
+
+The two sides match exactly. After the settlement, `get_pending_proposal` is null, the last outcome is
+`Executed`, and strikes are 0.
+
+What this shows: the vault signed a trade, a counterparty took the other side, and both ledgers changed by
+the amounts the vault's mandate allowed. What it does not show: a real counterparty or solver. The solver is
+an account we control. The prices are operator-fed testnet values, and the verifier is the fixture build,
+as described above.
+
+## Refused trade on vault2, 11 November 2026
+
+Proposal 4 asked for 60 USDC, above the 50 USDC per-trade cap. The vault did not refuse it on the cap. It
+refused it on balance, because the vault held only 7 USDC. The engine checks the balance before the cap.
+Log: [vault2-overcap.log](vault2-overcap.log).
+
+| Step | Result | Hash / evidence |
+|---|---|---|
+| `set_report` wNEAR at $3.61 | receipt failures 0 | `HVq5STkPKYyWy1jS2AZSyQgP45SakQnGvLoB449gWiTd` |
+| `set_report` USDC at $0.999479 | receipt failures 0 | `HND6fizCzDaQ47tRLNsMToX2pjh4Z3YQtkbD1Byenafm` |
+| `propose` by the agent: 60 USDC for at least 16.5 wNEAR | proposal 4 | `ALsNp7NuLAA5cJWdRxSYVsbnPNinqrBMrCsmtytG7mYN` |
+| `execute` | outcome `Rejected`: `InsufficientBalance` | `GoUU2JWXjPSWdbf5tZU2F8ypFQvxrYkPBGnuWSSNyXbc` |
+
+The rejection counts as one strike (`get_strikes` = 1). The next approved trade resets it to zero. Three strikes
+halt new proposals. The proposal is cleared, and nothing moved.
+
+This is not yet a demonstration of the cap. A cap refusal needs the vault to hold at least 60 USDC, so the cap
+check is what refuses. Funding that is a separate step.
+
+## Cap refusal on vault2 with enough balance, 11 November 2026
+
+To make the per-trade cap the check that refuses, the vault was first given 60 USDC more on the verifier. The
+vault then held 67 USDC. Log: [vault2-cap.log](vault2-cap.log).
+
+| Step | Result | Hash / evidence |
+|---|---|---|
+| `mint` 60 USDC to the operator | receipt failures 0 | `3XMkRBUE71rwnbCJrkHK6XeV4Lg9dQzS3vRkygEVvwcR` |
+| `ft_transfer_call` to the verifier for vault2 | receipt failures 0 | `8HxEpoX6ADRr7bkZHKiNw6op2vR5PAukxR3UZEwzXvih` |
+| `set_report` wNEAR at $3.62 | receipt failures 0 | `5YRs2UHEK15TrPk4WMEmHa84pvnd1UdaXs9knEEifSNe` |
+| `set_report` USDC at $0.999474 | receipt failures 0 | `4sGusYnLeuG7tgNMGEvZhqvrQt3WEC75rKQybL18i4TW` |
+| `propose` by the agent: 60 USDC for at least 16.5 wNEAR | proposal 5 | `Fgv7ad46RhNGddAJsVoC4s6S3Qk9teAWPxzsBKiLvp6X` |
+| `execute` | outcome `Rejected`: `TradeTooLarge`, notional 59,968,440 micro-USD above the 50,000,000 cap | `J4RvGERYiuFv2hfninTCFWxqjw4HikG6rXH7VRSsDjBM` |
+
+This is the cap refusal: the balance check passed, and the per-trade cap refused the trade. Nothing moved.
+After it, `get_strikes` is 2, and there is no pending proposal. A third strike halts new proposals. The
+next approved trade resets the count to zero, so the next trade should be a successful one.

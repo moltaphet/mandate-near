@@ -1,0 +1,20 @@
+PRICE | wNEAR 360000000 @ 1794383541 | USDC 99947200 @ 1794383533 | e8 units | source live: CoinGecko simple/price (public, no key); NEAR quote 8 s old, USDC quote 16 s old
+TX | set_report on oracle.mandate-t1.testnet by mandate-t1.testnet | hash BWoaDazWtSbyJfpaf7pyVNzcw3jSDDMWAjkf3NFqp8G7 | receipt failures: 0
+TX | set_report on oracle.mandate-t1.testnet by mandate-t1.testnet | hash H5QEezqw8TpgZCEmGYrh2rFSSkfH16MJHf6YupF5mxXA | receipt failures: 0
+TARGET | vault vault2
+TX | propose on vault2.mandate-t1.testnet by agent.mandate-t1.testnet | hash 5ptybytM9ikj2ibkM4J1yYxvP8ZoaPdZLRGVBdZEDKVu | receipt failures: 0
+TARGET | vault vault2
+TX | execute on vault2.mandate-t1.testnet by mandate-t1.testnet | hash 4a6qSdVNhitAEVttjUdDUHHrPLSwMJFzEazwvdFrYY4R | receipt failures: 0
+TARGET | vault vault2
+TARGET | vault vault2
+BALANCE | before | vault2.mandate-t1.testnet | nep141:usdc.mandate-t1.testnet | "9000000"
+BALANCE | before | vault2.mandate-t1.testnet | nep141:wrap.testnet | "0"
+BALANCE | before | solver.mandate-t1.testnet | nep141:usdc.mandate-t1.testnet | "0"
+BALANCE | before | solver.mandate-t1.testnet | nep141:wrap.testnet | "990000000000000000000000"
+TX | execute_intents on intents.mandate-t1.testnet by mandate-t1.testnet | hash B8nYgKKYcNCrYEuG9QZ92KUJe3vj641ZhvZTzy9VzXo5 | receipt failures: 0
+TARGET | vault vault2
+BALANCE | after | vault2.mandate-t1.testnet | nep141:usdc.mandate-t1.testnet | "7000000"
+BALANCE | after | vault2.mandate-t1.testnet | nep141:wrap.testnet | "550000000000000000000000"
+BALANCE | after | solver.mandate-t1.testnet | nep141:usdc.mandate-t1.testnet | "2000000"
+BALANCE | after | solver.mandate-t1.testnet | nep141:wrap.testnet | "440000000000000000000000"
+chain-steps rc=0
