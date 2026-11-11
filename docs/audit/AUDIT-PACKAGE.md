@@ -3,22 +3,26 @@
 For an external reviewer of the Mandate vault. This is a starting kit, not an audit
 result. Mandate has **not** been independently audited.
 
-## 0. Current candidate, 10 November 2026
+## 0. Current candidate, 11 November 2026
 
 Sections 1 to 3 describe the historical revision `2b043ba`. The current vault code is newer.
 Use this section for the present candidate.
 
 | Item | Value |
 |---|---|
-| `main` at the time of writing | `b2bdf49` (merge of PR #38) |
-| Last commit touching `contracts/vault/src` | `71ae686` (withdrawal ceiling and journal withdrawal protocol) |
-| Vault source the measured WASM was built from | `0976865` |
-| Vault WASM (no-ABI host build, 459,584 bytes) | SHA256 `a7dec54d8f5687db29b903e2f12c91e0d5eb5b3294d9487d178be37b4cbe6fe9` |
-| Testnet vault deployed with this WASM | `vault2.mandate-t1.testnet`, [evidence](../evidence/testnet-vault2-2026-11-09/README.md) |
+| `main` at the time of writing | `e4259ab` (merge of PR #46) |
+| Last commit touching `contracts/vault/src` | `4f90433` (record a failed execution as the pending proposal's outcome, PR #42) |
+| Vault WASM built from the current source (no-ABI host build, 459,678 bytes) | SHA256 `a67b1fab3d4f68a81b89b681c05eda360404192e0fd3eae2ea961216e2625e08` |
+| Vault WASM deployed on testnet (`vault2`, built before `4f90433`, 459,584 bytes) | SHA256 `a7dec54d8f5687db29b903e2f12c91e0d5eb5b3294d9487d178be37b4cbe6fe9` |
+| Testnet vault deployed with the older WASM | `vault2.mandate-t1.testnet`, [evidence](../evidence/testnet-vault2-2026-11-09/README.md) |
+
+The two hashes differ because of `4f90433`. That change is not deployed on testnet. It
+was tested locally (286 unit tests), but the deployed vault2 still runs the earlier build.
 
 Before you rely on these values, confirm that `contracts/vault/src` has not changed since
-`71ae686`, and rebuild the WASM and compare its hash. The measurement is a local host
-build without ABI. It is not a reproducible-build proof.
+`4f90433`, and rebuild the WASM and compare its hash. The measurement is a local host
+build without ABI, made with `cargo run -p mandate-vault --example testnet_run -- build`. It is not a
+reproducible-build proof.
 
 What the testnet run on vault2 exercised:
 

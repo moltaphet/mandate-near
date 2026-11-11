@@ -421,7 +421,7 @@ export function renderSnapshot(container, snapshot, documentRef = globalThis.doc
     section.append(element("h3", title)); return section;
   };
   const ruleFields = (list, rules) => {
-    row(list, "Trade cap", usd(rules.max_trade_usd)); row(list, "Daily request cap", usd(rules.max_daily_turnover_usd));
+    row(list, "Trade cap", usd(rules.max_trade_usd)); row(list, "Daily turnover allowance", usd(rules.max_daily_turnover_usd));
     row(list, "Position / slippage", `${rules.max_position_bps} / ${rules.max_slippage_bps} bps`);
     row(list, "Drawdown", `${rules.max_drawdown_bps} bps`);
     row(list, "Cooldown / price age", `${rules.min_trade_interval_sec}s / ${rules.max_price_age_sec}s`);
