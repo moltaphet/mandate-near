@@ -1,0 +1,6 @@
+TARGET | vault vault2
+TARGET | vault vault2
+TX | add_proposal on mandate-t1.sputnikv2.testnet by mandate-t1.testnet | hash 4sFspKrxZbiwqTsstfPQCyAEKGnnaAtZnM9hU1ERe4nK | receipt failures: 0
+TX | act_proposal on mandate-t1.sputnikv2.testnet by mandate-t1.testnet | hash Gd6WPZusSK958K6E6BRtzSUiRabgTnsvCnQN7wtb4mJw | receipt failures: 0
+OWNER | set_mandate approved through DAO proposal 5
+MANDATE | gemini-3.1-flash-lite queued; run mandate-apply after the delay

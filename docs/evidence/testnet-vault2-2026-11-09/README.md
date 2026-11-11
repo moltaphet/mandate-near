@@ -128,3 +128,17 @@ the default vault name without any warning. The operator approved those steps fo
 Fix: `contracts/vault/examples/testnet_run.rs` now refuses to run any vault step unless
 `MANDATE_VAULT` is set explicitly. It has no default, and each run prints the target
 (`TARGET | vault <name>`).
+
+## Model admission queued on vault2, 11 November 2026
+
+The owner proposed a mandate change through DAO proposal 5 (`set_mandate`). Its only loosened field is
+`allowed_model_ids`, which now also lists `gemini-3.1-flash-lite`. Everything else in the mandate is unchanged,
+which `simulate_mandate_change` confirmed read-only. The change is queued for the mandate delay.
+
+| Step | Result | Hash / evidence |
+|---|---|---|
+| `add_proposal` (set_mandate, DAO proposal 5) | receipt failures 0 | `4sFspKrxZbiwqTsstfPQCyAEKGnnaAtZnM9hU1ERe4nK` |
+| `act_proposal` VoteApprove | receipt failures 0 | `Gd6WPZusSK958K6E6BRtzSUiRabgTnsvCnQN7wtb4mJw` |
+
+The queued change takes effect at `effective_sec` 1794469069. The log is in [vault2-admit-model.log](vault2-admit-model.log).
+The allowlist stays `["manual-v1"]` until `mandate-apply` runs after that time.

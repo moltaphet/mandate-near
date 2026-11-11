@@ -314,6 +314,39 @@ async fn step(cx: &Ctx, name: &str, rest: &[String]) -> R<()> {
             owner_call(cx, "set_agent", json!({ "agent": sub("agent") }), "Set the vault agent")
                 .await?;
         }
+        // Admit one model ID to the allowlist (through the DAO). This is a loosening, so the
+        // vault queues it for the mandate delay. Everything else in the mandate is unchanged.
+        "admit-model" => {
+            let model = rest.first().ok_or("usage: admit-model <model id>")?.clone();
+            let mut mandate = view(cx, &vault_id(), "get_mandate", json!({})).await?;
+            let list =
+                mandate["allowed_model_ids"].as_array_mut().ok_or("allowed_model_ids missing")?;
+            if list.iter().any(|m| m == &json!(model)) {
+                return Err(format!("{model} is already admitted").into());
+            }
+            list.push(json!(model));
+            owner_call(
+                cx,
+                "set_mandate",
+                json!({ "mandate": mandate }),
+                &format!("Admit model {model}"),
+            )
+            .await?;
+            println!("MANDATE | {model} queued; run mandate-apply after the delay");
+        }
+        // Applies the queued mandate change once its delay has passed. Anyone may call it.
+        "mandate-apply" => {
+            call(
+                cx,
+                &vault_id(),
+                &parent,
+                "apply_pending_mandate",
+                json!({}),
+                30,
+                NearToken::from_yoctonear(0),
+            )
+            .await?;
+        }
         // 7. Anyone registers the vault's derived key on the Intents verifier.
         "register" => {
             call(
