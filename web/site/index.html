@@ -265,7 +265,7 @@ button:disabled {
 }
 
 .top-action {
-  font-size:11px;
+  font-size:12px;
   min-height:36px;
   padding:6px 12px
 }
@@ -392,7 +392,7 @@ button:disabled {
 }
 
 .fact p {
-  font-size:11px;
+  font-size:12px;
   color:var(--soft);
   margin:8px 0 0
 }
@@ -447,6 +447,9 @@ button:disabled {
 .audit-field {
   min-width:0
 }
+.audit-field select {
+  padding-right:36px;
+}
 
 label {
   display:block;
@@ -474,7 +477,7 @@ input::placeholder {
 small {
   display:block;
   color:var(--soft);
-  font-size:11px;
+  font-size:12px;
   margin-top:6px
 }
 
@@ -525,7 +528,7 @@ small {
 }
 
 .read-only-note {
-  font-size:11px;
+  font-size:12px;
   color:var(--soft);
   margin:8px 0 0
 }
@@ -625,7 +628,7 @@ small {
 
 .block-anchor code,.block-anchor p {
   grid-column:1/-1;
-  font-size:10px;
+  font-size:12px;
   color:var(--soft);
   margin:0
 }
@@ -683,7 +686,7 @@ dl {
 }
 
 .audit-note,.audit-blockers {
-  font-size:11px;
+  font-size:12px;
   line-height:1.8;
   color:var(--soft);
   margin:15px 0 0
@@ -698,7 +701,7 @@ dl {
 }
 
 .audit-details summary {
-  font-size:11px;
+  font-size:12px;
   color:var(--soft);
   cursor:pointer
 }
@@ -719,7 +722,7 @@ th,td {
   vertical-align:top;
   padding:10px 8px;
   border-bottom:1px solid var(--rule);
-  font-size:11px
+  font-size:12px
 }
 
 th {
@@ -743,7 +746,7 @@ td {
 }
 
 .audit-timeline p {
-  font-size:11px;
+  font-size:12px;
   color:var(--soft);
   margin:4px 0;
   overflow-wrap:anywhere
@@ -758,7 +761,7 @@ td {
   justify-content:space-between;
   gap:20px;
   margin:17px 0 0;
-  font-size:11px;
+  font-size:12px;
   color:var(--soft)
 }
 
@@ -983,7 +986,7 @@ td {
 .footer-links {
   display:flex;
   gap:22px;
-  font-size:11px
+  font-size:12px
 }
 
 .footer p {
@@ -1058,7 +1061,7 @@ td {
     gap:12px
   }
   .nav a {
-    font-size:10px
+    font-size:12px
   }
   .hero {
     padding:45px 0 35px
@@ -1175,7 +1178,7 @@ td {
   }
   .audit-row {
     gap:12px;
-    font-size:11px
+    font-size:12px
   }
   .block-anchor {
     padding:15px
@@ -1246,6 +1249,26 @@ td {
   }
   
 }
+
+/* Testnet banner, proof strip, status chips and transaction table */
+.net-banner{background:var(--ink);color:var(--paper);text-align:center;padding:8px 16px;font-family:var(--mono);font-size:12px;letter-spacing:.04em}
+.proof-strip{list-style:none;margin:22px 0 0;padding:0;display:grid;gap:10px}
+.proof-strip li{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;font-size:14px;line-height:1.4}
+.proof-strip a{font-family:var(--mono);font-size:12px;color:var(--ink);text-decoration:underline;text-underline-offset:3px}
+.chip{display:inline-block;font-family:var(--mono);font-size:12px;padding:3px 8px;border-radius:4px;white-space:nowrap;border:1px solid transparent}
+.chip.pass{background:rgba(0,135,95,.12);color:var(--pass-ink);border-color:rgba(0,135,95,.28)}
+.chip.block{background:rgba(185,51,22,.1);color:var(--block);border-color:rgba(185,51,22,.28)}
+.chip.amber{background:rgba(149,102,0,.12);color:var(--amber-ink);border-color:rgba(149,102,0,.28)}
+.tx-block{margin-top:40px}
+.tx-block h3{font-family:var(--serif);font-weight:400;font-size:28px;margin:0 0 8px}
+.tx-block>p{color:var(--soft);margin:0 0 16px;max-width:70ch}
+.tx-scroll{overflow-x:auto;border:1px solid var(--rule);border-radius:6px;background:var(--card)}
+.tx-table{width:100%;border-collapse:collapse;font-size:14px}
+.tx-table th,.tx-table td{text-align:left;padding:12px 14px;border-bottom:1px solid var(--rule);vertical-align:top}
+.tx-table th{font-family:var(--mono);font-size:12px;font-weight:400;color:var(--soft);text-transform:uppercase;letter-spacing:.06em}
+.tx-table tr:last-child td{border-bottom:0}
+.tx-table a{font-family:var(--mono);font-size:12px;color:var(--ink);white-space:nowrap}
+.tx-note{color:var(--soft);font-size:13px;margin:12px 0 0}
 </style>
 </head>
 <body>
@@ -1257,6 +1280,7 @@ td {
   <a class="button light top-action" href="https://github.com/moltaphet/mandate-near" rel="noopener noreferrer" target="_blank">Source ↗</a>
  </div>
 </header>
+<div class="net-banner" role="note">Testnet demo · Not audited · Mainnet NO-GO</div>
 <main id="home">
  <div class="wrap">
   <section class="hero" aria-labelledby="hero-title">
@@ -1264,9 +1288,14 @@ td {
     <div>
      <span class="eyebrow">NEAR · Agent security · Mandate</span>
      <h1 id="hero-title">Your agent proposes.<br><em>Your rules decide.</em></h1>
-     <p class="lede">Give an agent room to act, with limits you can inspect. Mandate checks trades on-chain before requesting a signature. The owner keeps a separate, delayed withdrawal path.</p>
-     <div class="hero-actions"><a class="button" href="#vault">Open vault dashboard <span aria-hidden="true">↗</span></a><a class="button light" href="#evidence">See the evidence</a></div>
-     <p class="hero-note"><span class="dot" style="display:inline-block;color:var(--amber);margin-right:6px"></span>Experimental prototype. Live funded execution is unverified.</p>
+     <p class="lede">An AI agent proposes treasury trades. The vault's on-chain gates decide what may be signed, and the owner keeps a separate 24-hour withdrawal path.</p>
+     <div class="hero-actions"><a class="button" href="#vault">Read the testnet vault <span aria-hidden="true">↗</span></a><a class="button light" href="#evidence">See the evidence</a></div>
+     <ul class="proof-strip" aria-label="Live testnet results">
+      <li><span class="chip pass">Delivered</span><span>1 USDC withdrawal after the 24-hour delay</span><a href="https://testnet.nearblocks.io/txns/3W3xycheutTk9xixMubbPLTP9JFEhzhYDug4BPXG9JBE" target="_blank" rel="noopener noreferrer">Transaction ↗</a></li>
+      <li><span class="chip pass">Settled</span><span>Matched trade: both ledgers changed</span><a href="https://testnet.nearblocks.io/txns/B8nYgKKYcNCrYEuG9QZ92KUJe3vj641ZhvZTzy9VzXo5" target="_blank" rel="noopener noreferrer">Transaction ↗</a></li>
+      <li><span class="chip block">Rejected</span><span>60 USDC over the 50 USDC per-trade cap</span><a href="https://testnet.nearblocks.io/txns/J4RvGERYiuFv2hfninTCFWxqjw4HikG6rXH7VRSsDjBM" target="_blank" rel="noopener noreferrer">Transaction ↗</a></li>
+     </ul>
+     <p class="hero-note">Testnet only. Prices are operator-fed and the counterparty is an account we control. See the evidence.</p>
     </div>
     <aside class="boundary" aria-label="Trade authorization flow">
      <div class="boundary-top"><span class="eyebrow">The authority boundary</span><span class="badge green">On-chain rules</span></div>
@@ -1290,15 +1319,15 @@ td {
    <div class="section-head"><div><span class="eyebrow">01 / Your vault</span><h2 id="vault-title">Everything on one page.</h2></div><p>Inspect the owner, current rules, queued changes and listed balances. Every observation comes from one final block. No wallet is needed to read a public vault.</p></div>
    <p class="file-note" id="file-notice" hidden>This page needs an HTTP server for its dashboard module. From the repository root, run <code>python3 -B scripts/dashboard-fixture.py</code>, then open the local preview on port 8124.</p>
    <div class="dashboard" id="live-view">
-    <div class="dashboard-bar"><strong>Vault dashboard</strong><div class="right"><span class="badge"><span class="dot"></span>Read-only</span><button class="inline-button" id="share-vault" type="button" disabled>Copy vault link</button><button class="inline-button" id="load-fixture" type="button" hidden>Local test vault</button></div></div>
+    <div class="dashboard-bar"><strong>Vault dashboard</strong><div class="right"><span class="badge"><span class="dot"></span>Read-only</span><button class="inline-button" id="share-vault" type="button" disabled>Copy vault link</button></div></div>
     <form class="audit-form" id="audit-form">
      <div class="connect-row">
-      <div class="audit-field"><label for="audit-network">Network</label><select id="audit-network"><option value="mainnet">NEAR mainnet</option><option value="testnet">NEAR testnet</option><option value="local-fixture">Local fixture · test data</option></select></div>
-      <div class="audit-field"><label for="audit-account">Public vault account</label><input id="audit-account" placeholder="your-vault.near" required minlength="2" maxlength="64" autocomplete="off" spellcheck="false" autocapitalize="none"></div>
+      <div class="audit-field"><label for="audit-network">Network</label><select id="audit-network"><option value="testnet" selected>NEAR testnet (demo)</option><option value="local-fixture">Local fixture · test data</option></select></div>
+      <div class="audit-field"><label for="audit-account">Public vault account</label><input id="audit-account" value="vault2.mandate-t1.testnet" placeholder="vault2.mandate-t1.testnet" required minlength="2" maxlength="64" autocomplete="off" spellcheck="false" autocapitalize="none"></div>
       <button class="button audit-submit" type="submit" id="read-vault" disabled>Read vault <span aria-hidden="true">↗</span></button>
      </div>
      <details class="advanced"><summary>RPC &amp; verification options</summary><div class="advanced-grid">
-      <div class="audit-field"><label for="audit-rpc">Public RPC endpoint</label><input id="audit-rpc" type="url" value="https://free.rpc.fastnear.com" required maxlength="512" spellcheck="false"><small>HTTPS on public networks. Local fixtures use loopback HTTP.</small></div>
+      <div class="audit-field"><label for="audit-rpc">Public RPC endpoint</label><input id="audit-rpc" type="url" value="https://test.rpc.fastnear.com" required maxlength="512" spellcheck="false"><small>HTTPS on public networks. Local fixtures use loopback HTTP.</small></div>
       <div class="audit-field"><label for="audit-code">Expected vault code hash · optional</label><input id="audit-code" maxlength="44" autocomplete="off" spellcheck="false"><small>Without a supplied hash, code identity stays unverified.</small></div>
       <div class="audit-field wide"><label for="audit-receipt">Explorer receipt reference · optional</label><input id="audit-receipt" type="url" maxlength="256" spellcheck="false"><small>A reference link does not authenticate settlement.</small></div>
      </div></details>
@@ -1336,13 +1365,29 @@ td {
      <li><b>Agent decision sources</b><span>Two-asset rebalancing, strict model output and canonical commitments. Declared IDs use delayed admission and immediate removal. Final local client and sandbox checks passed on 8 November; model origin, live inference and hardware attestation remain unverified.</span></li>
      <li><b>Connected public dashboard</b><span>Pinned block, exact base-unit formatting and text-only rendering of RPC data.</span></li>
     </ul><a class="text-link" href="https://github.com/moltaphet/mandate-near/tree/main/contracts/vault/tests" target="_blank" rel="noopener noreferrer">Review the tests ↗</a></article>
-    <article class="proof-card"><span class="badge amber"><span class="dot"></span>Live evidence pending</span><h3>The release boundary.</h3><ul>
-     <li><b>A functioning oracle</b><span>The oracle is not yet selected. Pyth Core is documented as unsupported on NEAR; a verified feed source, correct units and a reliable updater are still required.</span></li>
+    <article class="proof-card"><span class="badge amber"><span class="dot"></span>Testnet done · release pending</span><h3>The release boundary.</h3><ul>
+     <li><b>A functioning oracle</b><span>Testnet prices are operator-fed from a public source with checked timestamps. No verified Pyth feed is in use yet, so the oracle is not selected.</span></li>
      <li><b>A reviewed, sealed deployment</b><span>Selected DAO owner distinct from the vault, verified governance, exact artifact and permanently inert proof sinks. Fresh issuer history matters.</span></li>
-     <li><b>Actual vault MPC → funded fill</b><span>The current source has not demonstrated the complete path on a live chain.</span></li>
-     <li><b>A real 24-hour withdrawal</b><span>Elapsed delay, receiver deltas and late/failure recovery need intended-chain receipts.</span></li>
+     <li><b>Vault signing → matched fill</b><span>Shown on testnet with a counterparty we control. An independent solver, the real Intents contract and mainnet are not shown.</span></li>
+     <li><b>A 24-hour withdrawal</b><span>Shown on testnet: 1 USDC waited 24 hours and was delivered. Mainnet and on-chain failure recovery are not shown.</span></li>
      <li><b>TEE attestation &amp; operational history</b><span>OutLayer integration is planned. Relay acknowledgement is not fill verification.</span></li>
     </ul><a class="text-link" href="https://github.com/moltaphet/mandate-near/blob/main/docs/OPERATIONAL-READINESS.md" target="_blank" rel="noopener noreferrer">Read the release gates ↗</a></article>
+   </div>
+   <div class="tx-block">
+    <h3>Testnet transactions on vault2</h3>
+    <p>Each row links to its transaction on the public testnet explorer. The full index, with every step and its logs, is in the repository.</p>
+    <div class="tx-scroll"><table class="tx-table">
+     <thead><tr><th scope="col">Action</th><th scope="col">Result</th><th scope="col">Transaction</th></tr></thead>
+     <tbody>
+      <tr><td>1 USDC withdrawal, after the 24-hour delay</td><td><span class="chip pass">Delivered</span></td><td><a href="https://testnet.nearblocks.io/txns/3W3xycheutTk9xixMubbPLTP9JFEhzhYDug4BPXG9JBE" target="_blank" rel="noopener noreferrer">3W3xyche…G9JBE ↗</a></td></tr>
+      <tr><td>Trade: 2 USDC for at least 0.55 wNEAR</td><td><span class="chip pass">Executed</span></td><td><a href="https://testnet.nearblocks.io/txns/GX3H8soziLDsfb9F71zM6LunC11Ff48GL5rTS68ic4tQ" target="_blank" rel="noopener noreferrer">GX3H8soz…ic4tQ ↗</a></td></tr>
+      <tr><td>Matched settlement: both ledgers changed</td><td><span class="chip pass">Settled</span></td><td><a href="https://testnet.nearblocks.io/txns/B8nYgKKYcNCrYEuG9QZ92KUJe3vj641ZhvZTzy9VzXo5" target="_blank" rel="noopener noreferrer">B8nYgKKY…VzXo5 ↗</a></td></tr>
+      <tr><td>Refused: 60 USDC over the 50 USDC cap</td><td><span class="chip block">Rejected · TradeTooLarge</span></td><td><a href="https://testnet.nearblocks.io/txns/J4RvGERYiuFv2hfninTCFWxqjw4HikG6rXH7VRSsDjBM" target="_blank" rel="noopener noreferrer">J4RvGERY…sDjBM ↗</a></td></tr>
+      <tr><td>Refused: 60 USDC with 7 USDC held</td><td><span class="chip block">Rejected · InsufficientBalance</span></td><td><a href="https://testnet.nearblocks.io/txns/GoUU2JWXjPSWdbf5tZU2F8ypFQvxrYkPBGnuWSSNyXbc" target="_blank" rel="noopener noreferrer">GoUU2JWX…NyXbc ↗</a></td></tr>
+      <tr><td>Model admission: gemini-3.1-flash-lite</td><td><span class="chip amber">Queued · effective 12 Nov 07:37 UTC</span></td><td><a href="https://testnet.nearblocks.io/txns/4sFspKrxZbiwqTsstfPQCyAEKGnnaAtZnM9hU1ERe4nK" target="_blank" rel="noopener noreferrer">4sFspKrx…Re4nK ↗</a></td></tr>
+     </tbody>
+    </table></div>
+    <p class="tx-note">Testnet only. The token, the verifier and the oracle are testnet stand-ins. The counterparty is an account we control.</p>
    </div>
    <div class="reproduce"><div><h3>Reproduce the local checks.</h3><p>Rust, cargo-near, Python 3 and Node.js 22+. The 8 November candidate passed 479 distinct local tests, including all 14 sandbox targets, through direct commands. The hardening report records source/WASM identity and command history. Frozen-release CI, reproducible builds and live custody evidence remain required.</p></div><div><div class="command"><code>./scripts/verify.sh --integration</code><button id="copy-verify" type="button" aria-label="Copy verification command" disabled>Copy</button></div><p class="copy-status" id="copy-status" role="status"></p></div></div>
   </section>
