@@ -1318,6 +1318,58 @@ td {
   .fact,.proof-card,.boundary,.button{transition:none!important;transform:none!important}
 }
 .boundary-top{flex-wrap:wrap;gap:8px 12px}
+
+/* Replay, simulator, legend, icons, live indicator, focus and heading sizes */
+.rule .ico{width:26px;height:26px;stroke:var(--pass);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;display:block;margin-bottom:12px}
+.legend{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:0 0 22px}
+.legend p{margin:0 0 0 6px;color:var(--soft);font-size:14px;width:100%}
+@media (min-width:700px){.legend p{width:auto}}
+.chip.neutral{color:var(--soft);border-color:var(--rule);background:transparent}
+.replay{display:grid;gap:22px}
+.steps{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.step,.play{font:12px var(--mono);padding:10px 14px;border-radius:999px;border:1px solid var(--rule);background:transparent;color:var(--soft);cursor:pointer;transition:border-color .25s,color .25s,background .25s}
+.step[aria-current="step"]{border-color:var(--pass);color:var(--pass-ink);background:rgba(61,220,151,.1)}
+.step:hover,.play:hover{border-color:var(--pass)}
+.play{margin-left:auto;color:var(--ink)}
+.play[aria-pressed="true"]{border-color:var(--amber);color:var(--amber-ink)}
+.replay-main{border:1px solid var(--rule);border-radius:8px;background:var(--card);padding:22px}
+.step-text{font-size:17px;line-height:1.6;margin:0 0 10px;min-height:5.2em;color:var(--ink)}
+.step-tx{font:12px var(--mono);color:var(--soft);margin:0 0 18px;min-height:1.6em}
+.step-tx a{color:var(--pass-ink)}
+.ledgers{display:grid;gap:14px}
+@media (min-width:700px){.ledgers{grid-template-columns:1fr 1fr}}
+.ledger{border:1px solid var(--rule);border-radius:6px;padding:16px 18px;background:var(--paper)}
+.ledger h3{font:12px var(--mono);color:var(--soft);margin:0 0 12px;font-weight:400;text-transform:uppercase;letter-spacing:.06em}
+.ledger dl{margin:0;display:grid;gap:8px}
+.ledger dl div{display:flex;justify-content:space-between;align-items:baseline}
+.ledger dt{font:12px var(--mono);color:var(--soft)}
+.ledger dd{margin:0;font:600 22px var(--serif);color:var(--ink)}
+.ledger dd.moved{animation:moved .9s ease}
+@keyframes moved{0%{color:var(--pass-ink)}100%{color:var(--ink)}}
+.simulator{border:1px solid var(--rule);border-radius:8px;background:var(--card);padding:24px;max-width:760px}
+.simulator label{display:block;font:14px var(--sans);margin-bottom:12px}
+.simulator output{font:600 22px var(--serif);color:var(--pass-ink);margin-left:6px}
+.simulator input[type=range]{width:100%;accent-color:var(--pass);margin:4px 0 18px}
+.gates{list-style:none;margin:0 0 16px;padding:0;display:grid;gap:8px}
+.gates li{display:flex;align-items:center;gap:10px;font-size:15px;color:var(--soft)}
+.gates .mark{width:12px;height:12px;border-radius:50%;border:1.5px solid var(--rule);flex:none}
+.gates li.ok{color:var(--ink)}
+.gates li.ok .mark{background:var(--pass);border-color:var(--pass)}
+.gates li.no{color:var(--block)}
+.gates li.no .mark{background:var(--block);border-color:var(--block)}
+.verdict{margin:0 0 14px;font:14px var(--mono);padding:12px 14px;border-radius:6px;border:1px solid var(--rule)}
+.verdict.pass{color:var(--pass-ink);border-color:rgba(61,220,151,.3);background:rgba(61,220,151,.07)}
+.verdict.block{color:var(--block);border-color:rgba(255,125,98,.35);background:rgba(255,125,98,.07)}
+.sim-note{font-size:13px;color:var(--soft);margin:0}
+.live-pill{display:inline-flex;align-items:center;gap:8px;font:12px var(--mono);color:var(--pass-ink);border:1px solid rgba(61,220,151,.35);border-radius:999px;padding:4px 10px;margin-right:10px}
+.live-pill .dot{width:7px;height:7px;border-radius:50%;background:var(--pass)}
+.live-pill[hidden]{display:none}
+:focus-visible{outline:2px solid var(--pass);outline-offset:3px;border-radius:4px}
+.section-head h2{font-size:clamp(34px,4.4vw,54px);line-height:1.05}
+@media (prefers-reduced-motion:reduce){
+  .ledger dd.moved{animation:none}
+  .step,.play{transition:none}
+}
 </style>
 </head>
 <body>
@@ -1406,20 +1458,54 @@ td {
   <section class="section reveal" id="rules" aria-labelledby="rules-title">
    <div class="section-head"><div><span class="eyebrow">02 / The mandate</span><h2 id="rules-title">Limits before signatures.</h2></div><p>Every proposed trade passes the same ordered checks. The first refusal has a named reason. The agent cannot replace the bytes the vault constructs.</p></div>
    <div class="rules-grid">
-    <article class="rule"><span class="index">01 / Structure</span><h3>Allowed assets.</h3><p>Different listed assets, with positive input and minimum output.</p></article>
-    <article class="rule"><span class="index">02 / Timing</span><h3>Room between trades.</h3><p>No outstanding intent, and the configured cooldown has elapsed.</p></article>
-    <article class="rule"><span class="index">03 / Prices</span><h3>Fresh enough to decide.</h3><p>Held and traded assets need accepted, recent oracle data.</p></article>
-    <article class="rule"><span class="index">04 / Balance</span><h3>Spend what is held.</h3><p>The listed Intents balance must cover the proposed input.</p></article>
-    <article class="rule"><span class="index">05 / Trade size</span><h3>A cap per request.</h3><p>Oracle-valued input cannot exceed the owner's trade limit.</p></article>
-    <article class="rule"><span class="index">06 / Turnover</span><h3>A daily allowance.</h3><p>Approved signing requests reserve quota for their UTC approval day.</p></article>
-    <article class="rule"><span class="index">07 / Slippage</span><h3>A minimum worth taking.</h3><p>Minimum output value must fit the allowed oracle-value slippage.</p></article>
-    <article class="rule"><span class="index">08 / Drawdown</span><h3>De-risk at the threshold.</h3><p>When observed NAV trips the drawdown guard, only stable destinations pass.</p></article>
-    <article class="rule"><span class="index">09 / Position</span><h3>Keep exposure bounded.</h3><p>Non-stable position limits apply, with a non-worsening de-risking exception.</p></article>
+    <article class="rule"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg><span class="index">01 / Structure</span><h3>Allowed assets.</h3><p>Different listed assets, with positive input and minimum output.</p></article>
+    <article class="rule"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span class="index">02 / Timing</span><h3>Room between trades.</h3><p>No outstanding intent, and the configured cooldown has elapsed.</p></article>
+    <article class="rule"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l5-5 4 4 8-8"/><path d="M15 8h6v6"/></svg><span class="index">03 / Prices</span><h3>Fresh enough to decide.</h3><p>Held and traded assets need accepted, recent oracle data.</p></article>
+    <article class="rule"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M16 12.5h2"/></svg><span class="index">04 / Balance</span><h3>Spend what is held.</h3><p>The listed Intents balance must cover the proposed input.</p></article>
+    <article class="rule"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h16M12 4v16"/><circle cx="12" cy="12" r="8"/></svg><span class="index">05 / Trade size</span><h3>A cap per request.</h3><p>Oracle-valued input cannot exceed the owner's trade limit.</p></article>
+    <article class="rule"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span class="index">06 / Turnover</span><h3>A daily allowance.</h3><p>Approved signing requests reserve quota for their UTC approval day.</p></article>
+    <article class="rule"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M10 3l4 4-4 4M20 17H10M14 13l-4 4 4 4"/></svg><span class="index">07 / Slippage</span><h3>A minimum worth taking.</h3><p>Minimum output value must fit the allowed oracle-value slippage.</p></article>
+    <article class="rule"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7l6 6 4-4 8 8"/><path d="M15 17h6v-6"/></svg><span class="index">08 / Drawdown</span><h3>De-risk at the threshold.</h3><p>When observed NAV trips the drawdown guard, only stable destinations pass.</p></article>
+    <article class="rule"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg><span class="index">09 / Position</span><h3>Keep exposure bounded.</h3><p>Non-stable position limits apply, with a non-worsening de-risking exception.</p></article>
    </div>
    <p class="guard-note">The oracle is trusted for market correctness. Stable assets are owner-configured, and freshness does not prove a peg. Pause stops new and unsigned work; an already issued signature remains valid until its deadline.</p>
   </section>
+  <section class="section reveal" id="replay" aria-labelledby="replay-title">
+   <div class="section-head"><div><span class="eyebrow">Replay · testnet, recorded values</span><h2 id="replay-title">One trade, from proposal to settlement.</h2></div><p>Each step shows the values recorded on vault2 on 11 November. Nothing here calls the chain.</p></div>
+   <div class="replay">
+    <div class="steps" role="group" aria-label="Trade steps">
+     <button type="button" class="step" data-step="0" aria-current="step">1 · Propose</button>
+     <button type="button" class="step" data-step="1">2 · Check</button>
+     <button type="button" class="step" data-step="2">3 · Sign</button>
+     <button type="button" class="step" data-step="3">4 · Settle</button>
+     <button type="button" class="play" id="replay-play" aria-pressed="false">Play</button>
+    </div>
+    <div class="replay-main">
+     <p class="step-text" id="step-text" aria-live="polite"></p>
+     <p class="step-tx" id="step-tx"></p>
+     <div class="ledgers">
+      <article class="ledger"><h3>vault2</h3><dl><div><dt>USDC</dt><dd id="v-usdc">9</dd></div><div><dt>wNEAR</dt><dd id="v-wnear">0</dd></div></dl></article>
+      <article class="ledger"><h3>Counterparty · an account we control</h3><dl><div><dt>USDC</dt><dd id="s-usdc">0</dd></div><div><dt>wNEAR</dt><dd id="s-wnear">0.99</dd></div></dl></article>
+     </div>
+    </div>
+   </div>
+  </section>
+  <section class="section reveal" id="simulator" aria-labelledby="simulator-title">
+   <div class="section-head"><div><span class="eyebrow">Try the rule</span><h2 id="simulator-title">Move the amount. The rule answers.</h2></div><p>The same checks the vault runs on a proposal, evaluated on this page with the values recorded on 11 November: 67 USDC held and a 50 USDC per-trade cap. This page does not call the chain.</p></div>
+   <div class="simulator">
+    <label for="amount">Proposed amount <output id="amount-out" for="amount">2</output> USDC</label>
+    <input type="range" id="amount" min="1" max="70" step="1" value="2">
+    <ul class="gates" aria-label="Checks">
+     <li id="g-balance"><span class="mark" aria-hidden="true"></span>Balance covers the amount</li>
+     <li id="g-cap"><span class="mark" aria-hidden="true"></span>Within the 50 USDC per-trade cap</li>
+    </ul>
+    <p class="verdict" id="verdict" aria-live="polite"></p>
+    <p class="sim-note">The refusal codes are the ones the contract recorded: InsufficientBalance and TradeTooLarge. The balance is checked first, as the two recorded refusals show.</p>
+   </div>
+  </section>
   <section class="section reveal" id="evidence" aria-labelledby="evidence-title">
    <div class="section-head"><div><span class="eyebrow">03 / Evidence</span><h2 id="evidence-title">Built, tested, still to prove.</h2></div><p>A local test, a historical simulation and a funded live receipt establish different things. This page keeps those boundaries visible.</p></div>
+   <div class="legend" aria-label="Status legend"><span class="chip pass">Testnet · done</span><span class="chip neutral">Local test</span><span class="chip amber">Fixture</span><span class="chip block">Not done yet</span><p>Every claim on this page carries one of these labels.</p></div>
    <div class="proof-grid">
     <article class="proof-card reveal"><span class="badge green"><span class="dot"></span>Local evidence</span><h3>The working core.</h3><ul>
      <li><b>Ordered gates &amp; owner delays</b><span>Unit, boundary and property tests; sandbox access-control checks.</span></li>
@@ -1500,6 +1586,59 @@ td {
     });
   },{threshold:.15});
   document.querySelectorAll('.reveal').forEach(function(el){io.observe(el);});
+})();
+</script>
+<script>
+(function(){
+  var steps=[
+    {text:'The agent proposes 2 USDC for at least 0.55 wNEAR under manual-v1 (proposal 3). A proposal is only a request.',tx:'5ptybytM9ikj2ibkM4J1yYxvP8ZoaPdZLRGVBdZEDKVu',txLabel:'Proposal transaction',v:['9','0'],s:['0','0.99']},
+    {text:'The vault checks the balance, the 50 USDC per-trade cap, a price no older than 60 seconds, and the 1% slippage limit. No signature is requested until every check passes.',tx:null,v:['9','0'],s:['0','0.99']},
+    {text:'With every check passed, the vault requests a signature. The execution is recorded as Executed for proposal 3.',tx:'4a6qSdVNhitAEVttjUdDUHHrPLSwMJFzEazwvdFrYY4R',txLabel:'Execute transaction',v:['9','0'],s:['0','0.99']},
+    {text:'The signed vault intent and the matching counterparty intent settle in one execute_intents call. The two sides’ changes mirror each other.',tx:'B8nYgKKYcNCrYEuG9QZ92KUJe3vj641ZhvZTzy9VzXo5',txLabel:'Settlement transaction',v:['7','0.55'],s:['2','0.44']}
+  ];
+  var buttons=[].slice.call(document.querySelectorAll('.step'));
+  var playBtn=document.getElementById('replay-play'),timer=null,current=0;
+  function set(id,val){var el=document.getElementById(id);if(el&&el.textContent!==val){el.textContent=val;el.classList.remove('moved');void el.offsetWidth;el.classList.add('moved');}}
+  function show(i){
+    current=i;var st=steps[i];
+    buttons.forEach(function(b,k){if(k===i)b.setAttribute('aria-current','step');else b.removeAttribute('aria-current');});
+    document.getElementById('step-text').textContent=st.text;
+    var tx=document.getElementById('step-tx');tx.textContent='';
+    if(st.tx){var a=document.createElement('a');a.href='https://testnet.nearblocks.io/txns/'+st.tx;a.target='_blank';a.rel='noopener noreferrer';a.textContent=st.txLabel+' '+st.tx.slice(0,8)+'…'+st.tx.slice(-5)+' ↗';tx.appendChild(a);}
+    else{tx.textContent='No transaction at this step.';}
+    set('v-usdc',st.v[0]);set('v-wnear',st.v[1]);set('s-usdc',st.s[0]);set('s-wnear',st.s[1]);
+  }
+  buttons.forEach(function(b,k){b.addEventListener('click',function(){stop();show(k);});});
+  function stop(){if(timer){clearInterval(timer);timer=null;}playBtn.setAttribute('aria-pressed','false');playBtn.textContent='Play';}
+  playBtn.addEventListener('click',function(){
+    if(timer){stop();return;}
+    playBtn.setAttribute('aria-pressed','true');playBtn.textContent='Pause';
+    timer=setInterval(function(){show((current+1)%steps.length);},3800);
+  });
+  show(0);
+
+  var amount=document.getElementById('amount');
+  if(amount){
+    var BAL=67,CAP=50;
+    var out=document.getElementById('amount-out'),verdict=document.getElementById('verdict');
+    var gb=document.getElementById('g-balance'),gc=document.getElementById('g-cap');
+    function evaluate(){
+      var v=parseInt(amount.value,10);out.textContent=String(v);
+      var balOk=v<=BAL,capOk=v<=CAP;
+      gb.className=balOk?'ok':'no';gc.className=(balOk&&capOk)?'ok':'no';
+      if(!balOk){verdict.className='verdict block';verdict.textContent='Refused · InsufficientBalance. The vault holds '+BAL+' USDC.';}
+      else if(!capOk){verdict.className='verdict block';verdict.textContent='Refused · TradeTooLarge. Above the 50 USDC per-trade cap.';}
+      else{verdict.className='verdict pass';verdict.textContent='Passes the balance and cap checks. Price and slippage still apply before any signature.';}
+    }
+    amount.addEventListener('input',evaluate);evaluate();
+  }
+
+  var bar=document.querySelector('#live-view .dashboard-bar .right');
+  var status=document.getElementById('audit-status');
+  if(bar&&status&&window.MutationObserver){
+    var pill=document.createElement('span');pill.className='live-pill';pill.hidden=true;pill.innerHTML='<span class="dot"></span>Live · testnet';bar.insertBefore(pill,bar.firstChild);
+    new MutationObserver(function(){pill.hidden=!/observed/.test(status.className);}).observe(status,{attributes:true,attributeFilter:['class']});
+  }
 })();
 </script>
 <script type="module" src="./site.mjs" onerror="if(location.protocol==='file:')document.getElementById('file-notice').hidden=false;document.getElementById('audit-status').className='audit-status error';document.getElementById('audit-status').textContent='Dashboard module unavailable. Open the HTTP preview or reload the served site.';"></script>
