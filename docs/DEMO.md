@@ -52,8 +52,9 @@ proposal, and `withdraw-apply` was called by the parent account once the delay h
 
 ## Not yet shown
 
-- A live refusal gallery on testnet, where each refused transaction is sent separately and recorded.
-  This needs one approval per transaction.
+- A full refusal gallery on testnet. Two refusals are recorded on chain (TradeTooLarge and
+  InsufficientBalance); stale price, slippage, cooldown and the other gates are shown only on the sandbox.
 - A real oracle. The current testnet oracle is a stand-in; see [testnet decisions](design/testnet-decisions.md).
-- A matched settlement with a real counterparty.
+- A matched settlement with an independent counterparty. The recorded settlement used an account the team controls.
+- A model-decided trade. The model admission applies on 12 November; until then every recorded trade uses `manual-v1`.
 - A failure or recovery case on chain (lost callback, failed signing, cancellation).
