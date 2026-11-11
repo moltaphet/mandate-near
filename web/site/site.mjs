@@ -62,6 +62,8 @@ export function mountSite(doc, locationRef, clipboard) {
       field('audit-status').textContent = 'Vault link loaded. Select Read vault for a fresh final-block snapshot.';
     }
   } catch (error) { status.textContent = error.message; }
+  // The demo vault is read as soon as the page loads, so a visitor sees live state without a click.
+  if (typeof form.requestSubmit === 'function') form.requestSubmit();
 
   field('share-vault').addEventListener('click', async () => {
     try {
@@ -80,18 +82,6 @@ export function mountSite(doc, locationRef, clipboard) {
       await copyText(clipboard, './scripts/verify.sh --integration');
       feedback.textContent = 'Verification command copied.';
     } catch (error) { feedback.textContent = error.message; }
-  });
-
-  const fixture = field('load-fixture');
-  fixture.hidden = !['localhost', '127.0.0.1', '[::1]'].includes(locationRef.hostname);
-  fixture.addEventListener('click', () => {
-    field('audit-network').value = 'local-fixture';
-    field('audit-rpc').value = NETWORKS['local-fixture'].rpc;
-    field('audit-account').value = 'vault.near';
-    field('audit-code').value = '';
-    field('audit-receipt').value = '';
-    form.dispatchEvent(new Event('input', { bubbles: true }));
-    form.requestSubmit();
   });
 
   if (typeof MutationObserver !== 'undefined') {

@@ -556,6 +556,7 @@ export function mountLiveDashboard(documentRef = globalThis.document) {
   const form = documentRef.getElementById("audit-form");
   if (!form) return;
   const output = documentRef.getElementById("audit-output"), status = documentRef.getElementById("audit-status");
+  let retried = false;
   const loader = createSnapshotLoader(readAuditSnapshot, {
     loading() { output.replaceChildren(); status.textContent = "Reading one final-block snapshot…"; status.className = "audit-status"; },
     success(snapshot) {
@@ -563,16 +564,29 @@ export function mountLiveDashboard(documentRef = globalThis.document) {
       status.textContent = `Snapshot observed ${new Date().toISOString().replace("T", " ").replace(/\.\d+Z$/, " UTC")}. Refresh to read newer state.`;
       status.className = "audit-status observed";
     },
-    error(error) { output.replaceChildren(); status.textContent = error.message; status.className = "audit-status error"; },
+    error(error) {
+      // One automatic retry for a slow RPC: the first read after page load can time out while the endpoint warms up.
+      if (!retried && /timed out/i.test(error.message)) {
+        retried = true;
+        output.replaceChildren();
+        status.textContent = "The RPC was slow to answer. Trying once more…";
+        status.className = "audit-status";
+        setTimeout(() => run(), 800);
+        return;
+      }
+      output.replaceChildren(); status.textContent = error.message; status.className = "audit-status error";
+    },
   });
   const field = (id) => documentRef.getElementById(id);
   const network = field("audit-network"), rpc = field("audit-rpc");
   network.addEventListener("change", () => { rpc.value = NETWORKS[network.value].rpc; });
   form.addEventListener("input", () => { loader.cancel(); output.replaceChildren(); status.textContent = "Inputs changed. Read the account again for a new snapshot."; });
+  const run = () => loader.run({ network: network.value, rpc: rpc.value.trim(), account: field("audit-account").value.trim(),
+    expectedCodeHash: field("audit-code").value.trim(), receiptUrl: field("audit-receipt").value.trim() });
   form.addEventListener("submit", (e) => {
     e.preventDefault();
-    loader.run({ network: network.value, rpc: rpc.value.trim(), account: field("audit-account").value.trim(),
-      expectedCodeHash: field("audit-code").value.trim(), receiptUrl: field("audit-receipt").value.trim() });
+    retried = false;
+    run();
   });
   const setMode = (mode) => {
     const sample = mode === "sample";
