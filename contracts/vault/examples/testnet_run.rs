@@ -188,6 +188,7 @@ fn solver_secret() -> R<SecretKey> {
 }
 
 /// Like `call`, but signed by the given key for the given caller.
+#[allow(clippy::too_many_arguments)]
 async fn call_as(
     cx: &Ctx,
     caller: &AccountId,
@@ -395,7 +396,7 @@ async fn step(cx: &Ctx, name: &str, rest: &[String]) -> R<()> {
             // 1. Create the account, funded by the parent, with the solver's key.
             let r = Account::create_account(solver.clone())
                 .fund_myself(parent.clone(), NearToken::from_millinear(200))
-                .with_public_key(spk.clone())
+                .with_public_key(spk)
                 .with_signer(cx.signer.clone())
                 .send_to(&cx.net)
                 .await?;
