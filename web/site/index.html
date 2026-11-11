@@ -1282,8 +1282,8 @@ td {
 .flow .node circle{fill:var(--paper);stroke:var(--pass);stroke-width:2}
 .flow .node:nth-child(3) circle{animation:flow-pulse 4.8s ease-in-out infinite}
 .flow .block circle{fill:var(--block)}
-.flow text{font-family:var(--mono);font-size:12px;fill:var(--soft);text-anchor:middle}
-.flow .block text{fill:var(--block);text-anchor:start}
+.flow text{font-family:var(--mono);font-size:26px;fill:var(--soft);text-anchor:middle}
+.flow .block text{fill:var(--block);text-anchor:start;font-size:20px}
 .flow figcaption{font-family:var(--mono);font-size:12px;color:var(--soft);margin-top:4px}
 @keyframes flow-run{from{stroke-dashoffset:0}to{stroke-dashoffset:-100}}
 @keyframes flow-pulse{0%,100%{stroke-width:2}50%{stroke-width:4}}
@@ -1348,15 +1348,15 @@ td {
     <aside class="boundary reveal" aria-label="Trade authorization flow">
      <div class="boundary-top"><span class="eyebrow">The authority boundary</span><span class="badge green">On-chain rules</span></div>
      <figure class="flow" aria-hidden="true">
-      <svg viewBox="0 0 560 176" role="presentation" focusable="false">
-       <path class="track" d="M70 56 H490" pathLength="100"/>
-       <path class="glow" d="M70 56 H490" pathLength="100"/>
-       <path class="refuse" d="M280 56 V118 H360" pathLength="100"/>
-       <g class="node"><circle cx="70" cy="56" r="9"/><text x="70" y="92">Propose</text></g>
-       <g class="node"><circle cx="210" cy="56" r="9"/><text x="210" y="92">Check gates</text></g>
-       <g class="node"><circle cx="350" cy="56" r="9"/><text x="350" y="92">Sign</text></g>
-       <g class="node"><circle cx="490" cy="56" r="9"/><text x="490" y="92">Settle</text></g>
-       <g class="block"><circle cx="280" cy="56" r="5"/><text x="372" y="122">Refused · TradeTooLarge</text></g>
+      <svg viewBox="0 0 560 200" role="presentation" focusable="false">
+       <path class="track" d="M70 60 H490" pathLength="100"/>
+       <path class="glow" d="M70 60 H490" pathLength="100"/>
+       <path class="refuse" d="M210 70 V146 H236" pathLength="100"/>
+       <g class="node"><circle cx="70" cy="60" r="10"/><text x="70" y="98">Propose</text></g>
+       <g class="node"><circle cx="210" cy="60" r="10"/><text x="210" y="98">Check</text></g>
+       <g class="node"><circle cx="350" cy="60" r="10"/><text x="350" y="98">Sign</text></g>
+       <g class="node"><circle cx="490" cy="60" r="10"/><text x="490" y="98">Settle</text></g>
+       <g class="block"><text x="244" y="151">Refused · TradeTooLarge</text></g>
       </svg>
       <figcaption>One proposal, checked on-chain before a signature.</figcaption>
      </figure>
