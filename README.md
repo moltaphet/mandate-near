@@ -1,25 +1,87 @@
-<p align="center">
+<div align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="web/assets/logo-light.svg">
-    <img src="web/assets/logo.svg" alt="Mandate logo" width="360">
+    <img src="web/assets/logo.svg" alt="Mandate logo" width="300">
   </picture>
+  <h1>Mandate</h1>
+  <p><em>An AI agent proposes treasury trades. A NEAR vault checks every trade on chain against the owner's rules, and only then asks Chain Signatures to sign.</em></p>
+  <img src="docs/assets/readme-hero-animated.svg" alt="Mandate: a proposal moves through Propose, Check, Sign and Settle; a second proposal branches from Check and is refused as TradeTooLarge. Testnet, not audited, mainnet NO-GO." width="100%">
+
+  <br/>
+
+  [![Live site](https://img.shields.io/badge/Live-mandatenear.xyz-3ddc97?style=for-the-badge)](https://mandatenear.xyz)
+  [![Testnet record](https://img.shields.io/badge/Testnet-vault2_record-0b0f0d?style=for-the-badge)](#testnet-record-vault2)
+  [![Evidence](https://img.shields.io/badge/Evidence-logs_%26_hashes-1f6feb?style=for-the-badge)](docs/evidence/testnet-vault2-2026-11-09/README.md)
+  ![Mainnet](https://img.shields.io/badge/Mainnet-NO--GO-ff7d62?style=for-the-badge)
+  ![Audit](https://img.shields.io/badge/Audit-not_audited-f2b84b?style=for-the-badge)
+
+  <br/>
+
+  ![Rust](https://img.shields.io/badge/Rust-000000?style=flat&logo=rust&logoColor=white)
+  ![near-sdk](https://img.shields.io/badge/near--sdk-5-3ddc97?style=flat)
+  ![NEAR Intents](https://img.shields.io/badge/NEAR-Intents-0b0f0d?style=flat)
+  ![Chain Signatures](https://img.shields.io/badge/Chain_Signatures-MPC-0b0f0d?style=flat)
+  ![Vercel](https://img.shields.io/badge/Vercel-site-000000?style=flat&logo=vercel&logoColor=white)
+  [![License](https://img.shields.io/badge/License-MIT-yellow?style=flat)](LICENSE)
+  [![CI](https://github.com/moltaphet/mandate-near/actions/workflows/ci.yml/badge.svg)](https://github.com/moltaphet/mandate-near/actions/workflows/ci.yml)
+
+</div>
+
+---
+
+## 📸 See it in action
+
+<p align="center">
+  <img src="docs/assets/readme-site.png" alt="mandatenear.xyz: the hero with the live testnet results and the animated authority boundary" width="100%">
 </p>
 
-# Mandate
+The site at **[mandatenear.xyz](https://mandatenear.xyz)** reads `vault2.mandate-t1.testnet` from one final block as soon as it opens. No wallet is needed, and nothing is signed.
 
-**An on-chain authorization boundary between a trading agent and treasury funds on NEAR Intents.**
+| Live dashboard | Trade replay |
+|---|---|
+| <img src="docs/assets/readme-dashboard.png" alt="Dashboard summary: Intents balance 0.55 wNEAR, 67 USDC, strikes 2 of 3, read from testnet" width="100%"> | <img src="docs/assets/readme-replay.png" alt="Replay of proposal 3 at the settle step: vault2 7 USDC and 0.55 wNEAR, counterparty 2 USDC and 0.44 wNEAR" width="100%"> |
+| Balances and strikes read from the testnet contract | The recorded trade, step by step, with each transaction linked |
 
-Mandate is a Rust smart-contract vault that checks an exact trade against an
-owner-defined policy before requesting an Ed25519 signature from NEAR Chain
-Signatures. Treasury balances live in the vault account's ledger inside the
-configured NEAR Intents contract. The reference agent proposes decisions; it
-has no treasury signing key. A separate owner controls rules, pausing, agent
-assignment and delayed withdrawals.
+## 💡 The problem and the solution
 
-The agent can use a manual plan, a deterministic two-asset rebalancer or an
-optional model response. Each proposal remains subject to the same on-chain
-rules. A compromised agent can still make harmful trades within those rules:
-Mandate limits authorization, rather than guaranteeing profitable decisions.
+### The problem
+An agent that holds treasury keys can be tricked, jailbroken or simply wrong, and then it can move everything. Most agent wallets rely on the agent behaving well.
+
+### The solution
+Mandate splits **deciding** from **spending**:
+
+- **The agent proposes.** It names the assets, the input amount and the minimum output. It holds no treasury signing key.
+- **The vault decides.** A Rust contract on NEAR runs nine ordered checks on chain: allowed assets, cooldown, fresh prices, balance, per-trade cap, daily turnover, slippage, drawdown and position. The first failure is refused with a named reason, and three refusals halt new proposals.
+- **Only then a signature.** The vault builds the intent bytes itself and asks NEAR Chain Signatures (MPC) for an Ed25519 signature. NEAR Intents settles the trade.
+- **The owner keeps control.** Loosening a rule, changing the agent or withdrawing waits 24 hours and can be cancelled. Tightening is immediate.
+
+A permitted trade can still lose money. Mandate bounds what can be authorized; it does not make decisions profitable.
+
+## ⚙️ How one trade moves
+
+| Step | What happens | Recorded on testnet |
+|---|---|---|
+| 1. Propose | The agent submits 2 USDC for at least 0.55 wNEAR, with an allowed model ID | Proposal 3 |
+| 2. Check | The vault reads balances and fresh oracle prices and runs the nine checks | All passed |
+| 3. Sign | The vault requests the MPC signature for the exact intent it built | `Executed` |
+| 4. Settle | The vault's intent and a matching counterparty intent settle in one `execute_intents` | vault −2 USDC +0.55 wNEAR; counterparty the reverse |
+| ✗ Refuse | 60 USDC is proposed against the 50 USDC per-trade cap | `Rejected · TradeTooLarge`, nothing signed |
+
+## ⛓️ On testnet today
+
+The vault, its DAO owner and every step above are on NEAR testnet, with transaction hashes and logs. See the **[Testnet record: vault2](#testnet-record-vault2)** table: a 1 USDC withdrawal delivered after a real 24-hour wait, a matched settlement, two on-chain refusals, and the queued admission of a model ID.
+
+The token, the Intents verifier and the oracle are testnet stand-ins, prices are operator-fed from a public source, and the counterparty is an account the team controls.
+
+## 🔍 Verify it yourself
+
+```bash
+python3 -B scripts/demo-readback.py   # read vault2 on testnet: view calls only, no key, no transaction
+cargo test -p mandate-vault --lib      # vault unit tests
+./scripts/verify.sh                    # format, clippy, unit tests, site and agent suites
+```
+
+## 🚦 Status
 
 > **Experimental prototype — not ready for real funds.** Local contract and
 > client tests, sandbox fixtures and historical interoperability experiments
