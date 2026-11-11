@@ -679,3 +679,22 @@ fn later_queue_replacement_resets_the_withdrawal_delay() {
     assert!(v.last_withdrawal_outcome.is_none());
     assert_eq!(v.trading, TradingState::default());
 }
+
+#[test]
+fn a_failed_execution_is_recorded_as_the_outcome_of_its_proposal() {
+    let mut v = setup();
+    let proposal = run(&mut v);
+    context(accounts(1), 1, T + 1, None);
+    v.set_mandate(Mandate { max_trade_usd: U64(10_000_000), ..v.mandate.clone() });
+    context(accounts(0), 0, T + 2, None);
+    failed(
+        v.on_salt(Ok("00000000".into()), proposal.clone(), approved(), U64(1)),
+        "the execution configuration changed",
+    );
+    let recorded = v.last_proposal_outcome.clone().expect("the failure must be recorded");
+    assert_eq!(recorded.proposal_id, proposal.id);
+    assert!(matches!(
+        recorded.outcome,
+        ExecutionOutcome::Failed { ref reason } if reason == "the execution configuration changed"
+    ));
+}
