@@ -1293,12 +1293,12 @@ td {
     <div class="dashboard-bar"><strong>Vault dashboard</strong><div class="right"><span class="badge"><span class="dot"></span>Read-only</span><button class="inline-button" id="share-vault" type="button" disabled>Copy vault link</button><button class="inline-button" id="load-fixture" type="button" hidden>Local test vault</button></div></div>
     <form class="audit-form" id="audit-form">
      <div class="connect-row">
-      <div class="audit-field"><label for="audit-network">Network</label><select id="audit-network"><option value="mainnet">NEAR mainnet</option><option value="testnet">NEAR testnet</option><option value="local-fixture">Local fixture · test data</option></select></div>
-      <div class="audit-field"><label for="audit-account">Public vault account</label><input id="audit-account" placeholder="your-vault.near" required minlength="2" maxlength="64" autocomplete="off" spellcheck="false" autocapitalize="none"></div>
+      <div class="audit-field"><label for="audit-network">Network</label><select id="audit-network"><option value="testnet" selected>NEAR testnet (demo)</option><option value="local-fixture">Local fixture · test data</option></select></div>
+      <div class="audit-field"><label for="audit-account">Public vault account</label><input id="audit-account" value="vault2.mandate-t1.testnet" placeholder="vault2.mandate-t1.testnet" required minlength="2" maxlength="64" autocomplete="off" spellcheck="false" autocapitalize="none"></div>
       <button class="button audit-submit" type="submit" id="read-vault" disabled>Read vault <span aria-hidden="true">↗</span></button>
      </div>
      <details class="advanced"><summary>RPC &amp; verification options</summary><div class="advanced-grid">
-      <div class="audit-field"><label for="audit-rpc">Public RPC endpoint</label><input id="audit-rpc" type="url" value="https://free.rpc.fastnear.com" required maxlength="512" spellcheck="false"><small>HTTPS on public networks. Local fixtures use loopback HTTP.</small></div>
+      <div class="audit-field"><label for="audit-rpc">Public RPC endpoint</label><input id="audit-rpc" type="url" value="https://test.rpc.fastnear.com" required maxlength="512" spellcheck="false"><small>HTTPS on public networks. Local fixtures use loopback HTTP.</small></div>
       <div class="audit-field"><label for="audit-code">Expected vault code hash · optional</label><input id="audit-code" maxlength="44" autocomplete="off" spellcheck="false"><small>Without a supplied hash, code identity stays unverified.</small></div>
       <div class="audit-field wide"><label for="audit-receipt">Explorer receipt reference · optional</label><input id="audit-receipt" type="url" maxlength="256" spellcheck="false"><small>A reference link does not authenticate settlement.</small></div>
      </div></details>
