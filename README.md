@@ -597,6 +597,32 @@ links. `attack-demo.sh` and `gas-report.sh` run sandbox scenarios and write
 tracked evidence; rerun them only when intentionally refreshing that evidence.
 Final gas/storage measurements must identify the exact build and adapter.
 
+### Testnet record: vault2
+
+`vault2.mandate-t1.testnet` on NEAR testnet, owned by the Sputnik DAO `mandate-t1.sputnikv2.testnet`.
+Every row has a log in [docs/evidence/testnet-vault2-2026-11-09](docs/evidence/testnet-vault2-2026-11-09/README.md), and every transaction there reported 0 receipt failures.
+The token, the Intents verifier and the oracle are testnet stand-ins, prices are operator-fed from a public
+source, and the counterparty is an account the team controls.
+
+| Date (2026) | What happened | Result | Transaction | Log |
+|---|---|---|---|---|
+| 10 Nov | 1 USDC withdrawal applied after its real 86,400-second delay | `Delivered` | [`3W3xyche…`](https://testnet.nearblocks.io/txns/3W3xycheutTk9xixMubbPLTP9JFEhzhYDug4BPXG9JBE) | [vault2-withdraw-apply.log](docs/evidence/testnet-vault2-2026-11-09/vault2-withdraw-apply.log) |
+| 10 Nov | Proposal 2: 2 USDC for at least 0.55 wNEAR, executed at a live price | `Executed` | [`GX3H8soz…`](https://testnet.nearblocks.io/txns/GX3H8soziLDsfb9F71zM6LunC11Ff48GL5rTS68ic4tQ) | [vault2-live-trade.log](docs/evidence/testnet-vault2-2026-11-09/vault2-live-trade.log) |
+| 11 Nov | Proposal 3 executed, then settled with the counterparty in one `execute_intents` | vault −2 USDC +0.55 wNEAR; counterparty +2 USDC −0.55 wNEAR | [`4a6qSdVN…`](https://testnet.nearblocks.io/txns/4a6qSdVNhitAEVttjUdDUHHrPLSwMJFzEazwvdFrYY4R), [`B8nYgKKY…`](https://testnet.nearblocks.io/txns/B8nYgKKYcNCrYEuG9QZ92KUJe3vj641ZhvZTzy9VzXo5) | [vault2-settlement.log](docs/evidence/testnet-vault2-2026-11-09/vault2-settlement.log) |
+| 11 Nov | Proposal 4: 60 USDC with 7 USDC held | `Rejected · InsufficientBalance` | [`GoUU2JWX…`](https://testnet.nearblocks.io/txns/GoUU2JWXjPSWdbf5tZU2F8ypFQvxrYkPBGnuWSSNyXbc) | [vault2-overcap.log](docs/evidence/testnet-vault2-2026-11-09/vault2-overcap.log) |
+| 11 Nov | Proposal 5: 60 USDC with 67 USDC held, valued at $59.97 against the $50 cap | `Rejected · TradeTooLarge` | [`J4RvGERY…`](https://testnet.nearblocks.io/txns/J4RvGERYiuFv2hfninTCFWxqjw4HikG6rXH7VRSsDjBM) | [vault2-cap.log](docs/evidence/testnet-vault2-2026-11-09/vault2-cap.log) |
+| 11 Nov | DAO proposal 5 queues the admission of `gemini-3.1-flash-lite` | Queued, effective 12 Nov 07:37:49 UTC | [`4sFspKrx…`](https://testnet.nearblocks.io/txns/4sFspKrxZbiwqTsstfPQCyAEKGnnaAtZnM9hU1ERe4nK) | [vault2-admit-model.log](docs/evidence/testnet-vault2-2026-11-09/vault2-admit-model.log) |
+| 11 Nov | Counterparty top-up: 20 USDC minted and deposited, 0.3 NEAR wrapped and deposited | Counterparty holds 22 USDC and 0.74 wNEAR | [`Q4tUjTaj…`](https://testnet.nearblocks.io/txns/Q4tUjTajTUyii6pxB1qfEg3LHokDGf9L58K6HSq3eUw), [`DGgVUpW1…`](https://testnet.nearblocks.io/txns/DGgVUpW1vCK5rX9hxQJHgvo4efzp2jHEvhmvNt5Y4y1U), [`Bho28s95…`](https://testnet.nearblocks.io/txns/Bho28s955Mg1K9pVaAji2wDrN3FDFQZ1SgQXcw7UGXUe), [`3nc47Muh…`](https://testnet.nearblocks.io/txns/3nc47MuhQHyRVoG94t6K33UcyeGZ97Qb72EErs9bAjHL) | [solver-topup.log](docs/evidence/testnet-vault2-2026-11-09/solver-topup.log) |
+
+State after these rows: vault2 holds 67 USDC and 0.55 wNEAR on the verifier, the strike count is 2 of 3,
+no proposal is pending, and only `manual-v1` is admitted until the queued change applies. To check the
+current state without an explorer, run `python3 -B scripts/demo-readback.py`; it makes view calls only.
+Block explorers can show empty pages for older testnet transactions, and the free RPC does not return
+their status; the contract views and ledgers above are the primary check.
+
+Not shown on testnet yet: a model-decided trade, an independent counterparty, a real oracle, the real
+Intents contract, on-chain replay refusal, and withdrawal failure or recovery cases. Mainnet is NO-GO.
+
 ## Website and dashboard
 
 The [Mandate website](https://mandatenear.xyz/) has an integrated read-only vault

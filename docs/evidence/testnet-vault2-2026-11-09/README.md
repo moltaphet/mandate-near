@@ -34,10 +34,15 @@ detailed tables and logs are in the sections below.
 | 20 | 11 Nov | `mint` 60 USDC, deposit to verifier | `3XMkRBUE…`, `8HxEpoX6…` | ok |
 | 21 | 11 Nov | `set_report` ×2, `propose` 60 USDC (proposal 5), `execute` | `5YRs2UHE…`, `4sGusYnL…`, `Fgv7ad46…`, `J4RvGERY…` | Rejected: TradeTooLarge |
 | check | 11 Nov | Read-only readback, no transaction (`scripts/demo-readback.py`) | [readback-2026-11-11.txt](readback-2026-11-11.txt) | Last outcome, strikes, withdrawal and ledgers match rows 1–21 |
+| 22 | 11 Nov | Solver top-up: mint 20 USDC and deposit it for the solver; wrap 0.3 NEAR (`solver-topup`) | `Q4tUjTaj…`, `DGgVUpW1…`, `Bho28s95…` | ok |
+| 23 | 11 Nov | Deposit the wrapped 0.3 wNEAR for the solver (`solver-topup-wnear`, 100 TGas) | `3nc47Muh…` | ok |
 
 **Net state at the end:** after step 18, vault2 holds 7 USDC and 0.55 wNEAR on the verifier, and the solver holds
 2 USDC and 0.44 wNEAR. Step 20 adds 60 USDC, so vault2 holds 67 USDC. Steps 19 and 21 are refused and move nothing.
 The strike count is 2, no proposal is pending, and the vault is not paused.
+Steps 22 and 23 top up the solver for the model-decided trade: it then holds 22 USDC and 0.74 wNEAR, and vault2
+is unchanged. Two earlier submissions of the wNEAR deposit at 200 TGas were rejected by the RPC before execution
+(InvalidTransaction) and moved nothing; the log is [solver-topup.log](solver-topup.log).
 
 Abbreviations: a hash ending in `…` is shortened here. The full hash is in the section named in the table.
 
