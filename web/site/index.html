@@ -1421,6 +1421,43 @@ td {
   .flow .n1 circle,.flow .n2 circle,.flow .n3 circle,.flow .n4 circle,.flow .block text{animation:none}
   .flow .node circle{fill:var(--paper)}
 }
+
+/* Polish: mobile nav, terminal, facts, section rhythm, CTA band, typography, dashboard summary */
+@media (max-width:760px){
+  .nav{justify-content:flex-start;gap:22px;overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding-bottom:2px;-webkit-mask-image:linear-gradient(90deg,#000 85%,transparent);mask-image:linear-gradient(90deg,#000 85%,transparent)}
+  .nav::-webkit-scrollbar{display:none}
+  .nav a{white-space:nowrap;flex:none}
+}
+.term{margin-top:44px;border:1px solid var(--rule);border-radius:10px;background:#070a09;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.45)}
+.term-bar{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--rule);background:var(--card)}
+.term-dots{display:flex;gap:6px}
+.term-dots i{width:10px;height:10px;border-radius:50%;background:rgba(232,239,233,.18);display:block}
+.term-title{font:12px var(--mono);color:var(--soft)}
+.term-replay{margin-left:auto;font:12px var(--mono);color:var(--ink);background:transparent;border:1px solid var(--rule);border-radius:999px;padding:5px 12px;cursor:pointer}
+.term-replay:hover{border-color:var(--pass)}
+.term-body{margin:0;padding:18px 20px;font:13px/1.75 var(--mono);color:var(--ink);min-height:21em;white-space:pre-wrap;overflow-x:auto}
+.term-body .tl b{display:inline-block;width:1.6em;font-weight:400}
+.term-body .cmd{color:var(--ink)}.term-body .cmd b{color:var(--soft)}
+.term-body .ok b,.term-body .pass,.term-body .pass b{color:var(--pass-ink)}
+.term-body .ok{color:var(--soft)}
+.term-body .no,.term-body .no b,.term-body .block,.term-body .block b{color:var(--block)}
+.term-note{margin:0;padding:10px 20px 14px;font-size:13px;color:var(--soft);border-top:1px solid var(--rule)}
+.facts{gap:14px;border-top:0;margin-top:22px}
+.fact,.fact+.fact{border:1px solid var(--rule);border-radius:10px;padding:20px;background:var(--card)}
+.fact .fico{width:22px;height:22px;stroke:var(--pass);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;display:block;margin-bottom:14px}
+.section{padding:96px 0;border-top:0;position:relative}
+.section::before{content:"";position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(61,220,151,.4),transparent)}
+@media (max-width:760px){.section{padding:64px 0}.facts{grid-template-columns:1fr 1fr}}
+.cta-band{margin-top:40px;padding:72px 0;border-top:1px solid var(--rule);background:radial-gradient(60% 120% at 80% 0%,rgba(61,220,151,.12),transparent 70%)}
+.cta-inner{display:flex;flex-wrap:wrap;align-items:end;justify-content:space-between;gap:28px}
+.cta-inner h2{font-family:var(--serif);font-weight:400;font-size:clamp(30px,4vw,48px);line-height:1.08;margin:10px 0 0;max-width:640px}
+.cta-actions{display:flex;flex-wrap:wrap;gap:12px}
+.hero-note,.boundary-foot,.flow figcaption,.guard-note,.tx-note{font-family:var(--sans);font-size:14px;letter-spacing:0}
+.audit-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin:0 0 18px}
+.audit-tile{border:1px solid var(--rule);border-radius:10px;padding:16px 18px;background:var(--card)}
+.audit-tile span{display:block;font:12px var(--mono);color:var(--soft);text-transform:uppercase;letter-spacing:.06em}
+.audit-tile strong{display:block;font:400 34px/1.1 var(--serif);color:var(--ink);margin-top:8px;font-variant-numeric:tabular-nums}
+.audit-tile.warn strong{color:var(--amber-ink)}
 </style>
 </head>
 <body>
@@ -1476,11 +1513,16 @@ td {
      <p class="boundary-foot">A signature is not a settlement receipt.<br>Permitted trades can still lose money.</p>
     </aside>
    </div>
+   <div class="term" aria-label="Recorded run of the vault checks">
+    <div class="term-bar"><span class="term-dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="term-title">vault2 · testnet record</span><button type="button" class="term-replay" id="term-replay">Replay</button></div>
+    <pre class="term-body" id="term-body"></pre>
+    <p class="term-note">Replayed from the testnet record of 11 November. Not a live session.</p>
+   </div>
    <div class="facts" aria-label="Contract limits">
-    <div class="fact reveal"><strong>9</strong><p>Ordered trade gates</p></div>
-    <div class="fact reveal"><strong>20</strong><p>Maximum mandate assets</p></div>
-    <div class="fact reveal"><strong>24h</strong><p>Loosening &amp; withdrawal delay</p></div>
-    <div class="fact reveal"><strong>NEAR</strong><p>Intents &amp; Chain Signatures</p></div>
+    <div class="fact reveal"><svg class="fico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7 3v6c0 4.2-3 7.4-7 9-4-1.6-7-4.8-7-9V6z"/><path d="M9 12l2 2 4-4"/></svg><strong>9</strong><p>Ordered trade gates</p></div>
+    <div class="fact reveal"><svg class="fico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg><strong>20</strong><p>Maximum mandate assets</p></div>
+    <div class="fact reveal"><svg class="fico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><strong>24h</strong><p>Loosening &amp; withdrawal delay</p></div>
+    <div class="fact reveal"><svg class="fico" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1"/></svg><strong>NEAR</strong><p>Intents &amp; Chain Signatures</p></div>
    </div>
   </section>
   <section class="section reveal" id="vault" aria-labelledby="vault-title">
@@ -1613,6 +1655,10 @@ td {
    </div></div>
   </section>
  </div>
+<section class="cta-band" aria-labelledby="cta-title"><div class="wrap"><div class="cta-inner">
+ <div><span class="eyebrow">Testnet · Not audited · Mainnet NO-GO</span><h2 id="cta-title">See the rules hold on a live testnet vault.</h2></div>
+ <div class="cta-actions"><a class="button" href="#vault">Read the testnet vault <span aria-hidden="true">↗</span></a><a class="button light" href="https://github.com/moltaphet/mandate-near" target="_blank" rel="noopener noreferrer">Source ↗</a></div>
+</div></div></section>
 </main>
 <footer class="footer"><div class="wrap"><div class="footer-top"><a class="brand" href="#home">Mandate</a><div class="footer-links"><a href="https://github.com/moltaphet/mandate-near" target="_blank" rel="noopener noreferrer">Repository ↗</a><a href="https://nearblocks.io/address/intents.near" target="_blank" rel="noopener noreferrer">Intents verifier ↗</a><a href="https://nearblocks.io/address/v1.signer" target="_blank" rel="noopener noreferrer">Chain Signatures ↗</a></div></div><p>Oracle-valued limits bound authorization, not profitability. Source/audit correspondence, external administrative roles and deployment custody require independent review.</p><div class="footer-bottom"><span>Mandate · MIT</span><span>Built with AI-assisted development · Prototype</span></div></div></footer>
 <script>if(location.protocol==='file:'){document.getElementById('file-notice').hidden=false;document.getElementById('audit-status').textContent='Open the HTTP preview above to enable the dashboard.';}</script>
@@ -1692,6 +1738,45 @@ td {
     var pill=document.createElement('span');pill.className='live-pill';pill.hidden=true;pill.innerHTML='<span class="dot"></span>Live · testnet';bar.insertBefore(pill,bar.firstChild);
     new MutationObserver(function(){pill.hidden=!/observed/.test(status.className);}).observe(status,{attributes:true,attributeFilter:['class']});
   }
+})();
+</script>
+<script>
+(function(){
+  var body=document.getElementById('term-body'),btn=document.getElementById('term-replay');
+  if(!body)return;
+  var lines=[
+    ['cmd','proposal 3 · 2 USDC for at least 0.55 wNEAR · manual-v1'],
+    ['ok','check balance   9 USDC held, 2 USDC needed'],
+    ['ok','check cap       2 USDC, within the $50 per-trade cap'],
+    ['ok','check price     oracle report no older than 60 s'],
+    ['ok','check slippage  minimum output within 1%'],
+    ['pass','signed          Executed · proposal 3'],
+    ['pass','settled         vault −2 USDC +0.55 wNEAR · counterparty +2 USDC −0.55 wNEAR'],
+    ['gap',''],
+    ['cmd','proposal 5 · 60 USDC for at least 16.5 wNEAR · manual-v1'],
+    ['ok','check balance   67 USDC held, 60 USDC needed'],
+    ['no','check cap       valued at $59.97, above the $50 per-trade cap'],
+    ['block','refused         TradeTooLarge · nothing signed, nothing moved']
+  ];
+  var marks={cmd:'›',ok:'✓',no:'✗',pass:'●',block:'■',gap:''};
+  var reduce=matchMedia('(prefers-reduced-motion: reduce)').matches,timer=null,run=0;
+  function lineEl(kind){var el=document.createElement('span');el.className='tl '+kind;var m=document.createElement('b');m.textContent=marks[kind];el.appendChild(m);var t=document.createElement('span');el.appendChild(t);body.appendChild(el);body.appendChild(document.createTextNode('\n'));return t;}
+  function play(){
+    run++;var mine=run;clearTimeout(timer);body.textContent='';
+    if(reduce){lines.forEach(function(l){lineEl(l[0]).textContent=l[1];});return;}
+    var i=0;
+    function next(){
+      if(mine!==run||i>=lines.length)return;
+      var l=lines[i++],t=lineEl(l[0]),k=0;
+      (function type(){if(mine!==run)return;t.textContent=l[1].slice(0,++k);if(k<l[1].length){timer=setTimeout(type,14);}else{timer=setTimeout(next,l[0]==='cmd'?420:260);}})();
+    }
+    next();
+  }
+  btn.addEventListener('click',play);
+  var started=false;function start(){if(started)return;started=true;play();}
+  btn.addEventListener('click',function(){started=true;});
+  if('IntersectionObserver' in window){var io=new IntersectionObserver(function(e){if(e[0].isIntersecting){io.disconnect();start();}},{threshold:.3});io.observe(body);}
+  setTimeout(start,8000);
 })();
 </script>
 <script type="module" src="./site.mjs" onerror="if(location.protocol==='file:')document.getElementById('file-notice').hidden=false;document.getElementById('audit-status').className='audit-status error';document.getElementById('audit-status').textContent='Dashboard module unavailable. Open the HTTP preview or reload the served site.';"></script>
