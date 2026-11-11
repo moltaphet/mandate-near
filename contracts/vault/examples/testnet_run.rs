@@ -216,6 +216,73 @@ async fn call_as(
     Ok(())
 }
 
+/// The solver's side of a vault trade, derived from the vault's signed token diff.
+#[derive(Debug, PartialEq)]
+struct MirrorTerms {
+    /// The asset the solver gives, which is the one the vault receives.
+    asset_in: String,
+    amount_in: u128,
+    /// The asset the solver receives, which is the one the vault gives.
+    asset_out: String,
+    min_amount_out: u128,
+}
+
+/// Reads a vault token diff of exactly two assets, one negative and one positive, and returns
+/// the opposite side for the solver. Any other shape is refused.
+fn mirror_terms(vault_diff: &Value) -> R<MirrorTerms> {
+    let map = vault_diff.as_object().ok_or("vault diff is not an object")?;
+    if map.len() != 2 {
+        return Err(format!("vault diff must name two assets, found {}", map.len()).into());
+    }
+    let (mut gives, mut gets) = (None, None);
+    for (asset, value) in map {
+        let text = value.as_str().ok_or("vault diff amount is not a string")?;
+        if let Some(abs) = text.strip_prefix('-') {
+            let amount: u128 = abs.parse()?;
+            if amount == 0 || gives.is_some() {
+                return Err("vault diff must have exactly one non-zero negative amount".into());
+            }
+            gives = Some((asset.clone(), amount));
+        } else {
+            let amount: u128 = text.parse()?;
+            if amount == 0 || gets.is_some() {
+                return Err("vault diff must have exactly one non-zero positive amount".into());
+            }
+            gets = Some((asset.clone(), amount));
+        }
+    }
+    let (vault_gives, gives_amount) = gives.ok_or("vault diff has no negative amount")?;
+    let (vault_gets, gets_amount) = gets.ok_or("vault diff has no positive amount")?;
+    Ok(MirrorTerms {
+        asset_in: vault_gets,
+        amount_in: gets_amount,
+        asset_out: vault_gives,
+        min_amount_out: gives_amount,
+    })
+}
+
+/// Confirms that every entry of the solver diff is the exact negation of the vault diff.
+fn check_mirror(vault_diff: &Value, solver_diff: &Value) -> R<()> {
+    let vault = vault_diff.as_object().ok_or("vault diff is not an object")?;
+    let solver = solver_diff.as_object().ok_or("solver diff is not an object")?;
+    if vault.len() != solver.len() {
+        return Err("solver diff names a different number of assets".into());
+    }
+    for (asset, value) in vault {
+        let text = value.as_str().ok_or("vault diff amount is not a string")?;
+        let negated = match text.strip_prefix('-') {
+            Some(abs) => abs.to_string(),
+            None => format!("-{text}"),
+        };
+        if solver.get(asset) != Some(&json!(negated)) {
+            return Err(
+                format!("solver diff is not the mirror of the vault's: {solver_diff}").into()
+            );
+        }
+    }
+    Ok(())
+}
+
 /// The solver's 64-byte ed25519 key (seed followed by public key), decoded from the key file.
 fn solver_key_bytes() -> R<[u8; 64]> {
     let home = std::env::var("HOME")?;
@@ -523,20 +590,42 @@ async fn step(cx: &Ctx, name: &str, rest: &[String]) -> R<()> {
             random[..8].copy_from_slice(&now.to_be_bytes());
             let nonce = mandate_vault::intent::v1_nonce(salt, deadline_sec, random)
                 .map_err(|e| e.to_string())?;
-            let usdc = usdc_asset();
+            // The solver takes the opposite side of whatever the vault signed: it gives the
+            // asset the vault receives, and receives the asset the vault gives.
+            let vault_diff = &vault_json["intents"][0]["diff"];
+            let terms = mirror_terms(vault_diff)?;
+            let held = view(
+                cx,
+                &intents,
+                "mt_balance_of",
+                json!({ "account_id": SOLVER, "token_id": terms.asset_in }),
+            )
+            .await?;
+            let held: u128 = held.as_str().ok_or("solver balance missing")?.parse()?;
+            if held < terms.amount_in {
+                return Err(format!(
+                    "the solver holds {held} of {} but the trade needs {}; fund it first",
+                    terms.asset_in, terms.amount_in
+                )
+                .into());
+            }
+            println!(
+                "MIRROR | solver gives {} {} and receives at least {} {}",
+                terms.amount_in, terms.asset_in, terms.min_amount_out, terms.asset_out
+            );
             let solver_payload =
                 mandate_vault::intent::token_diff_payload(&mandate_vault::intent::TokenDiff {
                     signer_id: SOLVER,
                     verifying_contract: intents.as_str(),
                     deadline_sec,
                     nonce,
-                    asset_in: WNEAR,
-                    amount_in: 550_000_000_000_000_000_000_000,
-                    asset_out: &usdc,
-                    min_amount_out: 2_000_000,
+                    asset_in: &terms.asset_in,
+                    amount_in: terms.amount_in,
+                    asset_out: &terms.asset_out,
+                    min_amount_out: terms.min_amount_out,
                 })
                 .map_err(|e| e.to_string())?;
-            // The solver's intent must mirror the vault's: same deadline, opposite diffs.
+            // The solver's intent must mirror the vault's: same deadline, exactly opposite diffs.
             let built: Value = near_sdk::serde_json::from_str(&solver_payload)?;
             if built["deadline"] != vault_json["deadline"] {
                 return Err(
@@ -544,12 +633,7 @@ async fn step(cx: &Ctx, name: &str, rest: &[String]) -> R<()> {
                         .into(),
                 );
             }
-            let diff = &built["intents"][0]["diff"];
-            if diff[WNEAR] != json!("-550000000000000000000000")
-                || diff[usdc.as_str()] != json!("2000000")
-            {
-                return Err(format!("solver diff is not the mirror of the vault's: {diff}").into());
-            }
+            check_mirror(vault_diff, &built["intents"][0]["diff"])?;
             let raw = solver_key_bytes()?;
             let seed: [u8; 32] = raw[..32].try_into()?;
             let signature =
@@ -820,4 +904,63 @@ async fn main() -> R<()> {
     let name = args.first().ok_or("usage: testnet_run <step> [args]")?;
     let cx = load()?;
     step(&cx, name, &args[1..]).await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const USDC: &str = "nep141:usdc.mandate-t1.testnet";
+
+    #[test]
+    fn mirror_of_a_usdc_to_wnear_trade() {
+        // The recorded proposal 3: the vault gives 2 USDC and receives 0.55 wNEAR.
+        let vault = json!({ USDC: "-2000000", WNEAR: "550000000000000000000000" });
+        let terms = mirror_terms(&vault).unwrap();
+        assert_eq!(
+            terms,
+            MirrorTerms {
+                asset_in: WNEAR.into(),
+                amount_in: 550_000_000_000_000_000_000_000,
+                asset_out: USDC.into(),
+                min_amount_out: 2_000_000,
+            }
+        );
+    }
+
+    #[test]
+    fn mirror_of_a_wnear_to_usdc_trade() {
+        let vault = json!({ WNEAR: "-100000000000000000000000", USDC: "359000" });
+        let terms = mirror_terms(&vault).unwrap();
+        assert_eq!(terms.asset_in, USDC);
+        assert_eq!(terms.amount_in, 359_000);
+        assert_eq!(terms.asset_out, WNEAR);
+        assert_eq!(terms.min_amount_out, 100_000_000_000_000_000_000_000);
+    }
+
+    #[test]
+    fn malformed_vault_diffs_are_refused() {
+        for bad in [
+            json!({ USDC: "-2000000" }),
+            json!({ USDC: "-1", WNEAR: "-1" }),
+            json!({ USDC: "1", WNEAR: "1" }),
+            json!({ USDC: "-0", WNEAR: "1" }),
+            json!({ USDC: "-2000000", WNEAR: "abc" }),
+            json!({ USDC: -2000000, WNEAR: "1" }),
+            json!({ USDC: "-1", WNEAR: "1", "nep141:other": "1" }),
+        ] {
+            assert!(mirror_terms(&bad).is_err(), "should refuse {bad}");
+        }
+    }
+
+    #[test]
+    fn check_mirror_requires_exact_negation() {
+        let vault = json!({ USDC: "-2000000", WNEAR: "550000000000000000000000" });
+        let good = json!({ USDC: "2000000", WNEAR: "-550000000000000000000000" });
+        assert!(check_mirror(&vault, &good).is_ok());
+        let short = json!({ USDC: "1999999", WNEAR: "-550000000000000000000000" });
+        assert!(check_mirror(&vault, &short).is_err());
+        let extra = json!({ USDC: "2000000", WNEAR: "-550000000000000000000000", "x": "1" });
+        assert!(check_mirror(&vault, &extra).is_err());
+    }
 }
