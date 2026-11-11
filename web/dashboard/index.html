@@ -211,6 +211,13 @@
   .sample-page { grid-column: 1 / -1; display: grid; gap: 22px; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); }
   @media (max-width: 980px) { .sample-page, .audit-grid { grid-template-columns: 1fr; } .audit-form { grid-template-columns: 1fr 1fr; } }
   @media (max-width: 600px) { .audit-form { grid-template-columns: 1fr; padding: 16px; } .audit-card { padding: 16px; } .audit-row { grid-template-columns: 1fr; gap: 3px; } .block-anchor { grid-template-columns: 1fr; } .block-anchor strong { grid-row: auto; } }
+
+  /* Summary tiles above the snapshot cards */
+  .audit-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin: 0 0 18px; }
+  .audit-tile { border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; background: var(--panel-2, transparent); }
+  .audit-tile span { display: block; font: 11px var(--mono); color: var(--dim, inherit); text-transform: uppercase; letter-spacing: .06em; }
+  .audit-tile strong { display: block; font-size: 28px; margin-top: 6px; font-variant-numeric: tabular-nums; }
+  .audit-tile.warn strong { color: var(--warn, #c08a1a); }
 </style>
 </head>
 <body>

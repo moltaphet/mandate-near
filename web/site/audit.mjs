@@ -549,7 +549,17 @@ export function renderSnapshot(container, snapshot, documentRef = globalThis.doc
     ? "This binding is reported by the vault. Executor admission, authoritative journal outcomes, completed refunds, account permissions, external code/admin roles, source/audit correspondence and live withdrawal results are UNVERIFIED. A matching supplied vault hash alone is not custody readiness."
     : "Account permissions, permanently inert receipt sinks, external code/admin roles, source/audit correspondence and oracle freshness/correctness are UNVERIFIED. A matching supplied vault hash alone is not custody readiness.", "audit-note"));
   grid.append(controls, rules, accounting, queues, timeline, ledger, identity);
-  container.replaceChildren(anchor, grid);
+  // Summary tiles: the listed Intents balances and the strike count, from the same snapshot.
+  const summary = element("div", undefined, "audit-summary");
+  const tile = (label, value, warn) => {
+    const box = element("div", undefined, warn ? "audit-tile warn" : "audit-tile");
+    box.append(element("span", label), element("strong", value)); summary.append(box);
+  };
+  const symbol = (assetId) => /^nep141:wrap\./.test(assetId) ? "wNEAR"
+    : assetId.replace(/^nep141:/, "").split(".")[0].toUpperCase();
+  snapshot.balances.forEach((balance) => tile(`Intents balance · ${symbol(balance.asset_id)}`, formatUnits(balance.units, balance.decimals)));
+  tile("Strikes · proposals halt at 3", `${snapshot.strikes} / 3`, snapshot.strikes >= 2n);
+  container.replaceChildren(anchor, summary, grid);
 }
 
 export function mountLiveDashboard(documentRef = globalThis.document) {
