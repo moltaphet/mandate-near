@@ -183,7 +183,7 @@ Design choices, stated:
 - NAV counts only mandate assets, so airdropped tokens cannot inflate it.
 - The high-water mark only rises, when an approved snapshot is reserved before signing dispatch.
 
-Status: gates 1–9 and the callback wiring are implemented and tested on a sandbox with the Intents fixture, stand-in signer and stand-in oracle. Live funded settlement remains unverified.
+Status: gates 1–9 and the callback wiring are implemented and tested on a sandbox with the Intents fixture, stand-in signer and stand-in oracle. On testnet (vault2, 11 November) a funded matched settlement is recorded against a counterparty account the team controls, with operator-fed prices and the fixture verifier; see the [vault2 evidence](evidence/testnet-vault2-2026-11-09/README.md). Settlement with an independent solver, the real Intents contract and mainnet remains unverified.
 
 The sandbox `matched_funded_settlement_is_atomic_and_replay_is_refused` test
 checks matched funded ledger settlement, atomic refusal and nonce replay. It

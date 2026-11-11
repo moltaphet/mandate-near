@@ -33,9 +33,13 @@ Mandate limits authorization, rather than guaranteeing profitable decisions.
 > Historical gas measurements from 7 November are in `docs/evidence/gas.txt`.
 > A testnet run on 7 November 2026 deployed the vault and obtained a real testnet
 > MPC signature ([evidence](docs/evidence/testnet-run-2026-11-07/README.md)). It used a
-> fixture Intents contract and a stand-in oracle. A 1 USDC delayed withdrawal was
-> queued and applied after its real 24-hour maturity, and the receiver was paid. Funded matched settlement and withdrawal/recovery evidence
-> remain open.
+> fixture Intents contract and a stand-in oracle. On vault2 (testnet, 9–11 November), a 1 USDC
+> withdrawal was queued and applied after its real 24-hour maturity, and the receiver was paid; a
+> matched trade settled with both ledgers changing, against a counterparty account the team controls;
+> and the per-trade cap and the balance check refused trades on chain
+> ([vault2 evidence](docs/evidence/testnet-vault2-2026-11-09/README.md)). Settlement with an
+> independent solver, a real oracle, on-chain withdrawal failure and recovery cases, and any mainnet
+> evidence remain open.
 > The project has not received an independent professional audit.
 > Start with [Security](SECURITY.md), [Threat model](THREAT_MODEL.md) and
 > [Operational readiness](docs/OPERATIONAL-READINESS.md).
@@ -623,10 +627,14 @@ Complete the funded core flow before treating optional integrations as ready:
    deployed code and administrative roles, voucher history and sealed permissions.
 3. **Run the approved live signing and settlement path.** Register the derived
    authority, obtain an actual vault MPC signature, settle a small matched trade
-   and record receipt/ledger evidence plus replay refusal.
+   and record receipt/ledger evidence plus replay refusal. On testnet the signature,
+   the settlement (with a counterparty the team controls) and the ledger changes are
+   recorded for vault2; replay refusal on chain and an independent solver remain.
 4. **Prove delayed withdrawal and recovery on the intended chain.** Wait a real
    86,400 seconds; demonstrate delivery, failed/ambiguous responses, cancellation
    races and late callbacks. Patching sandbox maturity proves no elapsed-day claim.
+   On testnet, delivery after a real 86,400-second wait is recorded for vault2; the
+   failure, cancellation and late-callback cases remain.
 5. **Demonstrate the agent and explicit keeper relay path.** Record exact quote,
    proposal, signature and final settlement; add operational handling for stale
    feeds, unresolved guards and unpublished intents.
