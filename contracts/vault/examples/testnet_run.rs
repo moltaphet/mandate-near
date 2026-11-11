@@ -513,6 +513,90 @@ async fn step(cx: &Ctx, name: &str, rest: &[String]) -> R<()> {
             .await?;
             println!("SOLVER | {solver} received 0.99 wNEAR on wrap.testnet (deposit is next)");
         }
+        // Deposits wNEAR the parent already holds into the verifier for the solver, without minting
+        // or wrapping again. Argument: milliNEAR-equivalent amount (default 300 = 0.3 wNEAR).
+        "solver-topup-wnear" => {
+            let solver = id(SOLVER);
+            let intents = sub("intents");
+            let near_milli: u128 = match rest.first() {
+                Some(v) => v.parse()?,
+                None => 300,
+            };
+            let wnear_amount = (near_milli * 1_000_000_000_000_000_000_000).to_string();
+            call(
+                cx,
+                &id(WRAP),
+                &parent,
+                "ft_transfer_call",
+                json!({
+                    "receiver_id": intents.as_str(),
+                    "amount": wnear_amount,
+                    "msg": json!({ "receiver_id": solver.as_str() }).to_string(),
+                }),
+                100,
+                NearToken::from_yoctonear(1),
+            )
+            .await?;
+            print_balances(cx, "after wNEAR deposit").await?;
+        }
+        // Tops up the solver on the verifier, paid by the parent: mints test USDC and wraps NEAR,
+        // then deposits both with the solver as the receiver. Arguments: USDC base units
+        // (default 20 USDC) and milliNEAR to wrap (default 300 = 0.3 NEAR).
+        "solver-topup" => {
+            let solver = id(SOLVER);
+            let intents = sub("intents");
+            let usdc = sub("usdc");
+            let wrap = id(WRAP);
+            let usdc_amount = rest.first().map(String::as_str).unwrap_or("20000000");
+            let near_milli: u128 = match rest.get(1) {
+                Some(v) => v.parse()?,
+                None => 300,
+            };
+            let msg = json!({ "receiver_id": solver.as_str() }).to_string();
+            call(
+                cx,
+                &usdc,
+                &parent,
+                "mint",
+                json!({ "account_id": parent.as_str(), "amount": usdc_amount }),
+                30,
+                NearToken::from_yoctonear(0),
+            )
+            .await?;
+            call(
+                cx,
+                &usdc,
+                &parent,
+                "ft_transfer_call",
+                json!({ "receiver_id": intents.as_str(), "amount": usdc_amount, "msg": msg }),
+                200,
+                NearToken::from_yoctonear(1),
+            )
+            .await?;
+            call(
+                cx,
+                &wrap,
+                &parent,
+                "near_deposit",
+                json!({}),
+                30,
+                NearToken::from_millinear(near_milli),
+            )
+            .await?;
+            // 1 milliNEAR is 10^21 yoctoNEAR, and wNEAR uses the same 24 decimals.
+            let wnear_amount = (near_milli * 1_000_000_000_000_000_000_000).to_string();
+            call(
+                cx,
+                &wrap,
+                &parent,
+                "ft_transfer_call",
+                json!({ "receiver_id": intents.as_str(), "amount": wnear_amount, "msg": msg }),
+                100,
+                NearToken::from_yoctonear(1),
+            )
+            .await?;
+            print_balances(cx, "after top-up").await?;
+        }
         // The solver deposits its wNEAR into the verifier. Its own key signs this step.
         "solver-deposit" => {
             let solver = id(SOLVER);
