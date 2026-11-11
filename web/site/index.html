@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#efebe2">
+<meta name="theme-color" content="#0b0f0d">
 <meta name="referrer" content="no-referrer">
 <meta name="description" content="Mandate separates agent proposals from on-chain trade authority. Inspect public NEAR vault state, owner rules and evidence in one dashboard.">
 <meta property="og:type" content="website">
@@ -13,22 +13,23 @@
 <meta name="twitter:card" content="summary">
 <link rel="canonical" href="https://mandatenear.xyz/">
 <link rel="icon" type="image/svg+xml" href="../assets/logo.svg">
+<script>if(!matchMedia("(prefers-reduced-motion: reduce)").matches&&"IntersectionObserver" in window)document.documentElement.classList.add("js");</script>
 <title>Mandate — Your agent proposes. Your rules decide.</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root {
-  --paper:#efebe2;
-  --card:#f8f6f1;
-  --ink:#111;
-  --soft:#5b5a55;
-  --rule:rgba(17,17,17,.14);
-  --pass:#00875f;
-  --pass-ink:#006f4e;
-  --amber-ink:#845b00;
-  --block:#b93316;
-  --amber:#956600;
+  --paper:#0b0f0d;
+  --card:#131a16;
+  --ink:#e8efe9;
+  --soft:#9fada5;
+  --rule:rgba(232,239,233,.13);
+  --pass:#3ddc97;
+  --pass-ink:#7ff0bd;
+  --amber-ink:#f5c66e;
+  --block:#ff7d62;
+  --amber:#f2b84b;
   --serif:"DM Serif Display",Georgia,serif;
   --mono:"IBM Plex Mono",ui-monospace,monospace;
   --sans:Inter,system-ui,sans-serif
@@ -109,7 +110,7 @@ button:disabled {
 }
 
 .eyebrow {
-  font:11px var(--mono);
+  font:12px var(--mono);
   letter-spacing:.13em;
   text-transform:uppercase;
   color:var(--soft)
@@ -126,7 +127,7 @@ button:disabled {
   padding:5px 10px;
   border:1px solid var(--rule);
   border-radius:99px;
-  font:10px var(--mono);
+  font:12px var(--mono);
   text-transform:uppercase;
   letter-spacing:.04em;
   background:var(--card)
@@ -218,7 +219,7 @@ button:disabled {
   top:0;
   z-index:5;
   border-bottom:1px solid var(--rule);
-  background:rgba(239,235,226,.97);
+  background:rgba(11,15,13,.92);
   backdrop-filter:blur(12px)
 }
 
@@ -255,7 +256,7 @@ button:disabled {
 .nav a {
   text-decoration:none;
   color:var(--soft);
-  font:11px var(--mono);
+  font:12px var(--mono);
   text-transform:uppercase;
   letter-spacing:.06em
 }
@@ -305,7 +306,7 @@ button:disabled {
 }
 
 .hero-note {
-  font:11px/1.7 var(--mono);
+  font:12px/1.7 var(--mono);
   color:var(--soft);
   margin:22px 0 0
 }
@@ -315,7 +316,7 @@ button:disabled {
   border-radius:8px;
   background:var(--card);
   padding:24px;
-  box-shadow:0 9px 30px rgba(17,17,17,.035)
+  box-shadow:0 9px 30px rgba(0,0,0,.45)
 }
 
 .boundary-top {
@@ -364,7 +365,7 @@ button:disabled {
 }
 
 .boundary-foot {
-  font:10px/1.8 var(--mono);
+  font:12px/1.8 var(--mono);
   color:var(--soft);
   border-top:1px solid var(--rule);
   margin:0;
@@ -428,7 +429,7 @@ button:disabled {
   background:none;
   border:0;
   color:var(--soft);
-  font:11px var(--mono);
+  font:12px var(--mono);
   text-decoration:underline;
   text-underline-offset:4px
 }
@@ -448,12 +449,14 @@ button:disabled {
   min-width:0
 }
 .audit-field select {
-  padding-right:36px;
+  -webkit-appearance:none;appearance:none;
+  padding-right:44px;cursor:pointer;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%239fada5' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 16px center;background-size:12px 8px;
 }
 
 label {
   display:block;
-  font:11px var(--mono);
+  font:12px var(--mono);
   margin-bottom:8px;
   color:var(--soft)
 }
@@ -471,7 +474,7 @@ input,select {
 }
 
 input::placeholder {
-  color:#6e6a61
+  color:var(--soft)
 }
 
 small {
@@ -491,7 +494,7 @@ small {
 }
 
 .advanced summary {
-  font:11px var(--mono);
+  font:12px var(--mono);
   color:var(--soft);
   cursor:pointer;
   width:fit-content
@@ -513,7 +516,7 @@ small {
 }
 
 .audit-status {
-  font:11px/1.7 var(--mono);
+  font:12px/1.7 var(--mono);
   color:var(--soft);
   margin:0;
   overflow-wrap:anywhere
@@ -536,7 +539,7 @@ small {
 .file-note {
   padding:14px 18px;
   border:1px solid rgba(149,102,0,.25);
-  background:#f5efdf;
+  background:var(--card);
   border-radius:5px;
   font-size:12px;
   margin-bottom:20px
@@ -597,7 +600,7 @@ small {
   display:block;
   height:5px;
   width:65%;
-  background:#d9d5cc;
+  background:var(--rule);
   border-radius:4px;
   margin-top:18px
 }
@@ -634,12 +637,12 @@ small {
 }
 
 .audit-kicker {
-  font:10px var(--mono);
+  font:12px var(--mono);
   color:var(--soft)
 }
 
 .block-anchor>span:not(.audit-kicker) {
-  font:11px var(--mono);
+  font:12px var(--mono);
   color:var(--soft)
 }
 
@@ -783,7 +786,7 @@ td {
 }
 
 .rule .index {
-  font:10px var(--mono);
+  font:12px var(--mono);
   color:var(--pass-ink)
 }
 
@@ -882,7 +885,7 @@ td {
   border-radius:5px;
   padding:17px 19px;
   color:#e5eae6;
-  font:11px var(--mono);
+  font:12px var(--mono);
   overflow:auto
 }
 
@@ -891,7 +894,7 @@ td {
 }
 
 .command button {
-  font:10px var(--mono);
+  font:12px var(--mono);
   background:none;
   color:#abd8c6;
   border:0;
@@ -901,7 +904,7 @@ td {
 
 .copy-status {
   min-height:20px;
-  font:10px var(--mono);
+  font:12px var(--mono);
   color:var(--soft);
   margin:6px 0 0
 }
@@ -922,7 +925,7 @@ td {
 }
 
 .milestone .step-no {
-  font:10px var(--mono);
+  font:12px var(--mono);
   color:var(--soft)
 }
 
@@ -990,7 +993,7 @@ td {
 }
 
 .footer p {
-  font:10px/1.8 var(--mono);
+  font:12px/1.8 var(--mono);
   color:var(--soft);
   margin:19px 0 0
 }
@@ -1000,7 +1003,7 @@ td {
   justify-content:space-between;
   gap:24px;
   margin-top:23px;
-  font:10px var(--mono);
+  font:12px var(--mono);
   color:var(--soft)
 }
 
@@ -1251,7 +1254,7 @@ td {
 }
 
 /* Testnet banner, proof strip, status chips and transaction table */
-.net-banner{background:var(--ink);color:var(--paper);text-align:center;padding:8px 16px;font-family:var(--mono);font-size:12px;letter-spacing:.04em}
+.net-banner{background:#132019;color:var(--pass-ink);border-bottom:1px solid rgba(61,220,151,.22);text-align:center;padding:8px 16px;font-family:var(--mono);font-size:12px;letter-spacing:.04em}
 .proof-strip{list-style:none;margin:22px 0 0;padding:0;display:grid;gap:10px}
 .proof-strip li{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;font-size:14px;line-height:1.4}
 .proof-strip a{font-family:var(--mono);font-size:12px;color:var(--ink);text-decoration:underline;text-underline-offset:3px}
@@ -1269,13 +1272,162 @@ td {
 .tx-table tr:last-child td{border-bottom:0}
 .tx-table a{font-family:var(--mono);font-size:12px;color:var(--ink);white-space:nowrap}
 .tx-note{color:var(--soft);font-size:13px;margin:12px 0 0}
+
+/* Console theme: animated trade path and refusal branch. Motion is removed for reduced-motion users. */
+.hero::before{content:"";position:absolute;inset:0;background:radial-gradient(closest-side at 72% 38%,rgba(61,220,151,.14),rgba(61,220,151,0));pointer-events:none;z-index:-1}
+.hero{position:relative}
+.flow{margin:0 0 14px;color:var(--soft)}
+.flow svg{width:100%;height:auto;display:block;overflow:visible}
+.flow .track{fill:none;stroke:var(--rule);stroke-width:2}
+.flow .glow{fill:none;stroke:var(--pass);stroke-width:3;stroke-linecap:round;stroke-dasharray:14 86;stroke-dashoffset:0;filter:drop-shadow(0 0 6px rgba(61,220,151,.7));animation:flow-run 4.8s linear infinite}
+.flow .refuse{fill:none;stroke:var(--block);stroke-width:2;stroke-dasharray:4 4;opacity:.8}
+.flow .node circle{fill:var(--paper);stroke:var(--pass);stroke-width:2}
+
+.flow .block circle{fill:var(--block)}
+.flow text{font-family:var(--mono);font-size:26px;fill:var(--soft);text-anchor:middle}
+.flow .block text{fill:var(--block);text-anchor:start;font-size:20px}
+.flow figcaption{font-family:var(--mono);font-size:12px;color:var(--soft);margin-top:4px}
+@keyframes flow-run{from{stroke-dashoffset:0}to{stroke-dashoffset:-100}}
+@keyframes flow-pulse{0%,100%{stroke-width:2}50%{stroke-width:4}}
+@media (prefers-reduced-motion:reduce){
+  .flow .glow,.flow .node:nth-child(3) circle{animation:none}
+  .flow .glow{stroke-dasharray:14 86;stroke-dashoffset:-30}
+}
+
+/* Motion. Everything here is decorative. .js is set only when motion is allowed, so content stays visible otherwise. */
+.progress{position:fixed;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--pass),#7ff0bd);transform-origin:0 50%;transform:scaleX(0);z-index:60;box-shadow:0 0 12px rgba(61,220,151,.6)}
+.js .reveal{opacity:0;transform:translateY(22px);transition:opacity .8s cubic-bezier(.2,.7,.2,1),transform .8s cubic-bezier(.2,.7,.2,1)}
+.js .reveal.in{opacity:1;transform:none}
+.js .fact.reveal:nth-child(2){transition-delay:.08s}
+.js .fact.reveal:nth-child(3){transition-delay:.16s}
+.js .fact.reveal:nth-child(4){transition-delay:.24s}
+.js .proof-card.reveal:nth-child(2){transition-delay:.12s}
+.fact strong{font-variant-numeric:tabular-nums}
+@media (hover:hover){
+  .fact,.proof-card,.boundary{transition:transform .35s ease,box-shadow .35s ease,border-color .35s ease}
+  .fact:hover,.proof-card:hover{transform:translateY(-4px);box-shadow:0 14px 42px rgba(61,220,151,.14);border-color:rgba(61,220,151,.35)}
+  .button:hover{box-shadow:0 0 0 1px var(--pass),0 0 26px rgba(61,220,151,.28)}
+}
+.hero{overflow:hidden}
+.hero-grid-bg{position:absolute;inset:0;pointer-events:none;z-index:-1;background-image:radial-gradient(rgba(232,239,233,.12) 1px,transparent 1.2px);background-size:26px 26px;-webkit-mask-image:radial-gradient(closest-side at 72% 40%,#000 20%,transparent 100%);mask-image:radial-gradient(closest-side at 72% 40%,#000 20%,transparent 100%);animation:grid-drift 26s linear infinite}
+@keyframes grid-drift{to{background-position:260px 260px}}
+.flow .glow{filter:drop-shadow(0 0 6px rgba(61,220,151,.7))}
+@media (prefers-reduced-motion:reduce){
+  .progress,.hero-grid-bg{display:none}
+  .js .reveal{opacity:1;transform:none;transition:none}
+  .fact,.proof-card,.boundary,.button{transition:none!important;transform:none!important}
+}
+.boundary-top{flex-wrap:wrap;gap:8px 12px}
+
+/* Replay, simulator, legend, icons, live indicator, focus and heading sizes */
+.rule .ico{width:26px;height:26px;stroke:var(--pass);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;display:block;margin-bottom:12px}
+.legend{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:0 0 22px}
+.legend p{margin:0 0 0 6px;color:var(--soft);font-size:14px;width:100%}
+@media (min-width:700px){.legend p{width:auto}}
+.chip.neutral{color:var(--soft);border-color:var(--rule);background:transparent}
+.replay{display:grid;gap:22px}
+.steps{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.step,.play{font:12px var(--mono);padding:10px 14px;border-radius:999px;border:1px solid var(--rule);background:transparent;color:var(--soft);cursor:pointer;transition:border-color .25s,color .25s,background .25s}
+.step[aria-current="step"]{border-color:var(--pass);color:var(--pass-ink);background:rgba(61,220,151,.1)}
+.step:hover,.play:hover{border-color:var(--pass)}
+.play{margin-left:auto;color:var(--ink)}
+.play[aria-pressed="true"]{border-color:var(--amber);color:var(--amber-ink)}
+.replay-main{border:1px solid var(--rule);border-radius:8px;background:var(--card);padding:22px}
+.step-text{font-size:17px;line-height:1.6;margin:0 0 10px;min-height:5.2em;color:var(--ink)}
+.step-tx{font:12px var(--mono);color:var(--soft);margin:0 0 18px;min-height:1.6em}
+.step-tx a{color:var(--pass-ink)}
+.ledgers{display:grid;gap:14px}
+@media (min-width:700px){.ledgers{grid-template-columns:1fr 1fr}}
+.ledger{border:1px solid var(--rule);border-radius:6px;padding:16px 18px;background:var(--paper)}
+.ledger h3{font:12px var(--mono);color:var(--soft);margin:0 0 12px;font-weight:400;text-transform:uppercase;letter-spacing:.06em}
+.ledger dl{margin:0;display:grid;gap:8px}
+.ledger dl div{display:flex;justify-content:space-between;align-items:baseline}
+.ledger dt{font:12px var(--mono);color:var(--soft)}
+.ledger dd{margin:0;font:600 22px var(--serif);color:var(--ink)}
+.ledger dd.moved{animation:moved .9s ease}
+@keyframes moved{0%{color:var(--pass-ink)}100%{color:var(--ink)}}
+.simulator{border:1px solid var(--rule);border-radius:8px;background:var(--card);padding:24px;max-width:760px}
+.simulator label{display:block;font:14px var(--sans);margin-bottom:12px}
+.simulator output{font:600 22px var(--serif);color:var(--pass-ink);margin-left:6px}
+.simulator input[type=range]{width:100%;accent-color:var(--pass);margin:4px 0 18px}
+.gates{list-style:none;margin:0 0 16px;padding:0;display:grid;gap:8px}
+.gates li{display:flex;align-items:center;gap:10px;font-size:15px;color:var(--soft)}
+.gates .mark{width:12px;height:12px;border-radius:50%;border:1.5px solid var(--rule);flex:none}
+.gates li.ok{color:var(--ink)}
+.gates li.ok .mark{background:var(--pass);border-color:var(--pass)}
+.gates li.no{color:var(--block)}
+.gates li.no .mark{background:var(--block);border-color:var(--block)}
+.verdict{margin:0 0 14px;font:14px var(--mono);padding:12px 14px;border-radius:6px;border:1px solid var(--rule)}
+.verdict.pass{color:var(--pass-ink);border-color:rgba(61,220,151,.3);background:rgba(61,220,151,.07)}
+.verdict.block{color:var(--block);border-color:rgba(255,125,98,.35);background:rgba(255,125,98,.07)}
+.sim-note{font-size:13px;color:var(--soft);margin:0}
+.live-pill{display:inline-flex;align-items:center;gap:8px;font:12px var(--mono);color:var(--pass-ink);border:1px solid rgba(61,220,151,.35);border-radius:999px;padding:4px 10px;margin-right:10px}
+.live-pill .dot{width:7px;height:7px;border-radius:50%;background:var(--pass)}
+.live-pill[hidden]{display:none}
+:focus-visible{outline:2px solid var(--pass);outline-offset:3px;border-radius:4px}
+.section-head h2{font-size:clamp(34px,4.4vw,54px);line-height:1.05}
+@media (prefers-reduced-motion:reduce){
+  .ledger dd.moved{animation:none}
+  .step,.play{transition:none}
+}
+
+/* Hero boundary panel: entrance, staggered steps, an edge glow, moving arrows and node pulses.
+   Decorative only; the content is fully visible without animation. Reduced motion turns all of it off. */
+.boundary{position:relative;isolation:isolate;animation:boundary-in .9s cubic-bezier(.2,.7,.2,1) backwards .15s}
+.boundary::before{content:"";position:absolute;inset:-1px;border-radius:inherit;padding:1px;background:linear-gradient(120deg,transparent 30%,rgba(61,220,151,.9) 50%,transparent 70%) 0 0/250% 100%;-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none;z-index:-1;opacity:.55;animation:edge-sweep 7s linear infinite}
+.boundary:hover{transform:translateY(-3px);box-shadow:0 22px 60px rgba(61,220,151,.14)}
+.boundary li{animation:step-in .7s cubic-bezier(.2,.7,.2,1) both}
+.boundary li:nth-child(1){animation-delay:.45s}
+.boundary li:nth-child(2){animation-delay:.6s}
+.boundary li:nth-child(3){animation-delay:.75s}
+.boundary li:nth-child(4){animation-delay:.9s}
+.boundary .arrow{display:inline-block;animation:arrow-bob 2.4s ease-in-out infinite}
+.boundary li:nth-child(2) .arrow{animation-delay:.3s}
+.boundary li:nth-child(3) .arrow{animation-delay:.6s}
+.boundary .number{transition:color .3s,transform .3s}
+.boundary li:hover .number{color:var(--pass-ink);transform:translateX(3px)}
+.flow .node{animation:node-in .6s cubic-bezier(.2,.7,.2,1) both}
+.flow .node:nth-child(2){animation-delay:.15s}
+.flow .node:nth-child(3){animation-delay:.3s}
+.flow .node:nth-child(4){animation-delay:.45s}
+
+@keyframes boundary-in{from{opacity:0;transform:translateY(18px) scale(.985)}to{opacity:1;transform:none}}
+@keyframes step-in{from{opacity:0;transform:translateX(14px)}to{opacity:1;transform:none}}
+@keyframes arrow-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(4px)}}
+@keyframes edge-sweep{from{background-position:100% 0}to{background-position:-150% 0}}
+@keyframes node-in{from{opacity:0;transform:scale(.4)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){
+  .boundary,.boundary::before,.boundary li,.boundary .arrow,.flow .node,.flow .node:nth-child(3) circle{animation:none!important}
+  .boundary:hover{transform:none}
+}
+
+/* Diagram state: one proposal travels Propose to Settle, lighting each step; a refusal packet
+   branches from Check in its own window of the same 9-second cycle. Hidden under reduced motion. */
+.flow .packet{fill:var(--pass);filter:drop-shadow(0 0 8px rgba(61,220,151,.9))}
+.flow .rpacket{fill:var(--block);filter:drop-shadow(0 0 8px rgba(255,125,98,.9));animation:rwindow 9s linear infinite}
+.flow .n1 circle{animation:lit-1 9s linear infinite}
+.flow .n2 circle{animation:lit-2 9s linear infinite}
+.flow .n3 circle{animation:lit-3 9s linear infinite}
+.flow .n4 circle{animation:lit-4 9s linear infinite}
+.flow .block text{animation:bwindow 9s linear infinite}
+@keyframes lit-1{0%,100%{fill:var(--pass)}}
+@keyframes lit-2{0%,30%{fill:var(--paper)}34%,100%{fill:var(--pass)}}
+@keyframes lit-3{0%,63%{fill:var(--paper)}67%,100%{fill:var(--pass)}}
+@keyframes lit-4{0%,96%{fill:var(--paper)}99%,100%{fill:var(--pass)}}
+@keyframes rwindow{0%,32%{opacity:0}34%,64%{opacity:1}66%,100%{opacity:0}}
+@keyframes bwindow{0%,32%{opacity:.25}36%,64%{opacity:1}68%,100%{opacity:.25}}
+@media (prefers-reduced-motion:reduce){
+  .flow .packet,.flow .rpacket{display:none}
+  .flow .n1 circle,.flow .n2 circle,.flow .n3 circle,.flow .n4 circle,.flow .block text{animation:none}
+  .flow .node circle{fill:var(--paper)}
+}
 </style>
 </head>
 <body>
 <a class="skip" href="#vault">Skip to vault dashboard</a>
 <header class="top">
  <div class="wrap top-inner">
-  <a class="brand" href="#home" aria-label="Mandate home"><img src="../assets/logo.svg" alt="Mandate" width="200" height="80"></a>
+  <a class="brand" href="#home" aria-label="Mandate home"><img src="../assets/logo-light.svg" alt="Mandate" width="200" height="80"></a>
   <nav class="nav" aria-label="Main navigation"><a href="#vault">Vault dashboard</a><a href="#rules">The rules</a><a href="#evidence">Evidence</a><a href="#roadmap">What's next</a></nav>
   <a class="button light top-action" href="https://github.com/moltaphet/mandate-near" rel="noopener noreferrer" target="_blank">Source ↗</a>
  </div>
@@ -1284,6 +1436,7 @@ td {
 <main id="home">
  <div class="wrap">
   <section class="hero" aria-labelledby="hero-title">
+   <div class="hero-grid-bg" aria-hidden="true"></div>
    <div class="hero-grid">
     <div>
      <span class="eyebrow">NEAR · Agent security · Mandate</span>
@@ -1297,8 +1450,23 @@ td {
      </ul>
      <p class="hero-note">Testnet only. Prices are operator-fed and the counterparty is an account we control. See the evidence.</p>
     </div>
-    <aside class="boundary" aria-label="Trade authorization flow">
+    <aside class="boundary reveal" aria-label="Trade authorization flow">
      <div class="boundary-top"><span class="eyebrow">The authority boundary</span><span class="badge green">On-chain rules</span></div>
+     <figure class="flow" aria-hidden="true">
+      <svg viewBox="0 0 560 200" role="presentation" focusable="false">
+       <path class="track" d="M70 60 H490" pathLength="100"/>
+       <path class="glow" d="M70 60 H490" pathLength="100"/>
+       <path class="refuse" d="M210 70 V146 H236" pathLength="100"/>
+       <g class="node n1"><circle cx="70" cy="60" r="10"/><text x="70" y="34">Propose</text></g>
+       <g class="node n2"><circle cx="210" cy="60" r="10"/><text x="210" y="34">Check</text></g>
+       <g class="node n3"><circle cx="350" cy="60" r="10"/><text x="350" y="34">Sign</text></g>
+       <g class="node n4"><circle cx="490" cy="60" r="10"/><text x="490" y="34">Settle</text></g>
+       <circle class="packet" r="6"><animateMotion dur="9s" repeatCount="indefinite" path="M70 60 H490"/></circle>
+       <circle class="rpacket" r="5"><animateMotion dur="9s" repeatCount="indefinite" calcMode="linear" keyTimes="0;0.33;0.5;1" keyPoints="0;0;1;1" path="M210 60 V146 H236"/></circle>
+       <g class="block"><text x="244" y="151">Refused · TradeTooLarge</text></g>
+      </svg>
+      <figcaption>One proposal, checked on-chain before a signature.</figcaption>
+     </figure>
      <ol>
       <li><span class="number">01</span><div><b>The agent proposes</b><p>Assets, input amount, minimum output.</p></div><span class="arrow" aria-hidden="true">↓</span></li>
       <li><span class="number">02</span><div><b>The vault checks</b><p>Balances, fresh prices and owner limits.</p></div><span class="arrow" aria-hidden="true">↓</span></li>
@@ -1309,13 +1477,13 @@ td {
     </aside>
    </div>
    <div class="facts" aria-label="Contract limits">
-    <div class="fact"><strong>9</strong><p>Ordered trade gates</p></div>
-    <div class="fact"><strong>20</strong><p>Maximum mandate assets</p></div>
-    <div class="fact"><strong>24h</strong><p>Loosening &amp; withdrawal delay</p></div>
-    <div class="fact"><strong>NEAR</strong><p>Intents &amp; Chain Signatures</p></div>
+    <div class="fact reveal"><strong>9</strong><p>Ordered trade gates</p></div>
+    <div class="fact reveal"><strong>20</strong><p>Maximum mandate assets</p></div>
+    <div class="fact reveal"><strong>24h</strong><p>Loosening &amp; withdrawal delay</p></div>
+    <div class="fact reveal"><strong>NEAR</strong><p>Intents &amp; Chain Signatures</p></div>
    </div>
   </section>
-  <section class="section" id="vault" aria-labelledby="vault-title">
+  <section class="section reveal" id="vault" aria-labelledby="vault-title">
    <div class="section-head"><div><span class="eyebrow">01 / Your vault</span><h2 id="vault-title">Everything on one page.</h2></div><p>Inspect the owner, current rules, queued changes and listed balances. Every observation comes from one final block. No wallet is needed to read a public vault.</p></div>
    <p class="file-note" id="file-notice" hidden>This page needs an HTTP server for its dashboard module. From the repository root, run <code>python3 -B scripts/dashboard-fixture.py</code>, then open the local preview on port 8124.</p>
    <div class="dashboard" id="live-view">
@@ -1340,32 +1508,66 @@ td {
    </div>
    <div class="section-foot"><p>Observed state shows what the contract records. It does not certify custody or settlement.</p><p id="share-status" role="status"></p></div>
   </section>
-  <section class="section" id="rules" aria-labelledby="rules-title">
+  <section class="section reveal" id="rules" aria-labelledby="rules-title">
    <div class="section-head"><div><span class="eyebrow">02 / The mandate</span><h2 id="rules-title">Limits before signatures.</h2></div><p>Every proposed trade passes the same ordered checks. The first refusal has a named reason. The agent cannot replace the bytes the vault constructs.</p></div>
    <div class="rules-grid">
-    <article class="rule"><span class="index">01 / Structure</span><h3>Allowed assets.</h3><p>Different listed assets, with positive input and minimum output.</p></article>
-    <article class="rule"><span class="index">02 / Timing</span><h3>Room between trades.</h3><p>No outstanding intent, and the configured cooldown has elapsed.</p></article>
-    <article class="rule"><span class="index">03 / Prices</span><h3>Fresh enough to decide.</h3><p>Held and traded assets need accepted, recent oracle data.</p></article>
-    <article class="rule"><span class="index">04 / Balance</span><h3>Spend what is held.</h3><p>The listed Intents balance must cover the proposed input.</p></article>
-    <article class="rule"><span class="index">05 / Trade size</span><h3>A cap per request.</h3><p>Oracle-valued input cannot exceed the owner's trade limit.</p></article>
-    <article class="rule"><span class="index">06 / Turnover</span><h3>A daily allowance.</h3><p>Approved signing requests reserve quota for their UTC approval day.</p></article>
-    <article class="rule"><span class="index">07 / Slippage</span><h3>A minimum worth taking.</h3><p>Minimum output value must fit the allowed oracle-value slippage.</p></article>
-    <article class="rule"><span class="index">08 / Drawdown</span><h3>De-risk at the threshold.</h3><p>When observed NAV trips the drawdown guard, only stable destinations pass.</p></article>
-    <article class="rule"><span class="index">09 / Position</span><h3>Keep exposure bounded.</h3><p>Non-stable position limits apply, with a non-worsening de-risking exception.</p></article>
+    <article class="rule"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg><span class="index">01 / Structure</span><h3>Allowed assets.</h3><p>Different listed assets, with positive input and minimum output.</p></article>
+    <article class="rule"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span class="index">02 / Timing</span><h3>Room between trades.</h3><p>No outstanding intent, and the configured cooldown has elapsed.</p></article>
+    <article class="rule"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l5-5 4 4 8-8"/><path d="M15 8h6v6"/></svg><span class="index">03 / Prices</span><h3>Fresh enough to decide.</h3><p>Held and traded assets need accepted, recent oracle data.</p></article>
+    <article class="rule"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M16 12.5h2"/></svg><span class="index">04 / Balance</span><h3>Spend what is held.</h3><p>The listed Intents balance must cover the proposed input.</p></article>
+    <article class="rule"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h16M12 4v16"/><circle cx="12" cy="12" r="8"/></svg><span class="index">05 / Trade size</span><h3>A cap per request.</h3><p>Oracle-valued input cannot exceed the owner's trade limit.</p></article>
+    <article class="rule"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span class="index">06 / Turnover</span><h3>A daily allowance.</h3><p>Approved signing requests reserve quota for their UTC approval day.</p></article>
+    <article class="rule"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M10 3l4 4-4 4M20 17H10M14 13l-4 4 4 4"/></svg><span class="index">07 / Slippage</span><h3>A minimum worth taking.</h3><p>Minimum output value must fit the allowed oracle-value slippage.</p></article>
+    <article class="rule"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7l6 6 4-4 8 8"/><path d="M15 17h6v-6"/></svg><span class="index">08 / Drawdown</span><h3>De-risk at the threshold.</h3><p>When observed NAV trips the drawdown guard, only stable destinations pass.</p></article>
+    <article class="rule"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg><span class="index">09 / Position</span><h3>Keep exposure bounded.</h3><p>Non-stable position limits apply, with a non-worsening de-risking exception.</p></article>
    </div>
    <p class="guard-note">The oracle is trusted for market correctness. Stable assets are owner-configured, and freshness does not prove a peg. Pause stops new and unsigned work; an already issued signature remains valid until its deadline.</p>
   </section>
-  <section class="section" id="evidence" aria-labelledby="evidence-title">
+  <section class="section reveal" id="replay" aria-labelledby="replay-title">
+   <div class="section-head"><div><span class="eyebrow">Replay · testnet, recorded values</span><h2 id="replay-title">One trade, from proposal to settlement.</h2></div><p>Each step shows the values recorded on vault2 on 11 November. Nothing here calls the chain.</p></div>
+   <div class="replay">
+    <div class="steps" role="group" aria-label="Trade steps">
+     <button type="button" class="step" data-step="0" aria-current="step">1 · Propose</button>
+     <button type="button" class="step" data-step="1">2 · Check</button>
+     <button type="button" class="step" data-step="2">3 · Sign</button>
+     <button type="button" class="step" data-step="3">4 · Settle</button>
+     <button type="button" class="play" id="replay-play" aria-pressed="false">Play</button>
+    </div>
+    <div class="replay-main">
+     <p class="step-text" id="step-text" aria-live="polite"></p>
+     <p class="step-tx" id="step-tx"></p>
+     <div class="ledgers">
+      <article class="ledger"><h3>vault2</h3><dl><div><dt>USDC</dt><dd id="v-usdc">9</dd></div><div><dt>wNEAR</dt><dd id="v-wnear">0</dd></div></dl></article>
+      <article class="ledger"><h3>Counterparty · an account we control</h3><dl><div><dt>USDC</dt><dd id="s-usdc">0</dd></div><div><dt>wNEAR</dt><dd id="s-wnear">0.99</dd></div></dl></article>
+     </div>
+    </div>
+   </div>
+  </section>
+  <section class="section reveal" id="simulator" aria-labelledby="simulator-title">
+   <div class="section-head"><div><span class="eyebrow">Try the rule</span><h2 id="simulator-title">Move the amount. The rule answers.</h2></div><p>The same checks the vault runs on a proposal, evaluated on this page with the values recorded on 11 November: 67 USDC held and a 50 USDC per-trade cap. This page does not call the chain.</p></div>
+   <div class="simulator">
+    <label for="amount">Proposed amount <output id="amount-out" for="amount">2</output> USDC</label>
+    <input type="range" id="amount" min="1" max="70" step="1" value="2">
+    <ul class="gates" aria-label="Checks">
+     <li id="g-balance"><span class="mark" aria-hidden="true"></span>Balance covers the amount</li>
+     <li id="g-cap"><span class="mark" aria-hidden="true"></span>Within the 50 USDC per-trade cap</li>
+    </ul>
+    <p class="verdict" id="verdict" aria-live="polite"></p>
+    <p class="sim-note">The refusal codes are the ones the contract recorded: InsufficientBalance and TradeTooLarge. The balance is checked first, as the two recorded refusals show.</p>
+   </div>
+  </section>
+  <section class="section reveal" id="evidence" aria-labelledby="evidence-title">
    <div class="section-head"><div><span class="eyebrow">03 / Evidence</span><h2 id="evidence-title">Built, tested, still to prove.</h2></div><p>A local test, a historical simulation and a funded live receipt establish different things. This page keeps those boundaries visible.</p></div>
+   <div class="legend" aria-label="Status legend"><span class="chip pass">Testnet · done</span><span class="chip neutral">Local test</span><span class="chip amber">Fixture</span><span class="chip block">Not done yet</span><p>Every claim on this page carries one of these labels.</p></div>
    <div class="proof-grid">
-    <article class="proof-card"><span class="badge green"><span class="dot"></span>Local evidence</span><h3>The working core.</h3><ul>
+    <article class="proof-card reveal"><span class="badge green"><span class="dot"></span>Local evidence</span><h3>The working core.</h3><ul>
      <li><b>Ordered gates &amp; owner delays</b><span>Unit, boundary and property tests; sandbox access-control checks.</span></li>
      <li><b>Signing &amp; matched settlement</b><span>Sandbox vault flow, a stand-in signer and the supplied Intents verifier fixture. Historical mainnet simulations are separate evidence.</span></li>
      <li><b>Withdrawal lifecycle &amp; proof guards</b><span>Delivery, refund, owner-rearmed retries and adversarial receipt tests. Sandbox maturity injection does not prove 24 elapsed hours.</span></li>
      <li><b>Agent decision sources</b><span>Two-asset rebalancing, strict model output and canonical commitments. Declared IDs use delayed admission and immediate removal. Final local client and sandbox checks passed on 8 November; model origin, live inference and hardware attestation remain unverified.</span></li>
      <li><b>Connected public dashboard</b><span>Pinned block, exact base-unit formatting and text-only rendering of RPC data.</span></li>
     </ul><a class="text-link" href="https://github.com/moltaphet/mandate-near/tree/main/contracts/vault/tests" target="_blank" rel="noopener noreferrer">Review the tests ↗</a></article>
-    <article class="proof-card"><span class="badge amber"><span class="dot"></span>Testnet done · release pending</span><h3>The release boundary.</h3><ul>
+    <article class="proof-card reveal"><span class="badge amber"><span class="dot"></span>Testnet done · release pending</span><h3>The release boundary.</h3><ul>
      <li><b>A functioning oracle</b><span>Testnet prices are operator-fed from a public source with checked timestamps. No verified Pyth feed is in use yet, so the oracle is not selected.</span></li>
      <li><b>A reviewed, sealed deployment</b><span>Selected DAO owner distinct from the vault, verified governance, exact artifact and permanently inert proof sinks. Fresh issuer history matters.</span></li>
      <li><b>Vault signing → matched fill</b><span>Shown on testnet with a counterparty we control. An independent solver, the real Intents contract and mainnet are not shown.</span></li>
@@ -1391,7 +1593,7 @@ td {
    </div>
    <div class="reproduce"><div><h3>Reproduce the local checks.</h3><p>Rust, cargo-near, Python 3 and Node.js 22+. The 8 November candidate passed 479 distinct local tests, including all 14 sandbox targets, through direct commands. The hardening report records source/WASM identity and command history. Frozen-release CI, reproducible builds and live custody evidence remain required.</p></div><div><div class="command"><code>./scripts/verify.sh --integration</code><button id="copy-verify" type="button" aria-label="Copy verification command" disabled>Copy</button></div><p class="copy-status" id="copy-status" role="status"></p></div></div>
   </section>
-  <section class="section" id="roadmap" aria-labelledby="roadmap-title">
+  <section class="section reveal" id="roadmap" aria-labelledby="roadmap-title">
    <div class="section-head"><div><span class="eyebrow">04 / What's next</span><h2 id="roadmap-title">Prove the path. Then expand.</h2></div><p>The next milestone is reproducible live execution. More features do not substitute for custody, oracle and recovery evidence.</p></div>
    <div class="roadmap">
     <article class="milestone"><span class="step-no">01</span><h3>Contract &amp; clients</h3><span class="badge green">Built locally</span><p>Gates, delayed controls, autonomous reference agent and this public reader.</p></article>
@@ -1400,7 +1602,7 @@ td {
     <article class="milestone"><span class="step-no">04</span><h3>Attested agent</h3><span class="badge">Planned</span><p>Add OutLayer attestation and operational monitoring after the core path is proven.</p></article>
    </div>
   </section>
-  <section class="section" id="questions" aria-labelledby="faq-title">
+  <section class="section reveal" id="questions" aria-labelledby="faq-title">
    <div class="faq-grid"><div><span class="eyebrow">The practical questions</span><h2 id="faq-title">Know the boundary.</h2></div><div class="faq-list">
     <details><summary>Can the agent withdraw or sign on its own?</summary><p>The agent can propose trades. It has no owner withdrawal authority or treasury signing authority through the contract API. It can still cause economically harmful trades that fit the mandate. Enforcement also depends on a correctly sealed vault and trusted external contracts.</p></details>
     <details><summary>What does this dashboard actually do?</summary><p>It reads one final-block snapshot of a public vault: controls, current and queued rules, Intents ledger balances, signing reservations and latest recorded outcomes. It sends no wallet transactions. Unknown history and settlement stay explicitly unverified.</p></details>
@@ -1414,6 +1616,84 @@ td {
 </main>
 <footer class="footer"><div class="wrap"><div class="footer-top"><a class="brand" href="#home">Mandate</a><div class="footer-links"><a href="https://github.com/moltaphet/mandate-near" target="_blank" rel="noopener noreferrer">Repository ↗</a><a href="https://nearblocks.io/address/intents.near" target="_blank" rel="noopener noreferrer">Intents verifier ↗</a><a href="https://nearblocks.io/address/v1.signer" target="_blank" rel="noopener noreferrer">Chain Signatures ↗</a></div></div><p>Oracle-valued limits bound authorization, not profitability. Source/audit correspondence, external administrative roles and deployment custody require independent review.</p><div class="footer-bottom"><span>Mandate · MIT</span><span>Built with AI-assisted development · Prototype</span></div></div></footer>
 <script>if(location.protocol==='file:'){document.getElementById('file-notice').hidden=false;document.getElementById('audit-status').textContent='Open the HTTP preview above to enable the dashboard.';}</script>
+<script>
+(function(){
+  if(!document.documentElement.classList.contains('js')) return;
+  var bar=document.createElement('div');bar.className='progress';bar.setAttribute('aria-hidden','true');document.body.appendChild(bar);
+  function progress(){var h=document.documentElement;var max=h.scrollHeight-h.clientHeight||1;bar.style.transform='scaleX('+Math.min(1,Math.max(0,h.scrollTop/max))+')';}
+  addEventListener('scroll',progress,{passive:true});progress();
+  function countUp(el){
+    var m=el.textContent.match(/^(\d+)(.*)$/);if(!m)return;
+    var end=parseInt(m[1],10),suffix=m[2],t0=Date.now(),dur=900,timer;
+    el.textContent='0'+suffix;
+    function paint(v){el.textContent=v+suffix;}
+    timer=setInterval(function(){var k=Math.min(1,(Date.now()-t0)/dur);paint(Math.round(end*(1-Math.pow(1-k,3))));if(k>=1)clearInterval(timer);},30);
+    setTimeout(function(){clearInterval(timer);paint(end);},dur+200);
+  }
+  var io=new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if(!e.isIntersecting)return;
+      e.target.classList.add('in');io.unobserve(e.target);
+      e.target.querySelectorAll('.fact strong').forEach(countUp);
+      if(e.target.classList.contains('fact')){var s=e.target.querySelector('strong');if(s)countUp(s);}
+    });
+  },{threshold:.15});
+  document.querySelectorAll('.reveal').forEach(function(el){io.observe(el);});
+})();
+</script>
+<script>
+(function(){
+  var steps=[
+    {text:'The agent proposes 2 USDC for at least 0.55 wNEAR under manual-v1 (proposal 3). A proposal is only a request.',tx:'5ptybytM9ikj2ibkM4J1yYxvP8ZoaPdZLRGVBdZEDKVu',txLabel:'Proposal transaction',v:['9','0'],s:['0','0.99']},
+    {text:'The vault checks the balance, the 50 USDC per-trade cap, a price no older than 60 seconds, and the 1% slippage limit. No signature is requested until every check passes.',tx:null,v:['9','0'],s:['0','0.99']},
+    {text:'With every check passed, the vault requests a signature. The execution is recorded as Executed for proposal 3.',tx:'4a6qSdVNhitAEVttjUdDUHHrPLSwMJFzEazwvdFrYY4R',txLabel:'Execute transaction',v:['9','0'],s:['0','0.99']},
+    {text:'The signed vault intent and the matching counterparty intent settle in one execute_intents call. The two sides’ changes mirror each other.',tx:'B8nYgKKYcNCrYEuG9QZ92KUJe3vj641ZhvZTzy9VzXo5',txLabel:'Settlement transaction',v:['7','0.55'],s:['2','0.44']}
+  ];
+  var buttons=[].slice.call(document.querySelectorAll('.step'));
+  var playBtn=document.getElementById('replay-play'),timer=null,current=0;
+  function set(id,val){var el=document.getElementById(id);if(el&&el.textContent!==val){el.textContent=val;el.classList.remove('moved');void el.offsetWidth;el.classList.add('moved');}}
+  function show(i){
+    current=i;var st=steps[i];
+    buttons.forEach(function(b,k){if(k===i)b.setAttribute('aria-current','step');else b.removeAttribute('aria-current');});
+    document.getElementById('step-text').textContent=st.text;
+    var tx=document.getElementById('step-tx');tx.textContent='';
+    if(st.tx){var a=document.createElement('a');a.href='https://testnet.nearblocks.io/txns/'+st.tx;a.target='_blank';a.rel='noopener noreferrer';a.textContent=st.txLabel+' '+st.tx.slice(0,8)+'…'+st.tx.slice(-5)+' ↗';tx.appendChild(a);}
+    else{tx.textContent='No transaction at this step.';}
+    set('v-usdc',st.v[0]);set('v-wnear',st.v[1]);set('s-usdc',st.s[0]);set('s-wnear',st.s[1]);
+  }
+  buttons.forEach(function(b,k){b.addEventListener('click',function(){stop();show(k);});});
+  function stop(){if(timer){clearInterval(timer);timer=null;}playBtn.setAttribute('aria-pressed','false');playBtn.textContent='Play';}
+  playBtn.addEventListener('click',function(){
+    if(timer){stop();return;}
+    playBtn.setAttribute('aria-pressed','true');playBtn.textContent='Pause';
+    timer=setInterval(function(){show((current+1)%steps.length);},3800);
+  });
+  show(0);
+
+  var amount=document.getElementById('amount');
+  if(amount){
+    var BAL=67,CAP=50;
+    var out=document.getElementById('amount-out'),verdict=document.getElementById('verdict');
+    var gb=document.getElementById('g-balance'),gc=document.getElementById('g-cap');
+    function evaluate(){
+      var v=parseInt(amount.value,10);out.textContent=String(v);
+      var balOk=v<=BAL,capOk=v<=CAP;
+      gb.className=balOk?'ok':'no';gc.className=(balOk&&capOk)?'ok':'no';
+      if(!balOk){verdict.className='verdict block';verdict.textContent='Refused · InsufficientBalance. The vault holds '+BAL+' USDC.';}
+      else if(!capOk){verdict.className='verdict block';verdict.textContent='Refused · TradeTooLarge. Above the 50 USDC per-trade cap.';}
+      else{verdict.className='verdict pass';verdict.textContent='Passes the balance and cap checks. Price and slippage still apply before any signature.';}
+    }
+    amount.addEventListener('input',evaluate);evaluate();
+  }
+
+  var bar=document.querySelector('#live-view .dashboard-bar .right');
+  var status=document.getElementById('audit-status');
+  if(bar&&status&&window.MutationObserver){
+    var pill=document.createElement('span');pill.className='live-pill';pill.hidden=true;pill.innerHTML='<span class="dot"></span>Live · testnet';bar.insertBefore(pill,bar.firstChild);
+    new MutationObserver(function(){pill.hidden=!/observed/.test(status.className);}).observe(status,{attributes:true,attributeFilter:['class']});
+  }
+})();
+</script>
 <script type="module" src="./site.mjs" onerror="if(location.protocol==='file:')document.getElementById('file-notice').hidden=false;document.getElementById('audit-status').className='audit-status error';document.getElementById('audit-status').textContent='Dashboard module unavailable. Open the HTTP preview or reload the served site.';"></script>
 </body>
 </html>
