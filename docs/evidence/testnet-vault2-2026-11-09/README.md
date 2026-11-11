@@ -33,6 +33,7 @@ detailed tables and logs are in the sections below.
 | 19 | 11 Nov | `set_report` ×2, `propose` 60 USDC (proposal 4), `execute` | `HVq5STkP…`, `HND6fizC…`, `ALsNp7Nu…`, `GoUU2JWX…` | Rejected: InsufficientBalance |
 | 20 | 11 Nov | `mint` 60 USDC, deposit to verifier | `3XMkRBUE…`, `8HxEpoX6…` | ok |
 | 21 | 11 Nov | `set_report` ×2, `propose` 60 USDC (proposal 5), `execute` | `5YRs2UHE…`, `4sGusYnL…`, `Fgv7ad46…`, `J4RvGERY…` | Rejected: TradeTooLarge |
+| check | 11 Nov | Read-only readback, no transaction (`scripts/demo-readback.py`) | [readback-2026-11-11.txt](readback-2026-11-11.txt) | Last outcome, strikes, withdrawal and ledgers match rows 1–21 |
 
 **Net state at the end:** after step 18, vault2 holds 7 USDC and 0.55 wNEAR on the verifier, and the solver holds
 2 USDC and 0.44 wNEAR. Step 20 adds 60 USDC, so vault2 holds 67 USDC. Steps 19 and 21 are refused and move nothing.

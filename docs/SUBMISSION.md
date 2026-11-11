@@ -32,6 +32,16 @@ All transactions are on `vault2.mandate-t1.testnet`, with its owner a Sputnik DA
 4. **Refusal (30 s).** Show the cap refusal. The agent asked for 60 USDC against a 50 USDC cap, and the contract refused it.
 5. **Delay and boundary (30 s).** Show the withdrawal row (24-hour delay, then `Delivered`) and the note on what is not shown.
 
+## Verify without a block explorer
+
+Block explorers may show empty pages for older transactions. The results can be checked from the contracts directly:
+
+```bash
+python3 -B scripts/demo-readback.py
+```
+
+This makes public view calls only. It sends no transaction and needs no key. It prints the last proposal outcome (`Executed` or `Rejected` with its reason), the strike count, the withdrawal outcome (`Delivered`), the allowed models, and the verifier ledgers for the vault and the counterparty. A recorded run is in [readback-2026-11-11.txt](evidence/testnet-vault2-2026-11-09/readback-2026-11-11.txt).
+
 ## Reproduce
 
 - Driver: `contracts/vault/examples/testnet_run.rs`. Every vault step needs `MANDATE_VAULT` set.
