@@ -3,8 +3,9 @@
 A controlled run of the Mandate vault on NEAR testnet, driven by
 [`contracts/vault/examples/testnet_run.rs`](../../../contracts/vault/examples/testnet_run.rs).
 The decisions behind it are in [testnet-decisions.md](../../design/testnet-decisions.md).
-Every state-changing step printed its transaction hash; the raw output of each step
-is saved next to this file.
+Every state-changing step printed a hash; the raw output of each step is saved next to this file.
+The printed values are not the real transaction hashes (a near-api 0.8.7 bug). This README uses the real
+hashes; [TX-HASH-CORRECTIONS.md](../TX-HASH-CORRECTIONS.md) maps each printed value to its transaction.
 
 ## What is real and what is a stand-in
 
@@ -25,20 +26,20 @@ is the DAO. The vault, oracle and token WASM hashes are in `00-wasm-sha256.txt`.
 
 | Step | Result | Hash |
 |---|---|---|
-| Create `mandate-t1.testnet` | ok | `4c8z2FqUjCCXSJpNn3cVZJph8Wi5a9R5MKvZ8JdG5kWZ` |
-| Create oracle, usdc, intents, agent accounts | ok | `2kRYmidk…`, `CSvkLMTf…`, `DCCLvtTN…`, `3arx6Suy…` |
-| Deploy oracle, usdc, intents | ok | `FG6NioUM…`, `Hsf5JwUY…`, `8eFNCeSy…` |
-| Create the DAO | ok | `7WveiGGEQ3uGheHTEFyQqNf8ZsLtuuCEZYJc8s72aqNW` |
-| Create, fund, deploy and initialise the vault in one transaction | ok, no key added | `6GgwhTpBR9DK2CdjCfZTP5s77mnyDeDvrPo7jrZvyib4` |
-| `set_agent` through DAO proposal 0 | ok | `9LXg2JEU…` (add), `GfXGFe2z…` (approve) |
-| `register_intents_key` | ok, key registered | `2cWpV124QfHdTHRpEzpwjpLXmGv9ac8tnNhhYvDYDcq6` |
-| Mint and deposit 10 USDC to the vault's Intents ledger | ledger shows 10,000,000 | `9mnnZoXd…`, `4SfvvCrq…` |
-| Oracle reports (wNEAR $4.50, USDC $1.00) | ok | `EUfWPdAG…`, `499kGdtR…` |
-| `propose` by the agent | proposal 1 | `7Q3oSFu65rS5XjnBPpuNsm6MtYy6inPSkYreKFj5CyR1` |
+| Create `mandate-t1.testnet` | ok | `AH1ceSpBY13wDoBW15GEBy9iaV9vemWRvhpTg3h7vHRS` |
+| Create oracle, usdc, intents, agent accounts | ok | `6x62Tgj2…`, `94Y9c9WY…`, `BimYP5kM…`, `GmvSNxPQ…` |
+| Deploy oracle, usdc, intents | ok | `2dNdzhda…`, `AfJ7APfp…`, `CmnreRcZ…` |
+| Create the DAO | ok | `8U3Kows3zeW1DU4Tbp8qYsBwqDR14jstfGSC8omZn7BX` |
+| Create, fund, deploy and initialise the vault in one transaction | ok, no key added | `4khnfb5gjGxxghx5bkHjnbwLHvatHf3FemKj3oqUQEv6` |
+| `set_agent` through DAO proposal 0 | ok | `6mdRKswm…` (add), `BKuy63Ux…` (approve) |
+| `register_intents_key` | ok, key registered | `Co2GvcbFrpNUSJFdLr7cgFmZXvFk24BjgvP6MQAFx2mE` |
+| Mint and deposit 10 USDC to the vault's Intents ledger | ledger shows 10,000,000 | `GLoxeoWJ…`, `C36pp2dn…` |
+| Oracle reports (wNEAR $4.50, USDC $1.00) | ok | `EfQ6X7De…`, `93PJoxXi…` |
+| `propose` by the agent | proposal 1 | `GeUV6vzdVtdeKZmD35PMxcBkqXfFUxV88S5ymcDosaEA` |
 | `execute` | outcome `Executed`, signed intent retained | not captured, see below |
-| `request_withdrawal` through DAO proposal 2 | queued, `effective_sec` 1794159940 | `F5s1ps27…` (add), `2N3GxKHg…` (approve) |
+| `request_withdrawal` through DAO proposal 2 | queued, `effective_sec` 1794159940 | `DAhi8GQL…` (add), `GwV529dH…` (approve) |
 | `apply_pending_withdrawal` before maturity | refused: "the withdrawal is still in its delay" | `09-withdraw-apply-early.log` |
-| `apply_pending_withdrawal` after maturity (8 Nov 2026, 18:01 UTC) | ok, receipt failures 0 | `3RPHMsYvjFA51FvVnnq1MoiSiMvVVDYTGx7oRQsPCC1j` (logs `11`–`14`) |
+| `apply_pending_withdrawal` after maturity (8 Nov 2026, 18:01 UTC) | ok, receipt failures 0 | `81JCWdkt3cMfhQgNLp6yJ36Np9HfF14g5NpRR7g3w26s` (logs `11`–`14`) |
 
 ## Independent check of the signature
 

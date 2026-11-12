@@ -10,17 +10,18 @@ All transactions are on `vault2.mandate-t1.testnet`, with its owner a Sputnik DA
 
 | Scenario | What happened | Transaction |
 |---|---|---|
-| Owner delay is real | 1 USDC withdrawal queued, then delivered after the 24-hour delay (`Delivered`) | [`3W3xycheutTk9xixMubbPLTP9JFEhzhYDug4BPXG9JBE`](https://testnet.nearblocks.io/txns/3W3xycheutTk9xixMubbPLTP9JFEhzhYDug4BPXG9JBE) |
-| Trade settles on both sides | Vault signed 2 USDC for 0.55 wNEAR. A matched intent from a counterparty we control settled in one `execute_intents`. Vault: −2 USDC, +0.55 wNEAR. Counterparty: −0.55 wNEAR, +2 USDC | [`B8nYgKKYcNCrYEuG9QZ92KUJe3vj641ZhvZTzy9VzXo5`](https://testnet.nearblocks.io/txns/B8nYgKKYcNCrYEuG9QZ92KUJe3vj641ZhvZTzy9VzXo5) |
-| Per-trade cap refuses | 60 USDC proposal with 67 USDC held. Gate result `TradeTooLarge` (59.97 > 50 USDC cap). Nothing moved | [`J4RvGERYiuFv2hfninTCFWxqjw4HikG6rXH7VRSsDjBM`](https://testnet.nearblocks.io/txns/J4RvGERYiuFv2hfninTCFWxqjw4HikG6rXH7VRSsDjBM) |
-| Balance check refuses | 60 USDC proposal with 7 USDC held. Gate result `InsufficientBalance`. Nothing moved | [`GoUU2JWXjPSWdbf5tZU2F8ypFQvxrYkPBGnuWSSNyXbc`](https://testnet.nearblocks.io/txns/GoUU2JWXjPSWdbf5tZU2F8ypFQvxrYkPBGnuWSSNyXbc) |
-| Model admission waits 24 hours | `gemini-3.1-flash-lite` queued through the DAO on 11 Nov, effective 12 Nov 2026 07:37:49 UTC | [`4sFspKrxZbiwqTsstfPQCyAEKGnnaAtZnM9hU1ERe4nK`](https://testnet.nearblocks.io/txns/4sFspKrxZbiwqTsstfPQCyAEKGnnaAtZnM9hU1ERe4nK) |
-| Model admission applied | Applied at 07:38:59 UTC on 12 Nov by a permissionless `apply_pending_mandate`. Allowlist is now `manual-v1`, `gemini-3.1-flash-lite`; nothing queued | [`DzUFptM81MGMUBzaCpFWv4UiEjQXwu147LPJP8SK2fF9`](https://testnet.nearblocks.io/txns/DzUFptM81MGMUBzaCpFWv4UiEjQXwu147LPJP8SK2fF9) |
-| First model-decided proposal | Proposal 6 by `gemini-3.1-flash-lite`: 0.142450 wNEAR for at least 49.75 USDC, a wrong valuation by the model. Proposed with its model ID; `execute` was rejected by the RPC (`InvalidTransaction`), so nothing was signed. Expired with no strike | [log](evidence/testnet-vault2-2026-11-09/vault2-model-trade-attempt.log) |
+| Owner delay is real | 1 USDC withdrawal queued, then delivered after the 24-hour delay (`Delivered`) | [`7mG76TGMSkGPPXG28fLRDKTygaGVoZUeVg5N1u8Y7wfZ`](https://testnet.nearblocks.io/txns/7mG76TGMSkGPPXG28fLRDKTygaGVoZUeVg5N1u8Y7wfZ) |
+| Trade settles on both sides | Vault signed 2 USDC for 0.55 wNEAR. A matched intent from a counterparty we control settled in one `execute_intents`. Vault: −2 USDC, +0.55 wNEAR. Counterparty: −0.55 wNEAR, +2 USDC | [`7uTJpKFkEDfKEqz1PxzNePeXJN27LK1ank75E6TRonZE`](https://testnet.nearblocks.io/txns/7uTJpKFkEDfKEqz1PxzNePeXJN27LK1ank75E6TRonZE) |
+| Per-trade cap refuses | 60 USDC proposal with 67 USDC held. Gate result `TradeTooLarge` (59.97 > 50 USDC cap). Nothing moved | [`9cdyxmaAW6Q79SNbfayzoYBn6JFAfA362eEzjfGSKQhA`](https://testnet.nearblocks.io/txns/9cdyxmaAW6Q79SNbfayzoYBn6JFAfA362eEzjfGSKQhA) |
+| Balance check refuses | 60 USDC proposal with 7 USDC held. Gate result `InsufficientBalance`. Nothing moved | [`C17Yg3kqqA2jkxvzyJcYz5dRBE6HBZKCLt2MPskzF1dA`](https://testnet.nearblocks.io/txns/C17Yg3kqqA2jkxvzyJcYz5dRBE6HBZKCLt2MPskzF1dA) |
+| Model admission waits 24 hours | `gemini-3.1-flash-lite` queued through the DAO on 11 Nov, effective 12 Nov 2026 07:37:49 UTC | [`Fg5CEsnvMbooJHtUobKh2i1wsN1pyzoqtA74pfeok4Xj`](https://testnet.nearblocks.io/txns/Fg5CEsnvMbooJHtUobKh2i1wsN1pyzoqtA74pfeok4Xj) |
+| Model admission applied | Applied at 07:38:59 UTC on 12 Nov by a permissionless `apply_pending_mandate`. Allowlist is now `manual-v1`, `gemini-3.1-flash-lite`; nothing queued | [`Exen1r7y3un6fNq7xYTnvRKqoCnaNv1bqFA93XXzMvVs`](https://testnet.nearblocks.io/txns/Exen1r7y3un6fNq7xYTnvRKqoCnaNv1bqFA93XXzMvVs) |
+| First model-decided proposal | Proposal 6 by `gemini-3.1-flash-lite`: 0.142450 wNEAR for at least 49.75 USDC, a wrong valuation by the model (about 100 times the market). Never executed: the RPC refused the execute (`NotEnoughBalance` on the sending account), and the proposal expired with no strike. The agent now refuses such a plan before sending | [`8Ek1SRJWUZGdUZbG7JNE2EWsPAdBDBaF7kKUYq6hyWQ8`](https://testnet.nearblocks.io/txns/8Ek1SRJWUZGdUZbG7JNE2EWsPAdBDBaF7kKUYq6hyWQ8) |
+| Model-decided trade settles | Proposal 8: `gemini-3.1-flash-lite` chose one of the code-priced quotes, 0.290698 wNEAR for at least 0.995503 USDC. The vault checked every gate and the MPC signed (`Executed`); one `execute_intents` settled it. Vault +0.995503 USDC −0.290698 wNEAR; counterparty the mirror | [`5ZMSQdRgwkMoWVFy48tetrbPPJBMX5SgLKSbpJhKmzh7`](https://testnet.nearblocks.io/txns/5ZMSQdRgwkMoWVFy48tetrbPPJBMX5SgLKSbpJhKmzh7), [`BYWPTGwcw5nYkByRdTX9ReqKFvyYWxyJWiJCiCBRiASY`](https://testnet.nearblocks.io/txns/BYWPTGwcw5nYkByRdTX9ReqKFvyYWxyJWiJCiCBRiASY) |
 
 ## What is not shown yet
 
-- **A model-decided trade that executes.** The model is admitted and made one proposal (6), but it was not executed. Every executed trade above used the manual agent path (`manual-v1`).
+- **Model judgement.** The model chooses among quotes that code prices and checks; its recorded rationale for proposal 8 is not sound. The quotes and the vault's gates bound what it can do. Origin proof (a signed response or a TEE attestation) is not shown: the response is recorded as `UNVERIFIED`.
 - **A real counterparty.** The counterparty is an account we control, not an independent solver.
 - **A real oracle.** Prices are operator-fed testnet values from a public source, with source timestamps checked. The testnet oracle accepts reports from any caller.
 - **A real Intents contract.** The verifier is the fixture build.
@@ -30,13 +31,13 @@ All transactions are on `vault2.mandate-t1.testnet`, with its owner a Sputnik DA
 
 1. **Problem (30 s).** An AI agent should be able to move treasury funds, but a compromised or wrong agent must not be able to drain the treasury.
 2. **Mandate (30 s).** The owner sets limits: a per-trade cap, a token list, a slippage limit, a price-age limit, and an allowed model list. Each limit is enforced on-chain, not by the agent.
-3. **Settled trade (60 s).** Show the settlement row above. Point at the two ledgers before and after. Stress that the counterparty is ours and the prices are testnet.
-4. **Refusal (30 s).** Show the cap refusal. The agent asked for 60 USDC against a 50 USDC cap, and the contract refused it.
+3. **Allowed: a model-decided trade settles (60 s).** Show proposal 8: the model chose a code-priced quote, the vault checked every gate, the MPC signed, and both ledgers changed. Stress that the counterparty is ours and the prices are testnet.
+4. **Refused: dangerous requests (30 s).** Show the cap refusal (60 USDC against a 50 USDC cap, refused on chain) and proposal 6 (a model request at about 100 times the market, which the agent now refuses before sending).
 5. **Delay and boundary (30 s).** Show the withdrawal row (24-hour delay, then `Delivered`) and the note on what is not shown.
 
 ## Verify without a block explorer
 
-Block explorers may show empty pages for older transactions. The results can be checked from the contracts directly:
+Every hash above is the real transaction hash and opens on the explorer. The run logs printed different values because of a near-api 0.8.7 bug; [TX-HASH-CORRECTIONS.md](evidence/TX-HASH-CORRECTIONS.md) maps each one to its real transaction. The results can also be checked from the contracts directly:
 
 ```bash
 python3 -B scripts/demo-readback.py
