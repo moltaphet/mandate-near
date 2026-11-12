@@ -185,6 +185,11 @@ embedded SDK YAML. Neither affected version appears in production client/WASM
 normal-dependency trees. No project secret-timing or external-YAML exploit was
 confirmed; maintenance risk remains open. No SDK fork or advisory ignore was added.
 
+A `cargo audit` run on 12 November 2026 (RustSec database of 1,471 advisories, 498 locked
+crates) reported the same two items and nothing else. Neither appears in the vault's
+`wasm32-unknown-unknown` dependency tree; both reach only native agent/keeper builds through
+the NEAR SDK's test VM, and the project signs with ed25519, not the affected P-256 code.
+
 ### Checklist results (`near-contract-audit`)
 
 | Detector | Result |
@@ -203,6 +208,21 @@ confirmed; maintenance risk remains open. No SDK fork or advisory ignore was add
 | `cover-storage-cost` | Local input/entry bounds do not prove sufficient storage funding. Voucher entries and source-owned journal records/tombstones persist and grow with owner-authorized attempts. The source executor admits 1–20 immutable vaults and reserves padded terminal/refund storage before debit. Exact artifact/token costs and repeated owner rearming still need measured funding. |
 | `unsafe-math` | Pass. The release profile sets `overflow-checks = true`. |
 | `float-math` | Pass. No floating-point types. |
+
+### Review of 12 November 2026
+
+A line-by-line review after the testnet runs found these items. Each is listed with its state.
+
+| Item | State |
+|---|---|
+| The testnet driver printed `transaction().get_hash()`, which near-api 0.8.7 computes over a rebuilt object, so recorded hashes were not transaction hashes | Fixed: the driver prints `outcome().transaction_hash`; all 65 recorded hashes mapped to real ones ([TX-HASH-CORRECTIONS.md](docs/evidence/TX-HASH-CORRECTIONS.md)) |
+| A model plan could ask for far more than the market pays; approving it spends turnover and the cooldown and resets strikes | Fixed in the engine (`MinOutAboveMarket`, 2% margin) and in the agent. vault2 has no deployment keys and runs the earlier code; the gate applies to new deployments |
+| The testnet mock oracle accepted price writes from any account | Fixed: `oracle.mandate-t1.testnet` runs the `parent-writes-only` build; a write from another account is refused on chain |
+| Price feed had one source and no jump bound | Fixed: Kraken cross-check (2%) and a 10% jump limit against the on-chain report, both fail closed |
+| CI actions were pinned by tag and cargo-near was installed with `curl \| sh` | Fixed: actions pinned by commit hash; cargo-near installed from its release binary with a SHA-256 recorded in the workflow |
+| On testnet the agent account and the owner DAO's council account share one key | Open: needs a new, propose-only key for the agent and removal of the shared key. A leaked agent key would currently also control the DAO council vote |
+| Removing a held asset from the mandate applies at once (a tightening), and that asset cannot be withdrawn until it is listed again, which waits 24 hours | Documented. Before removing an asset, withdraw it or confirm the vault holds none |
+| `token_diff` signs an exact received amount; the real `intents.near` may take a protocol fee from it | Open for mainnet: gate 4 in [MAINNET-GATES.md](docs/MAINNET-GATES.md) |
 
 ## Before real funds
 

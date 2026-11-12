@@ -125,7 +125,7 @@ the withdrawal is not recorded in this folder.
 ## Operator-fed prices on the testnet oracle, 10 November 2026
 
 The oracle is the testnet stand-in `oracle.mandate-t1.testnet` (`contracts/mock-oracle`). Its
-`set_report` accepts a report from any caller, so these values are operator-fed testnet prices.
+`set_report` accepted a report from any caller at the time, so these values are operator-fed testnet prices. (Since 12 November the oracle accepts reports only from its parent account: redeploy `FCRXa3rUgx9QzWcxUf4J4j6qNCqz6vGA3jot73yjayUr`; a write from the agent account was then refused on chain, `7gvxw9YygQZ2GttALAmzg7yysLTa4TANeTwhwAEbq59N`.)
 They are not a verified oracle, and [gate 3 in MAINNET-GATES.md](../../MAINNET-GATES.md) stays PENDING.
 
 The prices came from the public CoinGecko `simple/price` endpoint through

@@ -4,8 +4,9 @@
 //! 2026-11-03, see contracts/vault/src/oracle.rs) and applies the same
 //! recency rule: an aggregate price is `null` when the newest report is older
 //! than `RECENCY_SEC`. Reports are set by the test, so the sandbox can
-//! reproduce fresh, stale and missing prices. It is never deployed to a real
-//! network.
+//! reproduce fresh, stale and missing prices. It is never deployed to mainnet.
+//! The testnet stand-in (`oracle.mandate-t1.testnet`) is built with the
+//! `parent-writes-only` feature, so only its parent account can write prices.
 
 use std::collections::BTreeMap;
 
@@ -87,7 +88,7 @@ impl MockOracle {
         Self { reports: BTreeMap::new(), pyth_reports: BTreeMap::new(), last_pyth_request: None }
     }
 
-    /// Sandbox only: sets the single report for `asset_id`.
+    /// Sets the single report for `asset_id`. Open in the sandbox; parent-only on testnet.
     pub fn set_report(
         &mut self,
         asset_id: String,
@@ -95,6 +96,7 @@ impl MockOracle {
         decimals: u8,
         timestamp_sec: U64,
     ) {
+        assert_reporter();
         self.reports
             .insert(asset_id, Report { multiplier, decimals, timestamp_sec: timestamp_sec.0 });
     }
@@ -134,6 +136,7 @@ impl MockOracle {
 
     /// Sandbox only: `None` removes the cache entry so the receiver answers null.
     pub fn set_pyth_report(&mut self, price_id: String, price: Option<PythPrice>) {
+        assert_reporter();
         if let Some(price) = price {
             self.pyth_reports.insert(price_id, price);
         } else {
@@ -183,5 +186,19 @@ impl MockOracle {
 
     pub fn get_last_pyth_request(&self) -> Option<PythRequest> {
         self.last_pyth_request.clone()
+    }
+}
+
+/// With `parent-writes-only`, only the account one level up may write prices: for
+/// `oracle.mandate-t1.testnet` that is `mandate-t1.testnet`. Without it, anyone may.
+fn assert_reporter() {
+    #[cfg(feature = "parent-writes-only")]
+    {
+        let me = env::current_account_id();
+        let parent = me.as_str().split_once('.').map_or("", |(_, parent)| parent);
+        near_sdk::require!(
+            env::predecessor_account_id().as_str() == parent,
+            "only the parent account can write prices"
+        );
     }
 }

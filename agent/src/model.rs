@@ -28,7 +28,7 @@ const MODEL_INSTRUCTIONS: &str = "Choose a trade or no trade using only the supp
 pub const DEFAULT_CANDIDATE_SIZES_USD: [u128; 4] = [1, 2, 5, 10];
 /// A model plan may not ask for more than the oracle value of what it gives, plus this margin.
 /// A request above the market can never fill, yet it still spends the vault's daily turnover.
-pub const MAX_MIN_OUT_PREMIUM_BPS: u128 = 200;
+pub const MAX_MIN_OUT_PREMIUM_BPS: u128 = mandate_vault::engine::MAX_MIN_OUT_PREMIUM_BPS;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ChatFailure {
@@ -353,6 +353,11 @@ impl<C: ChatClient> DecisionSource for ModelDecision<C> {
             amount_in: plan.amount_in.0,
             min_amount_out: plan.min_amount_out.0,
         };
+        match asks_above_market(snapshot, &trade) {
+            Ok(false) => {}
+            Ok(true) => return no_trade("the model asked for more than the market pays"),
+            Err(()) => return no_trade("the plan could not be valued at oracle prices"),
+        }
         if let Err(error) =
             check_trade(&snapshot.mandate, &snapshot.trading, &trade, &snapshot.market)
         {
@@ -360,11 +365,6 @@ impl<C: ChatClient> DecisionSource for ModelDecision<C> {
         }
         // The vault's gates bound only the least it accepts. A plan asking for more than the
         // market pays cannot fill, and would still spend turnover: refuse it here, unrepaired.
-        match asks_above_market(snapshot, &trade) {
-            Ok(false) => {}
-            Ok(true) => return no_trade("the model asked for more than the market pays"),
-            Err(()) => return no_trade("the plan could not be valued at oracle prices"),
-        }
         let policy = self.client.verification_policy();
         if verify_response(&response, policy.pinned_address.as_deref(), policy.required).is_err() {
             return no_trade(ChatFailure::InvalidProof.to_string());

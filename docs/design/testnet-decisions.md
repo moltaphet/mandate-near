@@ -22,7 +22,7 @@ transactions. The later deployment and owner calls have separate
 
 | ID | Decision |
 |---|---|
-| D1 oracle (testnet) | A self-operated Burrow-compatible oracle: `contracts/mock-oracle`, deployed to a testnet account we own and fed by the operator. It is a stand-in, not a production oracle. The mainnet oracle remains a separate, open decision. |
+| D1 oracle (testnet) | A self-operated Burrow-compatible oracle: `contracts/mock-oracle`, deployed to a testnet account we own and fed by the operator. It is a stand-in, not a production oracle. Since 12 November 2026 the testnet build uses the `parent-writes-only` feature, so only the parent account can write prices. The mainnet oracle remains a separate, open decision. |
 | D2 owner | A Sputnik DAO v2 created through `sputnikv2.testnet`, with a single-member council for the testnet run. Mainnet needs a multisig DAO with hardware keys. |
 | D3 Intents on testnet | Deploy the supplied Intents verifier fixture (`contracts/vault/tests/fixtures/intents-near-mainnet.wasm`, SHA256 `a1afab98916d9f213746544dcf8e4e6bdb22c0be6bc5dfbd8ea8814c9922b547`) to a testnet account we own, with `contracts/mock-ft` tokens. It is a fixture, not the real NEAR Intents. |
 | D4 signer | `v1.signer-prod.testnet`, domain 1. |

@@ -22,6 +22,10 @@ pub const SECONDS_PER_DAY: u64 = 86_400;
 pub const INTENT_TTL_SEC: u64 = 120;
 /// Tolerated oracle timestamp ahead of block time (clock skew).
 pub const MAX_FUTURE_PRICE_SKEW_SEC: u64 = 5;
+/// The most `min_amount_out` may be worth above the value of `amount_in`, in basis points.
+/// A larger request cannot fill, yet approving it would spend turnover and the cooldown and
+/// reset the strike count. The margin allows for an oracle that lags the market.
+pub const MAX_MIN_OUT_PREMIUM_BPS: u128 = 200;
 
 /// A proposed swap: give `amount_in` of `asset_in`, receive at least
 /// `min_amount_out` of `asset_out`. Amounts are token base units.
@@ -103,6 +107,7 @@ pub enum TradeError {
     TradeTooLarge { notional_usd: u128, max_usd: u128 },
     TurnoverCapExceeded { would_be_usd: u128, max_usd: u128 },
     SlippageExceeded,
+    MinOutAboveMarket,
     DrawdownDeRiskOnly,
     PositionTooLarge,
     EmptyPortfolio,
@@ -125,6 +130,7 @@ impl TradeError {
             Self::TradeTooLarge { .. } => "TradeTooLarge",
             Self::TurnoverCapExceeded { .. } => "TurnoverCapExceeded",
             Self::SlippageExceeded => "SlippageExceeded",
+            Self::MinOutAboveMarket => "MinOutAboveMarket",
             Self::DrawdownDeRiskOnly => "DrawdownDeRiskOnly",
             Self::PositionTooLarge => "PositionTooLarge",
             Self::EmptyPortfolio => "EmptyPortfolio",
@@ -157,6 +163,10 @@ impl fmt::Display for TradeError {
             Self::SlippageExceeded => {
                 write!(f, "min_amount_out is below oracle value minus slippage")
             }
+            Self::MinOutAboveMarket => write!(
+                f,
+                "min_amount_out is worth more than amount_in plus {MAX_MIN_OUT_PREMIUM_BPS} bps"
+            ),
             Self::DrawdownDeRiskOnly => {
                 write!(f, "drawdown breaker tripped: only trades into stable assets are allowed")
             }
@@ -177,7 +187,8 @@ impl fmt::Display for TradeError {
 /// 6. Turnover: today's turnover + notional ≤ `max_daily_turnover_usd`;
 ///    the day resets at 00:00 UTC.
 /// 7. Slippage: value of `min_amount_out` (rounded down) ≥ notional ×
-///    (1 − `max_slippage_bps`).
+///    (1 − `max_slippage_bps`), and ≤ notional × (1 + `MAX_MIN_OUT_PREMIUM_BPS`):
+///    a request above the market cannot fill and would only spend limits.
 /// 8. Drawdown: if NAV < high-water mark × (1 − `max_drawdown_bps`), only
 ///    trades into a stable asset are allowed.
 /// 9. Position: unless `asset_out` is stable, its worst-case value after
@@ -258,6 +269,9 @@ pub fn check_trade(
     let bps = u128::from(BPS_DENOMINATOR);
     if wide_mul(out_value, bps) < wide_mul(notional, bps - u128::from(mandate.max_slippage_bps)) {
         return Err(TradeError::SlippageExceeded);
+    }
+    if wide_mul(out_value, bps) > wide_mul(notional, bps + MAX_MIN_OUT_PREMIUM_BPS) {
+        return Err(TradeError::MinOutAboveMarket);
     }
 
     // 8. Drawdown breaker.
@@ -627,6 +641,21 @@ mod tests {
         assert_eq!(code(check(&s, &at_limit, &market())), "Approved");
         let below = Trade { min_amount_out: 396 * NEAR / 100 - 1, ..buy_near(20, 0) };
         assert_eq!(code(check(&s, &below, &market())), "SlippageExceeded");
+    }
+
+    #[test]
+    fn a_minimum_output_above_the_market_is_refused_at_the_exact_margin() {
+        let s = TradingState::default();
+        // 20 USD in at 5 USD per wNEAR is worth 4 wNEAR; the margin allows 2% more: 4.08 wNEAR.
+        let at_limit = Trade { min_amount_out: 408 * NEAR / 100, ..buy_near(20, 0) };
+        assert_eq!(code(check(&s, &at_limit, &market())), "Approved");
+        // Values are compared in whole micro-dollars; 10^18 yocto-wNEAR is 5 micro-dollars.
+        let above =
+            Trade { min_amount_out: 408 * NEAR / 100 + NEAR / 1_000_000, ..buy_near(20, 0) };
+        assert_eq!(code(check(&s, &above, &market())), "MinOutAboveMarket");
+        // About 100 times the market, the shape of testnet proposal 6.
+        let absurd = Trade { min_amount_out: 400 * NEAR, ..buy_near(20, 0) };
+        assert_eq!(code(check(&s, &absurd, &market())), "MinOutAboveMarket");
     }
 
     #[test]
