@@ -213,7 +213,22 @@ async fn main() -> Result<(), AgentError> {
                 return Ok(());
             }
         };
-        match ModelDecision::new(client).decide(&snapshot).await {
+        // Optional: the candidate trade sizes in whole dollars, for example "1,2".
+        let mut source = ModelDecision::new(client);
+        if let Ok(sizes) = std::env::var("MODEL_CANDIDATE_USD") {
+            let parsed: Result<Vec<u128>, _> =
+                sizes.split(',').map(|s| s.trim().parse::<u128>()).collect();
+            source = match parsed.ok().map(|sizes| source.with_candidate_sizes(sizes)) {
+                Some(Ok(source)) => source,
+                _ => {
+                    println!(
+                        "no trade: MODEL_CANDIDATE_USD must list whole-dollar sizes, for example 1,2"
+                    );
+                    return Ok(());
+                }
+            };
+        }
+        match source.decide(&snapshot).await {
             Decision::NoTrade { reason } => println!("no trade: {reason}"),
             Decision::Trade { plan, response } => {
                 let response = response.ok_or("model decision omitted its response record")?;

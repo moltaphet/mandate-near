@@ -1,0 +1,27 @@
+== A model-decided trade, from quote to settlement (first attempt) ==
+== Preflight (read-only) ==
+allowed=['manual-v1', 'gemini-3.1-flash-lite'] strikes=2 paused=false model=gemini-3.1-flash-lite quotes=$1,2
+== Fresh prices (2 transactions) ==
+WAIT | source quote is 22 s old; waiting for a fresher one
+WAIT | source quote is 31 s old; waiting for a fresher one
+WAIT | source quote is 39 s old; waiting for a fresher one
+WAIT | source quote is 48 s old; waiting for a fresher one
+WAIT | source quote is 58 s old; waiting for a fresher one
+REFUSED | NEAR: source quote is 66 s old (limit 60 s)
+REFUSED | NEAR: source quote is 75 s old (limit 60 s)
+PRICE | NEAR $3.460000 (wNEAR e8 346000000) | USDC $0.999546 (e8 99954600)
+QUOTE | oldest source quote is 20 s old
+PRICE | wNEAR 346000000 @ 1794483366 | USDC 99954600 @ 1794483373 | e8 units | source live: CoinGecko simple/price (public, no key); NEAR quote 21 s old, USDC quote 14 s old
+TX | set_report on oracle.mandate-t1.testnet by mandate-t1.testnet | hash GsBqwWxvE5Sf5SGQcnpDTDNgasKu7ovS4CQDDZsAD9hX | receipt failures: 0
+TX | set_report on oracle.mandate-t1.testnet by mandate-t1.testnet | hash F66W4HS2wmouVYzaNKEcCiqQDEYhxgva9qawejj9XAXh | receipt failures: 0
+== The model chooses one priced quote; the agent proposes it ==
+PROPOSAL | {"id":"7","asset_in":"nep141:usdc.mandate-t1.testnet","asset_out":"nep141:wrap.testnet","amount_in":"2000908","min_amount_out":"575144797687861271676301","reason_hash":"f4576f6fc27a54216db9224ff8f8e80d41084c66ab6577e55e79ede21662cb49","created_sec":1794483427,"expires_sec":1794483487,"model_id":"gemini-3.1-flash-lite"}
+MODEL | "model_id": "gemini-3.1-flash-lite",
+MODEL | "asset_in": "nep141:usdc.mandate-t1.testnet",
+MODEL | "asset_out": "nep141:wrap.testnet",
+MODEL | "amount_in": "2000908",
+MODEL | "min_amount_out": "575144797687861271676301",
+MODEL | proposal 7 submitted; reason hash f4576f6fc27a54216db9224ff8f8e80d41084c66ab6577e55e79ede21662cb49
+== Freshness guard before execute (read-only) ==
+PRICE AGE | 62 s on chain (vault limit 60 s; this run requires at most 45 s)
+STOP | price too old to execute safely; proposal 7 will expire with no strike

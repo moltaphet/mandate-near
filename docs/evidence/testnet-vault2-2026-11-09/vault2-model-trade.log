@@ -1,0 +1,45 @@
+== A model-decided trade, from quote to settlement ==
+== Preflight (read-only) ==
+allowed=['manual-v1', 'gemini-3.1-flash-lite'] strikes=2 paused=false model=gemini-3.1-flash-lite quotes=$1,2
+== Fresh prices for the model's decision (2 transactions) ==
+PRICE | NEAR $3.440000 (wNEAR e8 344000000) | USDC $0.999496 (e8 99949600)
+QUOTE | oldest source quote is 8 s old
+PRICE | wNEAR 344000000 @ 1794483834 | USDC 99949600 @ 1794483834 | e8 units | source live: CoinGecko simple/price (public, no key); NEAR quote 8 s old, USDC quote 8 s old
+TX | set_report on oracle.mandate-t1.testnet by mandate-t1.testnet | hash 3S4eVcGk7wn1m19LAg63h5EiD4pVzv6FVtqSAGXxqZpM | receipt failures: 0
+TX | set_report on oracle.mandate-t1.testnet by mandate-t1.testnet | hash DXtBuSmfUeicoekosG3sSEgmtpPQywVHShhqYFqa9Ush | receipt failures: 0
+== The model chooses one priced quote; the agent proposes it ==
+PROPOSAL | {"id":"8","asset_in":"nep141:wrap.testnet","asset_out":"nep141:usdc.mandate-t1.testnet","amount_in":"290697674418604651162790","min_amount_out":"995503","reason_hash":"2310d5135451b20f1a7ce636418ea1984a6d3e40b710f4619c1fe2eabf31374f","created_sec":1794483878,"expires_sec":1794483938,"model_id":"gemini-3.1-flash-lite"}
+MODEL | "model_id": "gemini-3.1-flash-lite",
+MODEL | "asset_in": "nep141:wrap.testnet",
+MODEL | "asset_out": "nep141:usdc.mandate-t1.testnet",
+MODEL | "amount_in": "290697674418604651162790",
+MODEL | "min_amount_out": "995503",
+MODEL | proposal 8 submitted; reason hash 2310d5135451b20f1a7ce636418ea1984a6d3e40b710f4619c1fe2eabf31374f
+== Prices refreshed before execute (2 transactions) ==
+PRICE | NEAR $3.450000 (wNEAR e8 345000000) | USDC $0.999471 (e8 99947100)
+QUOTE | oldest source quote is 24 s old
+PRICE | wNEAR 345000000 @ 1794483879 | USDC 99947100 @ 1794483879 | e8 units | source live: CoinGecko simple/price (public, no key); NEAR quote 24 s old, USDC quote 24 s old
+TX | set_report on oracle.mandate-t1.testnet by mandate-t1.testnet | hash Bu3nXciRpH2cRNqZZRWT3FnzXQasyywG3AcnwYVaCEG7 | receipt failures: 0
+TX | set_report on oracle.mandate-t1.testnet by mandate-t1.testnet | hash DFuneyv9CSZdavQX9R9ngr8BPGxukBKjDZqVZKLtX6gM | receipt failures: 0
+== Guard before execute: price age and slippage at the current prices (read-only) ==
+GUARD | OK | price age 33 s (limit 60, guard 52) | asks $0.9950 for $1.0029, vault floor $0.9929 | proposal expires in 26 s
+== Execute: the vault checks every gate, then the MPC signs ==
+TARGET | vault vault2
+TX | execute on vault2.mandate-t1.testnet by mandate-t1.testnet | hash 5ZMSQdRgwkMoWVFy48tetrbPPJBMX5SgLKSbpJhKmzh7 | receipt failures: 0
+OUTCOME | {"proposal_id":"8","outcome":{"Executed":{"proposal_id":"8","expires_sec":"1794484044"}}}
+== Settle with the counterparty: one execute_intents, both ledgers ==
+TARGET | vault vault2
+MIRROR | solver gives 995503 nep141:usdc.mandate-t1.testnet and receives at least 290697674418604651162790 nep141:wrap.testnet
+TARGET | vault vault2
+BALANCE | before | vault2.mandate-t1.testnet | nep141:usdc.mandate-t1.testnet | "67000000"
+BALANCE | before | vault2.mandate-t1.testnet | nep141:wrap.testnet | "550000000000000000000000"
+BALANCE | before | solver.mandate-t1.testnet | nep141:usdc.mandate-t1.testnet | "22000000"
+BALANCE | before | solver.mandate-t1.testnet | nep141:wrap.testnet | "740000000000000000000000"
+TX | execute_intents on intents.mandate-t1.testnet by mandate-t1.testnet | hash BYWPTGwcw5nYkByRdTX9ReqKFvyYWxyJWiJCiCBRiASY | receipt failures: 0
+TARGET | vault vault2
+BALANCE | after | vault2.mandate-t1.testnet | nep141:usdc.mandate-t1.testnet | "67995503"
+BALANCE | after | vault2.mandate-t1.testnet | nep141:wrap.testnet | "259302325581395348837210"
+BALANCE | after | solver.mandate-t1.testnet | nep141:usdc.mandate-t1.testnet | "21004497"
+BALANCE | after | solver.mandate-t1.testnet | nep141:wrap.testnet | "1030697674418604651162790"
+AGENT | proposal 8: Signed { proposal_id: 8, expires_sec: 1794484044 }; settlement remains unverified
+DONE | model-decided proposal 8 executed and settled

@@ -29,7 +29,7 @@ What the testnet run on vault2 exercised:
 - A per-request withdrawal ceiling of 5 USDC, stored in the mandate and read back with `get_mandate`.
 - One trade through `propose` and `execute`, with the outcome `Executed`.
 - A 1 USDC withdrawal queued, then applied after its 86,400-second delay. The outcome was `Delivered`
-  (transaction `3W3xycheutTk9xixMubbPLTP9JFEhzhYDug4BPXG9JBE`, 0 receipt failures).
+  (transaction `7mG76TGMSkGPPXG28fLRDKTygaGVoZUeVg5N1u8Y7wfZ`, 0 receipt failures).
 
 What it does not exercise: a real oracle, the real Intents contract, a matched settlement with
 a real counterparty, F26 recovery after a lost callback, and any failure path of the withdrawal

@@ -7,6 +7,7 @@ use std::future::Future;
 use std::time::Duration;
 
 use mandate_vault::engine::{Trade, check_trade};
+use mandate_vault::math::{Price, Rounding, U256, usd_micros};
 use near_sdk::json_types::U128;
 use near_sdk::serde_json::{self, Value, json};
 use serde::de::{self, DeserializeSeed, MapAccess, SeqAccess, Visitor};
@@ -21,7 +22,13 @@ pub const MAX_CHAT_RESPONSE_BYTES: usize = 64 * 1024;
 pub const MAX_RATIONALE_CHARS: usize = 800;
 pub const MODEL_REQUEST_TIMEOUT: Duration = Duration::from_secs(20);
 
-const MODEL_INSTRUCTIONS: &str = "Choose a trade or no trade using only the supplied public snapshot. Return only one JSON object with exactly these fields: asset_in (string), asset_out (string), amount_in (positive canonical decimal integer string in token base units), min_amount_out (positive canonical decimal integer string in token base units), rationale (nonempty string of at most 800 Unicode characters), no_trade (boolean), no_trade_reason (string or null). Both assets must be distinct assets in the mandate. All asset, amount and rationale fields remain required and valid even for no_trade=true. Never return commands, destinations, replacement limits or extra fields. The vault's existing rules remain authoritative.";
+const MODEL_INSTRUCTIONS: &str = "Choose a trade or no trade using only the supplied public snapshot. Return only one JSON object with exactly these fields: asset_in (string), asset_out (string), amount_in (positive canonical decimal integer string in token base units), min_amount_out (positive canonical decimal integer string in token base units), rationale (nonempty string of at most 800 Unicode characters), no_trade (boolean), no_trade_reason (string or null). Both assets must be distinct assets in the mandate. All asset, amount and rationale fields remain required and valid even for no_trade=true. Never return commands, destinations, replacement limits or extra fields. The vault's existing rules remain authoritative. Read amounts with the supplied units: token amounts are integer base units (10^decimals per whole token), mandate USD limits are micro-dollars (1 USD = 1000000), and the readable fields give the same values in whole tokens and dollars. To trade, copy exactly one entry from candidates: its asset_in, asset_out, amount_in and min_amount_out, unchanged. Each candidate was priced and checked by code. Never compute your own amounts. If no candidate fits, return no_trade=true.";
+
+/// Candidate trade sizes, in whole US dollars, offered to the model by default.
+pub const DEFAULT_CANDIDATE_SIZES_USD: [u128; 4] = [1, 2, 5, 10];
+/// A model plan may not ask for more than the oracle value of what it gives, plus this margin.
+/// A request above the market can never fill, yet it still spends the vault's daily turnover.
+pub const MAX_MIN_OUT_PREMIUM_BPS: u128 = 200;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ChatFailure {
@@ -241,11 +248,28 @@ pub trait ChatClient: Send + Sync {
 pub struct ModelDecision<C> {
     client: C,
     timeout: Duration,
+    candidate_sizes_usd: Vec<u128>,
 }
 
 impl<C: ChatClient> ModelDecision<C> {
     pub fn new(client: C) -> Self {
-        Self { client, timeout: MODEL_REQUEST_TIMEOUT }
+        Self {
+            client,
+            timeout: MODEL_REQUEST_TIMEOUT,
+            candidate_sizes_usd: DEFAULT_CANDIDATE_SIZES_USD.to_vec(),
+        }
+    }
+
+    /// Chooses the candidate trade sizes, in whole dollars, that code prices for the model.
+    pub fn with_candidate_sizes(mut self, sizes_usd: Vec<u128>) -> Result<Self, ChatFailure> {
+        if sizes_usd.is_empty()
+            || sizes_usd.len() > 8
+            || sizes_usd.iter().any(|s| *s == 0 || *s > 1_000_000)
+        {
+            return Err(ChatFailure::InvalidConfiguration);
+        }
+        self.candidate_sizes_usd = sizes_usd;
+        Ok(self)
     }
 
     /// Selects a shorter bounded deadline, useful for callers and offline tests.
@@ -267,7 +291,7 @@ impl<C: ChatClient> DecisionSource for ModelDecision<C> {
         if snapshot.mandate.allowed_model_ids.is_empty() {
             return no_trade("no decision sources are allowed");
         }
-        let prompt = match compact_snapshot(snapshot) {
+        let prompt = match compact_snapshot_with(snapshot, &self.candidate_sizes_usd) {
             Ok(prompt) => prompt,
             Err(error) => return no_trade(error.to_string()),
         };
@@ -333,6 +357,13 @@ impl<C: ChatClient> DecisionSource for ModelDecision<C> {
             check_trade(&snapshot.mandate, &snapshot.trading, &trade, &snapshot.market)
         {
             return no_trade(format!("local vault preview rejected the trade: {}", error.code()));
+        }
+        // The vault's gates bound only the least it accepts. A plan asking for more than the
+        // market pays cannot fill, and would still spend turnover: refuse it here, unrepaired.
+        match asks_above_market(snapshot, &trade) {
+            Ok(false) => {}
+            Ok(true) => return no_trade("the model asked for more than the market pays"),
+            Err(()) => return no_trade("the plan could not be valued at oracle prices"),
         }
         let policy = self.client.verification_policy();
         if verify_response(&response, policy.pinned_address.as_deref(), policy.required).is_err() {
@@ -474,6 +505,167 @@ fn positive_decimal(value: &str) -> Option<u128> {
 /// price mantissas are strings, preserving integer precision. Provider settings
 /// are never fields in this prompt. This is not the Step 2 canonical response.
 pub fn compact_snapshot(snapshot: &Snapshot) -> Result<String, ChatFailure> {
+    compact_snapshot_with(snapshot, &DEFAULT_CANDIDATE_SIZES_USD)
+}
+
+/// A trade that code priced at oracle values and checked with the vault's own gates.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Candidate {
+    pub id: String,
+    pub asset_in: String,
+    pub asset_out: String,
+    pub amount_in: u128,
+    pub min_amount_out: u128,
+    /// Oracle value of `amount_in`, in micro-dollars, rounded up.
+    pub value_usd_micros: u128,
+}
+
+/// Prices one trade per direction and size: `amount_in` worth the size in dollars, and a
+/// minimum output at the oracle value less half the allowed slippage, so the request is inside
+/// the vault's floor and below the market. Only trades that pass `check_trade` are kept.
+pub fn quote_candidates(snapshot: &Snapshot, sizes_usd: &[u128]) -> Vec<Candidate> {
+    let mandate = &snapshot.mandate;
+    let market = &snapshot.market;
+    let mut out = Vec::new();
+    for cfg_in in &mandate.assets {
+        for cfg_out in &mandate.assets {
+            if cfg_in.asset_id == cfg_out.asset_id {
+                continue;
+            }
+            let (Some(price_in), Some(price_out)) =
+                (market.prices.get(&cfg_in.asset_id), market.prices.get(&cfg_out.asset_id))
+            else {
+                continue;
+            };
+            let held = market.balances.get(&cfg_in.asset_id).copied().unwrap_or(0);
+            for size in sizes_usd {
+                let Some(micros) = size.checked_mul(1_000_000) else { continue };
+                if micros > u128::from(mandate.max_trade_usd.0) {
+                    continue;
+                }
+                let Some(amount_in) = tokens_for_usd(micros, cfg_in.decimals, price_in, false)
+                else {
+                    continue;
+                };
+                if amount_in == 0 || amount_in > held {
+                    continue;
+                }
+                let Ok(notional) = usd_micros(amount_in, cfg_in.decimals, price_in, Rounding::Up)
+                else {
+                    continue;
+                };
+                let haircut = u128::from(mandate.max_slippage_bps) / 2;
+                let target = notional.saturating_mul(10_000 - haircut) / 10_000 + 1;
+                let Some(min_out) = tokens_for_usd(target, cfg_out.decimals, price_out, true)
+                else {
+                    continue;
+                };
+                let trade = Trade {
+                    asset_in: cfg_in.asset_id.clone(),
+                    asset_out: cfg_out.asset_id.clone(),
+                    amount_in,
+                    min_amount_out: min_out,
+                };
+                if check_trade(mandate, &snapshot.trading, &trade, market).is_ok() {
+                    out.push(Candidate {
+                        id: format!("q{}", out.len() + 1),
+                        asset_in: trade.asset_in,
+                        asset_out: trade.asset_out,
+                        amount_in,
+                        min_amount_out: min_out,
+                        value_usd_micros: notional,
+                    });
+                }
+            }
+        }
+    }
+    out
+}
+
+/// True when the plan's minimum output is worth more than its input plus the allowed margin.
+fn asks_above_market(snapshot: &Snapshot, trade: &Trade) -> Result<bool, ()> {
+    let cfg_in = snapshot.mandate.asset(&trade.asset_in).ok_or(())?;
+    let cfg_out = snapshot.mandate.asset(&trade.asset_out).ok_or(())?;
+    let price_in = snapshot.market.prices.get(&trade.asset_in).ok_or(())?;
+    let price_out = snapshot.market.prices.get(&trade.asset_out).ok_or(())?;
+    let given =
+        usd_micros(trade.amount_in, cfg_in.decimals, price_in, Rounding::Up).map_err(|_| ())?;
+    let asked = usd_micros(trade.min_amount_out, cfg_out.decimals, price_out, Rounding::Down)
+        .map_err(|_| ())?;
+    Ok(U256::from(asked) * U256::from(10_000u64)
+        > U256::from(given) * U256::from(10_000 + MAX_MIN_OUT_PREMIUM_BPS))
+}
+
+/// Base units of a token worth `micros` micro-dollars at `price`, rounded down (or up).
+fn tokens_for_usd(micros: u128, decimals: u8, price: &Price, up: bool) -> Option<u128> {
+    if price.mantissa.0 == 0 || price.expo > 0 {
+        return None;
+    }
+    let numerator = U256::from(micros)
+        * U256::exp10(usize::from(decimals))
+        * U256::exp10(price.expo.unsigned_abs() as usize);
+    let denominator = U256::from(price.mantissa.0) * U256::from(1_000_000u64);
+    let (q, r) = numerator.div_mod(denominator);
+    let q = if up && !r.is_zero() { q + U256::one() } else { q };
+    (q.bits() <= 128).then(|| q.as_u128())
+}
+
+/// `amount` base units as a decimal string with `decimals` places, trailing zeros trimmed.
+fn readable(amount: u128, decimals: u32) -> String {
+    let digits = amount.to_string();
+    if decimals == 0 {
+        return digits;
+    }
+    let width = decimals as usize + 1;
+    let padded = format!("{digits:0>width$}");
+    let (whole, frac) = padded.split_at(padded.len() - decimals as usize);
+    let frac = frac.trim_end_matches('0');
+    if frac.is_empty() { whole.to_string() } else { format!("{whole}.{frac}") }
+}
+
+fn symbol(asset_id: &str) -> &str {
+    let account = asset_id.strip_prefix("nep141:").unwrap_or(asset_id);
+    account.split('.').next().unwrap_or(account)
+}
+
+/// Balances, prices and limits in whole tokens and dollars, derived from the raw snapshot.
+fn readable_section(snapshot: &Snapshot) -> Result<Value, ChatFailure> {
+    let m = &snapshot.mandate;
+    let mut assets = Vec::new();
+    for cfg in &m.assets {
+        let balance = snapshot.market.balances.get(&cfg.asset_id).copied().unwrap_or(0);
+        let (price_usd, value_usd) = match snapshot.market.prices.get(&cfg.asset_id) {
+            Some(p) if p.expo <= 0 => (
+                Some(readable(u128::from(p.mantissa.0), p.expo.unsigned_abs())),
+                usd_micros(balance, cfg.decimals, p, Rounding::Down).ok().map(|v| readable(v, 6)),
+            ),
+            _ => (None, None),
+        };
+        assets.push(json!({
+            "asset_id":cfg.asset_id,
+            "balance":format!("{} {}", readable(balance, u32::from(cfg.decimals)), symbol(&cfg.asset_id)),
+            "price_usd":price_usd,
+            "value_usd":value_usd
+        }));
+    }
+    let usd = |micros: u128| readable(micros, 6);
+    Ok(json!({
+        "assets":assets,
+        "limits_usd":{
+            "max_trade":usd(u128::from(m.max_trade_usd.0)),
+            "max_daily_turnover":usd(u128::from(m.max_daily_turnover_usd.0)),
+            "turnover_used_today":usd(snapshot.trading.day_turnover_usd)
+        },
+        "max_slippage_percent":readable(u128::from(m.max_slippage_bps), 2),
+        "max_position_percent_of_portfolio":readable(u128::from(m.max_position_bps), 2)
+    }))
+}
+
+/// The prompt: the raw public snapshot, plus readable values, units and priced candidates.
+pub fn compact_snapshot_with(
+    snapshot: &Snapshot,
+    sizes_usd: &[u128],
+) -> Result<String, ChatFailure> {
     snapshot.mandate.validate().map_err(|_| ChatFailure::InvalidSnapshot)?;
     let assets: Result<Vec<Value>, ChatFailure> = snapshot
         .mandate
@@ -505,7 +697,24 @@ pub fn compact_snapshot(snapshot: &Snapshot) -> Result<String, ChatFailure> {
             "day_turnover_usd":snapshot.trading.day_turnover_usd.to_string(),
             "high_water_mark_usd":snapshot.trading.high_water_mark_usd.to_string(),
             "signed_intent_expires_at_sec":snapshot.trading.signed_intent_expires_at_sec
-        }
+        },
+        "units":"Token amounts are integer base units: 10^decimals base units make one whole token. Mandate USD limits and trading USD values are micro-dollars: 1000000 = 1 USD. oracle_price is USD per whole token = mantissa x 10^expo. The readable section repeats these values in whole tokens and dollars.",
+        "readable":readable_section(snapshot)?,
+        "candidates":quote_candidates(snapshot, sizes_usd).iter().map(|c| {
+            let din = snapshot.mandate.asset(&c.asset_in).map(|a| a.decimals).unwrap_or(0);
+            let dout = snapshot.mandate.asset(&c.asset_out).map(|a| a.decimals).unwrap_or(0);
+            json!({
+                "id":c.id,
+                "asset_in":c.asset_in,
+                "asset_out":c.asset_out,
+                "amount_in":c.amount_in.to_string(),
+                "min_amount_out":c.min_amount_out.to_string(),
+                "summary":format!("give {} {}, receive at least {} {} (worth about ${})",
+                    readable(c.amount_in, u32::from(din)), symbol(&c.asset_in),
+                    readable(c.min_amount_out, u32::from(dout)), symbol(&c.asset_out),
+                    readable(c.value_usd_micros, 6))
+            })
+        }).collect::<Vec<_>>()
     }))
     .map_err(|_| ChatFailure::InvalidSnapshot)?;
     if prompt.len() > MAX_CHAT_RESPONSE_BYTES {

@@ -97,6 +97,20 @@ fn wasm(name: &str) -> R<Vec<u8>> {
     Ok(std::fs::read(format!("{WASM_DIR}/{name}.wasm"))?)
 }
 
+/// The hash the network assigned to a sent transaction, taken from its outcome.
+/// near-api 0.8.7 rebuilds `transaction()` from the RPC view and puts that hash in the
+/// block_hash field, so `transaction().get_hash()` is not the transaction's hash.
+fn tx_hash(result: &near_api::types::transaction::result::TransactionResult) -> String {
+    match result {
+        near_api::types::transaction::result::TransactionResult::Full(full) => {
+            full.outcome().transaction_hash.to_string()
+        }
+        near_api::types::transaction::result::TransactionResult::Pending { .. } => {
+            "pending".to_string()
+        }
+    }
+}
+
 /// Sends one function call, prints its hash and failures, and returns the success value.
 async fn call(
     cx: &Ctx,
@@ -115,7 +129,7 @@ async fn call(
         .with_signer(caller.clone(), cx.signer.clone())
         .send_to(&cx.net)
         .await?;
-    let hash = result.transaction().get_hash();
+    let hash = tx_hash(&result);
     let success = result.into_result().map_err(|e| format!("{method} failed: {e:?}"))?;
     println!(
         "TX | {method} on {contract} by {caller} | hash {hash} | receipt failures: {}",
@@ -207,7 +221,7 @@ async fn call_as(
         .with_signer(caller.clone(), signer)
         .send_to(&cx.net)
         .await?;
-    let hash = result.transaction().get_hash();
+    let hash = tx_hash(&result);
     let success = result.into_result().map_err(|e| format!("{method} failed: {e:?}"))?;
     println!(
         "TX | {method} on {contract} by {caller} | hash {hash} | receipt failures: {}",
@@ -353,7 +367,7 @@ async fn step(cx: &Ctx, name: &str, rest: &[String]) -> R<()> {
                 .with_signer(cx.signer.clone())
                 .send_to(&cx.net)
                 .await?;
-            println!("TX | create {parent} | hash {} ", r.transaction().get_hash());
+            println!("TX | create {parent} | hash {} ", tx_hash(&r));
             r.assert_success();
         }
         // 2. Sub-accounts that need a key. The vault is created later without any key.
@@ -366,10 +380,7 @@ async fn step(cx: &Ctx, name: &str, rest: &[String]) -> R<()> {
                     .with_signer(cx.signer.clone())
                     .send_to(&cx.net)
                     .await?;
-                println!(
-                    "TX | create {account} ({near} NEAR) | hash {}",
-                    r.transaction().get_hash()
-                );
+                println!("TX | create {account} ({near} NEAR) | hash {}", tx_hash(&r));
                 r.assert_success();
             }
         }
@@ -394,7 +405,7 @@ async fn step(cx: &Ctx, name: &str, rest: &[String]) -> R<()> {
                     .with_signer(cx.signer.clone())
                     .send_to(&cx.net)
                     .await?;
-                println!("TX | deploy+init {account} | hash {}", r.transaction().get_hash());
+                println!("TX | deploy+init {account} | hash {}", tx_hash(&r));
                 r.assert_success();
             }
         }
@@ -440,10 +451,7 @@ async fn step(cx: &Ctx, name: &str, rest: &[String]) -> R<()> {
                 .with_signer(cx.signer.clone())
                 .send_to(&cx.net)
                 .await?;
-            println!(
-                "TX | atomic create+deploy+init {vault} | hash {}",
-                r.transaction().get_hash()
-            );
+            println!("TX | atomic create+deploy+init {vault} | hash {}", tx_hash(&r));
             r.assert_success();
         }
         // 6. The owner names the agent (through the DAO).
@@ -467,7 +475,7 @@ async fn step(cx: &Ctx, name: &str, rest: &[String]) -> R<()> {
                 .with_signer(cx.signer.clone())
                 .send_to(&cx.net)
                 .await?;
-            println!("TX | create {solver} | hash {}", r.transaction().get_hash());
+            println!("TX | create {solver} | hash {}", tx_hash(&r));
             r.assert_success();
             // 2. Register the solver's key on the intents verifier (signed by the solver).
             call_as(

@@ -12,7 +12,8 @@ use mandate_agent::decision::{Decision, DecisionSource, ManualDecision, Rebalanc
 use mandate_agent::model::{
     ChatClient, ChatFailure, ChatResponse, MAX_CHAT_RESPONSE_BYTES, ModelDecision,
     VerificationPolicy, compact_snapshot, extract_decision, optional_model_setting,
-    response_contains_marker, sha256_hex, signature_lookup_url, validate_public_request_body,
+    quote_candidates, response_contains_marker, sha256_hex, signature_lookup_url,
+    validate_public_request_body,
 };
 use mandate_agent::provenance::{VerificationStatus, canonical_response_hash, verify_response};
 use mandate_agent::relay::Relay;
@@ -992,4 +993,86 @@ fn rebalance_adapter_uses_the_existing_exact_candidate_without_network_requests(
     assert_eq!(adapter.choose(&snapshot()).unwrap(), expected);
     assert_eq!(expected.asset_in, A);
     assert_eq!(expected.amount_in, 30_000_000);
+}
+
+fn plan_body(asset_in: &str, asset_out: &str, amount_in: u128, min_out: u128) -> String {
+    json!({
+        "asset_in":asset_in,
+        "asset_out":asset_out,
+        "amount_in":amount_in.to_string(),
+        "min_amount_out":min_out.to_string(),
+        "rationale":"Rebalance within the owner-defined limits.",
+        "no_trade":false,
+        "no_trade_reason":null
+    })
+    .to_string()
+}
+
+#[tokio::test]
+async fn a_plan_asking_a_hundred_times_the_market_is_refused_before_any_send() {
+    // The shape of testnet proposal 6: about $0.71 of wNEAR offered for 49.75 USDC.
+    let content = plan_body(B, A, 142_450_142_450_142_450_142_450, 49_750_000);
+    let fake = FakeClient::content(&content);
+    let reason = refusal(ModelDecision::new(fake.clone()).decide(&snapshot()).await);
+    assert_eq!(reason, "the model asked for more than the market pays");
+    assert_eq!(fake.calls(), 1);
+}
+
+#[tokio::test]
+async fn a_minimum_output_just_above_the_margin_is_refused_and_one_at_the_margin_passes() {
+    // 20 USDC is worth exactly 4 wNEAR at $5. The margin is 2%.
+    let over = plan_body(A, B, 20_000_000, 4 * NEAR * 10_201 / 10_000);
+    let reason = refusal(ModelDecision::new(FakeClient::content(&over)).decide(&snapshot()).await);
+    assert_eq!(reason, "the model asked for more than the market pays");
+    let at = plan_body(A, B, 20_000_000, 4 * NEAR * 10_200 / 10_000);
+    assert!(matches!(
+        ModelDecision::new(FakeClient::content(&at)).decide(&snapshot()).await,
+        Decision::Trade { .. }
+    ));
+}
+
+#[tokio::test]
+async fn every_quoted_candidate_passes_the_vault_gates_and_is_accepted_unchanged() {
+    let snapshot = snapshot();
+    let candidates = quote_candidates(&snapshot, &[1, 2, 5]);
+    assert!(candidates.len() >= 4, "both directions should be quoted: {candidates:?}");
+    for c in &candidates {
+        let trade = mandate_vault::engine::Trade {
+            asset_in: c.asset_in.clone(),
+            asset_out: c.asset_out.clone(),
+            amount_in: c.amount_in,
+            min_amount_out: c.min_amount_out,
+        };
+        mandate_vault::engine::check_trade(
+            &snapshot.mandate,
+            &snapshot.trading,
+            &trade,
+            &snapshot.market,
+        )
+        .expect("a candidate must pass the unchanged engine");
+        let content = plan_body(&c.asset_in, &c.asset_out, c.amount_in, c.min_amount_out);
+        let Decision::Trade { plan, .. } =
+            ModelDecision::new(FakeClient::content(&content)).decide(&snapshot).await
+        else {
+            panic!("candidate {} must be accepted", c.id)
+        };
+        assert_eq!((plan.amount_in.0, plan.min_amount_out.0), (c.amount_in, c.min_amount_out));
+    }
+}
+
+#[test]
+fn the_prompt_states_units_and_readable_values_and_lists_candidates() {
+    let input: Value = serde_json::from_str(&compact_snapshot(&snapshot()).unwrap()).unwrap();
+    assert!(input["units"].as_str().unwrap().contains("1000000 = 1 USD"));
+    assert_eq!(input["readable"]["assets"][1]["balance"], "5 wrap");
+    assert_eq!(input["readable"]["assets"][1]["price_usd"], "5");
+    assert_eq!(input["readable"]["assets"][0]["value_usd"], "100");
+    assert_eq!(input["readable"]["limits_usd"]["max_trade"], "30");
+    let first = &input["candidates"][0];
+    assert_eq!(first["id"], "q1");
+    assert!(
+        first["summary"].as_str().unwrap().starts_with("give 1 stable, receive at least 0.198")
+    );
+    // The raw fields stay as they were.
+    assert_eq!(input["mandate"]["max_trade_usd"], "30000000");
 }

@@ -1481,9 +1481,9 @@ td {
      <p class="lede">An AI agent proposes treasury trades. The vault's on-chain gates decide what may be signed, and the owner keeps a separate 24-hour withdrawal path.</p>
      <div class="hero-actions"><a class="button" href="#vault">Read the testnet vault <span aria-hidden="true">↗</span></a><a class="button light" href="#evidence">See the evidence</a></div>
      <ul class="proof-strip" aria-label="Live testnet results">
-      <li><span class="chip pass">Delivered</span><span>1 USDC withdrawal after the 24-hour delay</span><a href="https://testnet.nearblocks.io/txns/3W3xycheutTk9xixMubbPLTP9JFEhzhYDug4BPXG9JBE" target="_blank" rel="noopener noreferrer">Transaction ↗</a></li>
-      <li><span class="chip pass">Settled</span><span>Matched trade: both ledgers changed</span><a href="https://testnet.nearblocks.io/txns/B8nYgKKYcNCrYEuG9QZ92KUJe3vj641ZhvZTzy9VzXo5" target="_blank" rel="noopener noreferrer">Transaction ↗</a></li>
-      <li><span class="chip block">Rejected</span><span>60 USDC over the 50 USDC per-trade cap</span><a href="https://testnet.nearblocks.io/txns/J4RvGERYiuFv2hfninTCFWxqjw4HikG6rXH7VRSsDjBM" target="_blank" rel="noopener noreferrer">Transaction ↗</a></li>
+      <li><span class="chip pass">Delivered</span><span>1 USDC withdrawal after the 24-hour delay</span><a href="https://testnet.nearblocks.io/txns/7mG76TGMSkGPPXG28fLRDKTygaGVoZUeVg5N1u8Y7wfZ" target="_blank" rel="noopener noreferrer">Transaction ↗</a></li>
+      <li><span class="chip pass">Settled</span><span>Matched trade: both ledgers changed</span><a href="https://testnet.nearblocks.io/txns/7uTJpKFkEDfKEqz1PxzNePeXJN27LK1ank75E6TRonZE" target="_blank" rel="noopener noreferrer">Transaction ↗</a></li>
+      <li><span class="chip block">Rejected</span><span>60 USDC over the 50 USDC per-trade cap</span><a href="https://testnet.nearblocks.io/txns/9cdyxmaAW6Q79SNbfayzoYBn6JFAfA362eEzjfGSKQhA" target="_blank" rel="noopener noreferrer">Transaction ↗</a></li>
      </ul>
      <p class="hero-note">Testnet only. Prices are operator-fed and the counterparty is an account we control. See the evidence.</p>
     </div>
@@ -1606,13 +1606,13 @@ td {
      <li><b>Ordered gates &amp; owner delays</b><span>Unit, boundary and property tests; sandbox access-control checks.</span></li>
      <li><b>Signing &amp; matched settlement</b><span>Sandbox vault flow, a stand-in signer and the supplied Intents verifier fixture. Historical mainnet simulations are separate evidence.</span></li>
      <li><b>Withdrawal lifecycle &amp; proof guards</b><span>Delivery, refund, owner-rearmed retries and adversarial receipt tests. Sandbox maturity injection does not prove 24 elapsed hours.</span></li>
-     <li><b>Agent decision sources</b><span>Two-asset rebalancing, strict model output and canonical commitments. Declared IDs use delayed admission and immediate removal. Final local client and sandbox checks passed on 8 November; model origin, live inference and hardware attestation remain unverified.</span></li>
+     <li><b>Agent decision sources</b><span>Strict model output, canonical commitments, readable prompt values and code-priced quotes. Declared IDs use delayed admission and immediate removal. A model-decided trade executed and settled on testnet on 12 November; model origin and hardware attestation remain unverified.</span></li>
      <li><b>Connected public dashboard</b><span>Pinned block, exact base-unit formatting and text-only rendering of RPC data.</span></li>
     </ul><a class="text-link" href="https://github.com/moltaphet/mandate-near/tree/main/contracts/vault/tests" target="_blank" rel="noopener noreferrer">Review the tests ↗</a></article>
     <article class="proof-card reveal"><span class="badge amber"><span class="dot"></span>Testnet done · release pending</span><h3>The release boundary.</h3><ul>
      <li><b>A functioning oracle</b><span>Testnet prices are operator-fed from a public source with checked timestamps. No verified Pyth feed is in use yet, so the oracle is not selected.</span></li>
      <li><b>A reviewed, sealed deployment</b><span>Selected DAO owner distinct from the vault, verified governance, exact artifact and permanently inert proof sinks. Fresh issuer history matters.</span></li>
-     <li><b>Vault signing → matched fill</b><span>Shown on testnet with a counterparty we control. An independent solver, the real Intents contract and mainnet are not shown.</span></li>
+     <li><b>Vault signing → matched fill</b><span>Shown on testnet with a counterparty we control, for a manual trade and for a model-decided trade. An independent solver, the real Intents contract and mainnet are not shown.</span></li>
      <li><b>A 24-hour withdrawal</b><span>Shown on testnet: 1 USDC waited 24 hours and was delivered. Mainnet and on-chain failure recovery are not shown.</span></li>
      <li><b>TEE attestation &amp; operational history</b><span>OutLayer integration is planned. Relay acknowledgement is not fill verification.</span></li>
     </ul><a class="text-link" href="https://github.com/moltaphet/mandate-near/blob/main/docs/OPERATIONAL-READINESS.md" target="_blank" rel="noopener noreferrer">Read the release gates ↗</a></article>
@@ -1623,17 +1623,19 @@ td {
     <div class="tx-scroll"><table class="tx-table">
      <thead><tr><th scope="col">Action</th><th scope="col">Result</th><th scope="col">Transaction</th></tr></thead>
      <tbody>
-      <tr><td>1 USDC withdrawal, after the 24-hour delay</td><td><span class="chip pass">Delivered</span></td><td><a href="https://testnet.nearblocks.io/txns/3W3xycheutTk9xixMubbPLTP9JFEhzhYDug4BPXG9JBE" target="_blank" rel="noopener noreferrer">3W3xyche…G9JBE ↗</a></td></tr>
-      <tr><td>Trade: 2 USDC for at least 0.55 wNEAR</td><td><span class="chip pass">Executed</span></td><td><a href="https://testnet.nearblocks.io/txns/GX3H8soziLDsfb9F71zM6LunC11Ff48GL5rTS68ic4tQ" target="_blank" rel="noopener noreferrer">GX3H8soz…ic4tQ ↗</a></td></tr>
-      <tr><td>Matched settlement: both ledgers changed</td><td><span class="chip pass">Settled</span></td><td><a href="https://testnet.nearblocks.io/txns/B8nYgKKYcNCrYEuG9QZ92KUJe3vj641ZhvZTzy9VzXo5" target="_blank" rel="noopener noreferrer">B8nYgKKY…VzXo5 ↗</a></td></tr>
-      <tr><td>Refused: 60 USDC over the 50 USDC cap</td><td><span class="chip block">Rejected · TradeTooLarge</span></td><td><a href="https://testnet.nearblocks.io/txns/J4RvGERYiuFv2hfninTCFWxqjw4HikG6rXH7VRSsDjBM" target="_blank" rel="noopener noreferrer">J4RvGERY…sDjBM ↗</a></td></tr>
-      <tr><td>Refused: 60 USDC with 7 USDC held</td><td><span class="chip block">Rejected · InsufficientBalance</span></td><td><a href="https://testnet.nearblocks.io/txns/GoUU2JWXjPSWdbf5tZU2F8ypFQvxrYkPBGnuWSSNyXbc" target="_blank" rel="noopener noreferrer">GoUU2JWX…NyXbc ↗</a></td></tr>
-      <tr><td>Model admission queued by the DAO: gemini-3.1-flash-lite</td><td><span class="chip amber">Queued · 24-hour delay</span></td><td><a href="https://testnet.nearblocks.io/txns/4sFspKrxZbiwqTsstfPQCyAEKGnnaAtZnM9hU1ERe4nK" target="_blank" rel="noopener noreferrer">4sFspKrx…Re4nK ↗</a></td></tr>
-      <tr><td>Model admission applied after the delay</td><td><span class="chip pass">Applied · 12 Nov 07:38 UTC</span></td><td><a href="https://testnet.nearblocks.io/txns/DzUFptM81MGMUBzaCpFWv4UiEjQXwu147LPJP8SK2fF9" target="_blank" rel="noopener noreferrer">DzUFptM8…K2fF9 ↗</a></td></tr>
-      <tr><td>Model-decided proposal 6: 0.14 wNEAR for at least 49.75 USDC</td><td><span class="chip amber">Proposed · not executed</span></td><td><a href="https://github.com/moltaphet/mandate-near/blob/main/docs/evidence/testnet-vault2-2026-11-09/vault2-model-trade-attempt.log" target="_blank" rel="noopener noreferrer">Run log ↗</a></td></tr>
+      <tr><td>1 USDC withdrawal, after the 24-hour delay</td><td><span class="chip pass">Delivered</span></td><td><a href="https://testnet.nearblocks.io/txns/7mG76TGMSkGPPXG28fLRDKTygaGVoZUeVg5N1u8Y7wfZ" target="_blank" rel="noopener noreferrer">7mG76TGM…Y7wfZ ↗</a></td></tr>
+      <tr><td>Trade: 2 USDC for at least 0.55 wNEAR</td><td><span class="chip pass">Executed</span></td><td><a href="https://testnet.nearblocks.io/txns/Ah4QhhG2W8yTH9ZoG7XC6dVKBHTcKUvZeHDP2yzye8s4" target="_blank" rel="noopener noreferrer">Ah4QhhG2…ye8s4 ↗</a></td></tr>
+      <tr><td>Matched settlement: both ledgers changed</td><td><span class="chip pass">Settled</span></td><td><a href="https://testnet.nearblocks.io/txns/7uTJpKFkEDfKEqz1PxzNePeXJN27LK1ank75E6TRonZE" target="_blank" rel="noopener noreferrer">7uTJpKFk…RonZE ↗</a></td></tr>
+      <tr><td>Refused: 60 USDC over the 50 USDC cap</td><td><span class="chip block">Rejected · TradeTooLarge</span></td><td><a href="https://testnet.nearblocks.io/txns/9cdyxmaAW6Q79SNbfayzoYBn6JFAfA362eEzjfGSKQhA" target="_blank" rel="noopener noreferrer">9cdyxmaA…SKQhA ↗</a></td></tr>
+      <tr><td>Refused: 60 USDC with 7 USDC held</td><td><span class="chip block">Rejected · InsufficientBalance</span></td><td><a href="https://testnet.nearblocks.io/txns/C17Yg3kqqA2jkxvzyJcYz5dRBE6HBZKCLt2MPskzF1dA" target="_blank" rel="noopener noreferrer">C17Yg3kq…zF1dA ↗</a></td></tr>
+      <tr><td>Model admission queued by the DAO: gemini-3.1-flash-lite</td><td><span class="chip amber">Queued · 24-hour delay</span></td><td><a href="https://testnet.nearblocks.io/txns/Fg5CEsnvMbooJHtUobKh2i1wsN1pyzoqtA74pfeok4Xj" target="_blank" rel="noopener noreferrer">Fg5CEsnv…ok4Xj ↗</a></td></tr>
+      <tr><td>Model admission applied after the delay</td><td><span class="chip pass">Applied · 12 Nov 07:38 UTC</span></td><td><a href="https://testnet.nearblocks.io/txns/Exen1r7y3un6fNq7xYTnvRKqoCnaNv1bqFA93XXzMvVs" target="_blank" rel="noopener noreferrer">Exen1r7y…zMvVs ↗</a></td></tr>
+      <tr><td>Model-decided proposal 6: 0.14 wNEAR for at least 49.75 USDC (about 100× the market)</td><td><span class="chip amber">Proposed · never executed</span></td><td><a href="https://testnet.nearblocks.io/txns/8Ek1SRJWUZGdUZbG7JNE2EWsPAdBDBaF7kKUYq6hyWQ8" target="_blank" rel="noopener noreferrer">8Ek1SRJW…6hyWQ8 ↗</a></td></tr>
+      <tr><td>Model-decided proposal 8: 0.29 wNEAR for at least 0.995503 USDC</td><td><span class="chip pass">Executed</span></td><td><a href="https://testnet.nearblocks.io/txns/5ZMSQdRgwkMoWVFy48tetrbPPJBMX5SgLKSbpJhKmzh7" target="_blank" rel="noopener noreferrer">5ZMSQdRg…Kmzh7 ↗</a></td></tr>
+      <tr><td>Proposal 8 settled: both ledgers changed</td><td><span class="chip pass">Settled</span></td><td><a href="https://testnet.nearblocks.io/txns/BYWPTGwcw5nYkByRdTX9ReqKFvyYWxyJWiJCiCBRiASY" target="_blank" rel="noopener noreferrer">BYWPTGwc…iASY ↗</a></td></tr>
      </tbody>
     </table></div>
-    <p class="tx-note">Testnet only. The token, the verifier and the oracle are testnet stand-ins. The counterparty is an account we control. Proposal 6 was the admitted model's first decision. It priced 0.14 wNEAR as $50. The vault's gates set only the least it may accept, so a request for too much cannot cost the vault anything. The RPC rejected the execute, nothing was signed, and the proposal expired with no strike.</p>
+    <p class="tx-note">Testnet only. The token, the verifier and the oracle are testnet stand-ins. The counterparty is an account we control. Proposal 6 was the model's first decision: it priced 0.14 wNEAR as $50 and was never executed; the agent now refuses any plan that asks for more than the market pays. Proposal 8 was one of the quotes the agent prices and checks for the model; it executed and settled.</p>
    </div>
    <div class="reproduce"><div><h3>Reproduce the local checks.</h3><p>Rust, cargo-near, Python 3 and Node.js 22+. The 8 November candidate passed 479 distinct local tests, including all 14 sandbox targets, through direct commands. The hardening report records source/WASM identity and command history. Frozen-release CI, reproducible builds and live custody evidence remain required.</p></div><div><div class="command"><code>./scripts/verify.sh --integration</code><button id="copy-verify" type="button" aria-label="Copy verification command" disabled>Copy</button></div><p class="copy-status" id="copy-status" role="status"></p></div></div>
   </section>
@@ -1692,10 +1694,10 @@ td {
 <script>
 (function(){
   var steps=[
-    {text:'The agent proposes 2 USDC for at least 0.55 wNEAR under manual-v1 (proposal 3). A proposal is only a request.',tx:'5ptybytM9ikj2ibkM4J1yYxvP8ZoaPdZLRGVBdZEDKVu',txLabel:'Proposal transaction',v:['9','0'],s:['0','0.99']},
+    {text:'The agent proposes 2 USDC for at least 0.55 wNEAR under manual-v1 (proposal 3). A proposal is only a request.',tx:'98i1jNVhYQqozeJtcUdwZSHGcu8vBynrsLK3QfeZewDd',txLabel:'Proposal transaction',v:['9','0'],s:['0','0.99']},
     {text:'The vault checks the balance, the 50 USDC per-trade cap, a price no older than 60 seconds, and the 1% slippage limit. No signature is requested until every check passes.',tx:null,v:['9','0'],s:['0','0.99']},
-    {text:'With every check passed, the vault requests a signature. The execution is recorded as Executed for proposal 3.',tx:'4a6qSdVNhitAEVttjUdDUHHrPLSwMJFzEazwvdFrYY4R',txLabel:'Execute transaction',v:['9','0'],s:['0','0.99']},
-    {text:'The signed vault intent and the matching counterparty intent settle in one execute_intents call. The two sides’ changes mirror each other.',tx:'B8nYgKKYcNCrYEuG9QZ92KUJe3vj641ZhvZTzy9VzXo5',txLabel:'Settlement transaction',v:['7','0.55'],s:['2','0.44']}
+    {text:'With every check passed, the vault requests a signature. The execution is recorded as Executed for proposal 3.',tx:'GGyde4LHvEDMtjaEmKoMCLJhvEcYRM3RQ8MYe8Tnsc36',txLabel:'Execute transaction',v:['9','0'],s:['0','0.99']},
+    {text:'The signed vault intent and the matching counterparty intent settle in one execute_intents call. The two sides’ changes mirror each other.',tx:'7uTJpKFkEDfKEqz1PxzNePeXJN27LK1ank75E6TRonZE',txLabel:'Settlement transaction',v:['7','0.55'],s:['2','0.44']}
   ];
   var buttons=[].slice.call(document.querySelectorAll('.step'));
   var playBtn=document.getElementById('replay-play'),timer=null,current=0;

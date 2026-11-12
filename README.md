@@ -69,7 +69,7 @@ A permitted trade can still lose money. Mandate bounds what can be authorized; i
 
 ## ⛓️ On testnet today
 
-The vault, its DAO owner and every step above are on NEAR testnet, with transaction hashes and logs. See the **[Testnet record: vault2](#testnet-record-vault2)** table: a 1 USDC withdrawal delivered after a real 24-hour wait, a matched settlement, two on-chain refusals, and the admission of a model ID, applied only after its 24-hour delay.
+The vault, its DAO owner and every step above are on NEAR testnet, with transaction hashes and logs. See the **[Testnet record: vault2](#testnet-record-vault2)** table: a 1 USDC withdrawal delivered after a real 24-hour wait, a matched settlement, two on-chain refusals, the admission of a model ID applied only after its 24-hour delay, and a trade decided by that model that executed and settled.
 
 The token, the Intents verifier and the oracle are testnet stand-ins, prices are operator-fed from a public source, and the counterparty is an account the team controls.
 
@@ -668,28 +668,29 @@ source, and the counterparty is an account the team controls.
 
 | Date (2026) | What happened | Result | Transaction | Log |
 |---|---|---|---|---|
-| 10 Nov | 1 USDC withdrawal applied after its real 86,400-second delay | `Delivered` | [`3W3xyche…`](https://testnet.nearblocks.io/txns/3W3xycheutTk9xixMubbPLTP9JFEhzhYDug4BPXG9JBE) | [vault2-withdraw-apply.log](docs/evidence/testnet-vault2-2026-11-09/vault2-withdraw-apply.log) |
-| 10 Nov | Proposal 2: 2 USDC for at least 0.55 wNEAR, executed at a live price | `Executed` | [`GX3H8soz…`](https://testnet.nearblocks.io/txns/GX3H8soziLDsfb9F71zM6LunC11Ff48GL5rTS68ic4tQ) | [vault2-live-trade.log](docs/evidence/testnet-vault2-2026-11-09/vault2-live-trade.log) |
-| 11 Nov | Proposal 3 executed, then settled with the counterparty in one `execute_intents` | vault −2 USDC +0.55 wNEAR; counterparty +2 USDC −0.55 wNEAR | [`4a6qSdVN…`](https://testnet.nearblocks.io/txns/4a6qSdVNhitAEVttjUdDUHHrPLSwMJFzEazwvdFrYY4R), [`B8nYgKKY…`](https://testnet.nearblocks.io/txns/B8nYgKKYcNCrYEuG9QZ92KUJe3vj641ZhvZTzy9VzXo5) | [vault2-settlement.log](docs/evidence/testnet-vault2-2026-11-09/vault2-settlement.log) |
-| 11 Nov | Proposal 4: 60 USDC with 7 USDC held | `Rejected · InsufficientBalance` | [`GoUU2JWX…`](https://testnet.nearblocks.io/txns/GoUU2JWXjPSWdbf5tZU2F8ypFQvxrYkPBGnuWSSNyXbc) | [vault2-overcap.log](docs/evidence/testnet-vault2-2026-11-09/vault2-overcap.log) |
-| 11 Nov | Proposal 5: 60 USDC with 67 USDC held, valued at $59.97 against the $50 cap | `Rejected · TradeTooLarge` | [`J4RvGERY…`](https://testnet.nearblocks.io/txns/J4RvGERYiuFv2hfninTCFWxqjw4HikG6rXH7VRSsDjBM) | [vault2-cap.log](docs/evidence/testnet-vault2-2026-11-09/vault2-cap.log) |
-| 11 Nov | DAO proposal 5 queues the admission of `gemini-3.1-flash-lite` | Queued, effective 12 Nov 07:37:49 UTC | [`4sFspKrx…`](https://testnet.nearblocks.io/txns/4sFspKrxZbiwqTsstfPQCyAEKGnnaAtZnM9hU1ERe4nK) | [vault2-admit-model.log](docs/evidence/testnet-vault2-2026-11-09/vault2-admit-model.log) |
-| 11 Nov | Counterparty top-up: 20 USDC minted and deposited, 0.3 NEAR wrapped and deposited | Counterparty holds 22 USDC and 0.74 wNEAR | [`Q4tUjTaj…`](https://testnet.nearblocks.io/txns/Q4tUjTajTUyii6pxB1qfEg3LHokDGf9L58K6HSq3eUw), [`DGgVUpW1…`](https://testnet.nearblocks.io/txns/DGgVUpW1vCK5rX9hxQJHgvo4efzp2jHEvhmvNt5Y4y1U), [`Bho28s95…`](https://testnet.nearblocks.io/txns/Bho28s955Mg1K9pVaAji2wDrN3FDFQZ1SgQXcw7UGXUe), [`3nc47Muh…`](https://testnet.nearblocks.io/txns/3nc47MuhQHyRVoG94t6K33UcyeGZ97Qb72EErs9bAjHL) | [solver-topup.log](docs/evidence/testnet-vault2-2026-11-09/solver-topup.log) |
-| 12 Nov | The queued admission applied at 07:38:59 UTC, after the 24-hour delay ended at 07:37:49 | `Applied` · allowlist `manual-v1`, `gemini-3.1-flash-lite` | [`DzUFptM8…`](https://testnet.nearblocks.io/txns/DzUFptM81MGMUBzaCpFWv4UiEjQXwu147LPJP8SK2fF9) | [vault2-mandate-apply.log](docs/evidence/testnet-vault2-2026-11-09/vault2-mandate-apply.log) |
-| 12 Nov | Proposal 6, decided by `gemini-3.1-flash-lite`: 0.142450 wNEAR (about $0.50) for at least 49.75 USDC | Proposed, not executed: the RPC rejected `execute` (`InvalidTransaction`); expired with no strike | on chain via `get_pending_proposal`; prices [`9atYNXDG…`](https://testnet.nearblocks.io/txns/9atYNXDGu3w615cWD4azij4otMaRnhWnTkAHMNNAjjZ7) | [vault2-model-trade-attempt.log](docs/evidence/testnet-vault2-2026-11-09/vault2-model-trade-attempt.log) |
+| 10 Nov | 1 USDC withdrawal applied after its real 86,400-second delay | `Delivered` | [`7mG76TGM…`](https://testnet.nearblocks.io/txns/7mG76TGMSkGPPXG28fLRDKTygaGVoZUeVg5N1u8Y7wfZ) | [vault2-withdraw-apply.log](docs/evidence/testnet-vault2-2026-11-09/vault2-withdraw-apply.log) |
+| 10 Nov | Proposal 2: 2 USDC for at least 0.55 wNEAR, executed at a live price | `Executed` | [`Ah4QhhG2…`](https://testnet.nearblocks.io/txns/Ah4QhhG2W8yTH9ZoG7XC6dVKBHTcKUvZeHDP2yzye8s4) | [vault2-live-trade.log](docs/evidence/testnet-vault2-2026-11-09/vault2-live-trade.log) |
+| 11 Nov | Proposal 3 executed, then settled with the counterparty in one `execute_intents` | vault −2 USDC +0.55 wNEAR; counterparty +2 USDC −0.55 wNEAR | [`GGyde4LH…`](https://testnet.nearblocks.io/txns/GGyde4LHvEDMtjaEmKoMCLJhvEcYRM3RQ8MYe8Tnsc36), [`7uTJpKFk…`](https://testnet.nearblocks.io/txns/7uTJpKFkEDfKEqz1PxzNePeXJN27LK1ank75E6TRonZE) | [vault2-settlement.log](docs/evidence/testnet-vault2-2026-11-09/vault2-settlement.log) |
+| 11 Nov | Proposal 4: 60 USDC with 7 USDC held | `Rejected · InsufficientBalance` | [`C17Yg3kq…`](https://testnet.nearblocks.io/txns/C17Yg3kqqA2jkxvzyJcYz5dRBE6HBZKCLt2MPskzF1dA) | [vault2-overcap.log](docs/evidence/testnet-vault2-2026-11-09/vault2-overcap.log) |
+| 11 Nov | Proposal 5: 60 USDC with 67 USDC held, valued at $59.97 against the $50 cap | `Rejected · TradeTooLarge` | [`9cdyxmaA…`](https://testnet.nearblocks.io/txns/9cdyxmaAW6Q79SNbfayzoYBn6JFAfA362eEzjfGSKQhA) | [vault2-cap.log](docs/evidence/testnet-vault2-2026-11-09/vault2-cap.log) |
+| 11 Nov | DAO proposal 5 queues the admission of `gemini-3.1-flash-lite` | Queued, effective 12 Nov 07:37:49 UTC | [`Fg5CEsnv…`](https://testnet.nearblocks.io/txns/Fg5CEsnvMbooJHtUobKh2i1wsN1pyzoqtA74pfeok4Xj) | [vault2-admit-model.log](docs/evidence/testnet-vault2-2026-11-09/vault2-admit-model.log) |
+| 11 Nov | Counterparty top-up: 20 USDC minted and deposited, 0.3 NEAR wrapped and deposited | Counterparty holds 22 USDC and 0.74 wNEAR | [`GAhztL12…`](https://testnet.nearblocks.io/txns/GAhztL12goGRS6YW63o7b2hXCFpL7d1oMRfcquB6duy7), [`CDNUDt6G…`](https://testnet.nearblocks.io/txns/CDNUDt6Gc4Z9G2dZ3je2Vzg3US9Zmjj6ZAuDffg2wbi7), [`BT1s6qnS…`](https://testnet.nearblocks.io/txns/BT1s6qnSJzvBsuFCZywdU3pLUqdewRRYppTV5GZRmpoQ), [`HT3er3bD…`](https://testnet.nearblocks.io/txns/HT3er3bDcXUXDEmQyxETh83ZA6KVsQvpRBwUd2SS1YoE) | [solver-topup.log](docs/evidence/testnet-vault2-2026-11-09/solver-topup.log) |
+| 12 Nov | The queued admission applied at 07:38:59 UTC, after the 24-hour delay ended at 07:37:49 | `Applied` · allowlist `manual-v1`, `gemini-3.1-flash-lite` | [`Exen1r7y…`](https://testnet.nearblocks.io/txns/Exen1r7y3un6fNq7xYTnvRKqoCnaNv1bqFA93XXzMvVs) | [vault2-mandate-apply.log](docs/evidence/testnet-vault2-2026-11-09/vault2-mandate-apply.log) |
+| 12 Nov | Proposal 6, decided by `gemini-3.1-flash-lite`: 0.142450 wNEAR (about $0.50) for at least 49.75 USDC | Proposed, not executed: the RPC rejected `execute` (`NotEnoughBalance` on the sending account); expired with no strike | [`8Ek1SRJW…`](https://testnet.nearblocks.io/txns/8Ek1SRJWUZGdUZbG7JNE2EWsPAdBDBaF7kKUYq6hyWQ8); prices [`EEWvren5…`](https://testnet.nearblocks.io/txns/EEWvren5Gt69R1kFheqKU4PWA7Evn89HXZJPkoN5wi6q) | [vault2-model-trade-attempt.log](docs/evidence/testnet-vault2-2026-11-09/vault2-model-trade-attempt.log) |
+| 12 Nov | Proposal 8, decided by `gemini-3.1-flash-lite` from code-priced quotes: 0.290698 wNEAR for at least 0.995503 USDC, then settled with the counterparty | `Executed` · vault +0.995503 USDC −0.290698 wNEAR; counterparty the mirror | [`5ZMSQdRg…`](https://testnet.nearblocks.io/txns/5ZMSQdRgwkMoWVFy48tetrbPPJBMX5SgLKSbpJhKmzh7), [`BYWPTGwc…`](https://testnet.nearblocks.io/txns/BYWPTGwcw5nYkByRdTX9ReqKFvyYWxyJWiJCiCBRiASY) | [vault2-model-trade.log](docs/evidence/testnet-vault2-2026-11-09/vault2-model-trade.log) |
 
-State after these rows: vault2 holds 67 USDC and 0.55 wNEAR on the verifier, the strike count is 2 of 3,
-and the allowlist is `manual-v1` and `gemini-3.1-flash-lite`, with no mandate change queued
-([readback-2026-11-12-after-attempt.txt](docs/evidence/testnet-vault2-2026-11-09/readback-2026-11-12-after-attempt.txt)).
-Proposal 6 is still stored but expired, so it cannot execute; the agent's next proposal replaces it.
-Every executed trade used `manual-v1`. The model's proposal 6 was wrong: it priced 0.14 wNEAR as $50.
-The vault's gates set only the least it may accept, so a request for more than the market pays cannot cost
-the vault anything; at worst it never fills. The evidence README records the model's full response.
+State after these rows: vault2 holds 67.995503 USDC and 0.259302 wNEAR on the verifier, the strike count is 0,
+no proposal is pending, and the allowlist is `manual-v1` and `gemini-3.1-flash-lite`
+([readback-2026-11-12-after-model-trade.txt](docs/evidence/testnet-vault2-2026-11-09/readback-2026-11-12-after-model-trade.txt)).
+Proposal 6, the model's first decision, was wrong: it priced 0.14 wNEAR as $50 and was never executed. After it,
+the agent gives the model readable values and a list of code-priced quotes, and refuses any plan that asks for
+more than the market pays (2% margin, to allow for oracle lag). Proposal 8 was one of those quotes; it executed and settled.
 To check the current state without an explorer, run `python3 -B scripts/demo-readback.py`; it makes view calls only.
-Block explorers can show empty pages for older testnet transactions, and the free RPC does not return
-their status; the contract views and ledgers above are the primary check.
+Every hash above is the real transaction hash and opens on the explorer. The run logs printed different values
+because of a near-api 0.8.7 bug; [TX-HASH-CORRECTIONS.md](docs/evidence/TX-HASH-CORRECTIONS.md) maps each printed
+value to its real transaction and explains how each match was proven.
 
-Not shown on testnet yet: a model-decided trade that executes, an independent counterparty, a real oracle, the real
+Not shown on testnet yet: an independent counterparty, a real oracle, the real
 Intents contract, on-chain replay refusal, and withdrawal failure or recovery cases. Mainnet is NO-GO.
 
 ## Website and dashboard

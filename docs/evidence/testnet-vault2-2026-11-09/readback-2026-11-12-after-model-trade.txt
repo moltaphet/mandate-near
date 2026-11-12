@@ -1,0 +1,20 @@
+Read-only check of the testnet demo via https://test.rpc.fastnear.com
+Vault: vault2.mandate-t1.testnet   Verifier: intents.mandate-t1.testnet
+
+Last proposal outcome                        {"proposal_id": "8", "outcome": {"Executed": {"proposal_id": "8", "expires_sec": "1794484044"}}}
+Pending proposal                             null
+Strikes (halt at 3)                          0
+Paused                                       False
+Withdrawal status                            null
+Last withdrawal outcome                      {"Delivered": {"withdrawal_id": "1", "amount": "1000000"}}
+Allowed model ids                            ["manual-v1", "gemini-3.1-flash-lite"]
+Per-trade cap (micro-USD)                    50000000
+Pending mandate change                       null
+
+Verifier ledgers (base units)
+vault2.mandate-t1.testnet · nep141:usdc.mandate-t1.testnet 67995503
+vault2.mandate-t1.testnet · nep141:wrap.testnet 259302325581395348837210
+solver.mandate-t1.testnet · nep141:usdc.mandate-t1.testnet 21004497
+solver.mandate-t1.testnet · nep141:wrap.testnet 1030697674418604651162790
+
+Each value is read from the final block, so rerunning the script shows the latest state.
