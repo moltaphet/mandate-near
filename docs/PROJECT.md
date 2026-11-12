@@ -112,13 +112,13 @@ Components:
 - **Exact math**: 256-bit USD valuation with conservative rounding. Built, with tests.
 - **Intent builder**: `raw_ed25519` `token_diff` payload and V1 nonce. Built; historical author-recorded mainnet simulation and sandbox fixture verification, not a live funded vault trade.
 - **Keeper** (Rust): execution/outbox sandbox coverage and final local client/network tests passed; explicit publication is implemented with matching quote metadata. Live binary/relay operation remains open.
-- **Agent integrations**: manual script with existing sandbox coverage; deterministic two-asset strategy and final-snapshot gate preview implemented. OutLayer and model inference [PLANNED].
+- **Agent integrations**: manual script with existing sandbox coverage; deterministic two-asset strategy and final-snapshot gate preview implemented. Model decisions are implemented with readable prompt values and code-priced quotes; one model-decided trade executed and settled on testnet. OutLayer [PLANNED].
 - **SDK**: typed client over the vault's public methods. [PLANNED]
 - **Evidence site and dashboard**: selected public vault state and Intents balances can be read at one final block; fixed sample mode is separate. Public RPC data does not independently authenticate custody or settlement.
 
 ## 7. Trade lifecycle
 
-Two phases by design: the agent submits a proposal, then a permissionless caller executes it. Keeping planned TEE work outside execution avoids combining its gas with balance/oracle/signing calls. The implemented path is sandbox-tested with a stand-in MPC signer; a requirement to split the plain-script path has not been measured. It has not run end to end with funds on a live chain.
+Two phases by design: the agent submits a proposal, then a permissionless caller executes it. Keeping planned TEE work outside execution avoids combining its gas with balance/oracle/signing calls. The implemented path is sandbox-tested with a stand-in MPC signer; a requirement to split the plain-script path has not been measured. On NEAR testnet it has run end to end with the real testnet MPC signer and a fixture Intents verifier: two settled trades, one decided by a model (see docs/evidence/testnet-vault2-2026-11-09). It has not run on mainnet.
 
 **Transaction 1, decision.**
 1. The Rust reference agent accepts a manual plan or builds an exact-input proposal from two-asset holdings, target band and a matching solver quote. It previews every gate and refreshes final state before proposing. OutLayer is planned.

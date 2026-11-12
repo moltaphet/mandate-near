@@ -369,7 +369,8 @@
       <div class="tags">
         <div class="tagrow"><span class="pill proven">Simulated</span><span>A separate spike's testnet MPC signature was accepted by mainnet <code>simulate_intents</code> under an implicit account. No funded vault settlement is established by that check.</span></div>
         <div class="tagrow"><span class="pill tested">Tested</span><span>Gates, owner controls, funded matched ledger settlement, atomic refusal and replay against the sandbox Intents fixture with a stand-in signer/oracle. Run <code>./scripts/verify.sh --integration</code>; this page sends no transactions.</span></div>
-        <div class="tagrow"><span class="pill planned">Still open</span><span>Actual vault live signing, funded settlement, post-delay withdrawal, recovery and solver publication evidence; OutLayer agent. Deterministic rebalancing, explicit metadata-bound relay publication and unique withdrawal receipts are implemented with local tests. Receipts prove initial debit, not terminal FT delivery/refund completion.</span></div>
+        <div class="tagrow"><span class="pill proven">Testnet</span><span>On NEAR testnet (vault2): vault MPC signing, two settlements with a counterparty we control (one manual, one decided by an admitted model), a 1 USDC withdrawal after its 24-hour delay, and a model admission after its 24-hour delay. Evidence: <code>docs/evidence/testnet-vault2-2026-11-09</code>.</span></div>
+        <div class="tagrow"><span class="pill planned">Still open</span><span>On-chain failure and recovery cases, an independent solver, a real oracle, the real Intents contract and mainnet; OutLayer agent. Deterministic rebalancing, explicit metadata-bound relay publication and unique withdrawal receipts are implemented with local tests. Receipts prove initial debit, not terminal FT delivery/refund completion.</span></div>
         <div class="tagrow"><span class="pill sample">Sample</span><span>The receipt and interactive scenarios in this mode are fixed illustrations. The attack table is dated recorded sandbox output. Use Observed state for separate public RPC observations.</span></div>
       </div>
     </div>
@@ -384,7 +385,7 @@
     <div>
       <details class="q" open>
         <summary>Is this trading live on NEAR?</summary>
-        <p>No live funded vault trade is verified. The execution path reads balances and oracle data and calls a stand-in signer in sandbox tests. R1 used a separate testnet spike and mainnet simulation. Actual vault live signing and settlement still need transaction evidence.</p>
+        <p>On NEAR testnet only. vault2 signed and settled two trades with a counterparty we control, one of them decided by an admitted model, and both ledgers are recorded. No mainnet trade exists. On testnet the prices are operator-fed and the Intents verifier is a fixture build.</p>
       </details>
       <details class="q">
         <summary>Can the agent move the money?</summary>
@@ -400,7 +401,7 @@
       </details>
       <details class="q">
         <summary>Who can change the rules?</summary>
-        <p>Only the authorized owner. Tightening applies immediately; loosening is queued for 24 hours and can be cancelled. Pause blocks new and unsigned execution work; already issued signatures retain their deadline. These controls are implemented. A distinct recoverable owner is required; DAO/multisig integration remains to be demonstrated.</p>
+        <p>Only the authorized owner. Tightening applies immediately; loosening is queued for 24 hours and can be cancelled. Pause blocks new and unsigned execution work; already issued signatures retain their deadline. These controls are implemented. On testnet the owner is a Sputnik DAO: it set the agent, queued a withdrawal and admitted a model, each through a DAO proposal. A reviewed multisig with independent members is still required for real funds.</p>
       </details>
       <details class="q">
         <summary>What if the agent is compromised or spams proposals?</summary>
