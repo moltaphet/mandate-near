@@ -1,0 +1,20 @@
+Read-only check of the testnet demo via https://test.rpc.fastnear.com
+Vault: vault2.mandate-t1.testnet   Verifier: intents.mandate-t1.testnet
+
+Last proposal outcome                        {"proposal_id": "5", "outcome": {"Rejected": {"code": "TradeTooLarge", "reason": "TradeTooLarge: notional 59968440 exceeds 50000000 micro-USD"}}}
+Pending proposal                             {"id": "6", "asset_in": "nep141:wrap.testnet", "asset_out": "nep141:usdc.mandate-t1.testnet", "amount_in": "142450142450142450142450", "min_amount_out": "49750000", "reason_hash": "0596dcf0c22f1f49b51b538a66b60e249683db42044ef4effb913dbd27b400d4", "created_sec": 1794469664, "expires_sec": 1794469724, "model_id": "gemini-3.1-flash-lite"}
+Strikes (halt at 3)                          2
+Paused                                       False
+Withdrawal status                            null
+Last withdrawal outcome                      {"Delivered": {"withdrawal_id": "1", "amount": "1000000"}}
+Allowed model ids                            ["manual-v1", "gemini-3.1-flash-lite"]
+Per-trade cap (micro-USD)                    50000000
+Pending mandate change                       null
+
+Verifier ledgers (base units)
+vault2.mandate-t1.testnet · nep141:usdc.mandate-t1.testnet 67000000
+vault2.mandate-t1.testnet · nep141:wrap.testnet 550000000000000000000000
+solver.mandate-t1.testnet · nep141:usdc.mandate-t1.testnet 22000000
+solver.mandate-t1.testnet · nep141:wrap.testnet 740000000000000000000000
+
+Each value is read from the final block, so rerunning the script shows the latest state.

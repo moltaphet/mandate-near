@@ -56,6 +56,7 @@ proposal, and `withdraw-apply` was called by the parent account once the delay h
   InsufficientBalance); stale price, slippage, cooldown and the other gates are shown only on the sandbox.
 - A real oracle. The current testnet oracle is a stand-in; see [testnet decisions](design/testnet-decisions.md).
 - A matched settlement with an independent counterparty. The recorded settlement used an account the team controls.
-- A model-decided trade. The model admission applied on 12 November (`DzUFptM8…`), but every recorded trade
-  uses `manual-v1`. A dry run of the model path after the apply returned no trade because the prices were stale.
+- A model-decided trade that executes. The model admission applied on 12 November (`DzUFptM8…`), and the model
+  made one proposal (6), which was not executed: the RPC rejected `execute`, and the proposal expired with no
+  strike. Every executed trade uses `manual-v1`.
 - A failure or recovery case on chain (lost callback, failed signing, cancellation).

@@ -16,10 +16,11 @@ All transactions are on `vault2.mandate-t1.testnet`, with its owner a Sputnik DA
 | Balance check refuses | 60 USDC proposal with 7 USDC held. Gate result `InsufficientBalance`. Nothing moved | [`GoUU2JWXjPSWdbf5tZU2F8ypFQvxrYkPBGnuWSSNyXbc`](https://testnet.nearblocks.io/txns/GoUU2JWXjPSWdbf5tZU2F8ypFQvxrYkPBGnuWSSNyXbc) |
 | Model admission waits 24 hours | `gemini-3.1-flash-lite` queued through the DAO on 11 Nov, effective 12 Nov 2026 07:37:49 UTC | [`4sFspKrxZbiwqTsstfPQCyAEKGnnaAtZnM9hU1ERe4nK`](https://testnet.nearblocks.io/txns/4sFspKrxZbiwqTsstfPQCyAEKGnnaAtZnM9hU1ERe4nK) |
 | Model admission applied | Applied at 07:38:59 UTC on 12 Nov by a permissionless `apply_pending_mandate`. Allowlist is now `manual-v1`, `gemini-3.1-flash-lite`; nothing queued | [`DzUFptM81MGMUBzaCpFWv4UiEjQXwu147LPJP8SK2fF9`](https://testnet.nearblocks.io/txns/DzUFptM81MGMUBzaCpFWv4UiEjQXwu147LPJP8SK2fF9) |
+| First model-decided proposal | Proposal 6 by `gemini-3.1-flash-lite`: 0.142450 wNEAR for at least 49.75 USDC, a wrong valuation by the model. Proposed with its model ID; `execute` was rejected by the RPC (`InvalidTransaction`), so nothing was signed. Expired with no strike | [log](evidence/testnet-vault2-2026-11-09/vault2-model-trade-attempt.log) |
 
 ## What is not shown yet
 
-- **A model-decided trade.** The model is admitted, but every trade above used the manual agent path (`manual-v1`). A dry run of the model path after the apply returned no trade, because the prices on chain were older than the 60-second limit.
+- **A model-decided trade that executes.** The model is admitted and made one proposal (6), but it was not executed. Every executed trade above used the manual agent path (`manual-v1`).
 - **A real counterparty.** The counterparty is an account we control, not an independent solver.
 - **A real oracle.** Prices are operator-fed testnet values from a public source, with source timestamps checked. The testnet oracle accepts reports from any caller.
 - **A real Intents contract.** The verifier is the fixture build.
