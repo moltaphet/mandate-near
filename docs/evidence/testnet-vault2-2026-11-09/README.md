@@ -25,7 +25,7 @@ detailed tables and logs are in the sections below.
 | 11 | 10 Nov | `set_report` ×2 (live, $3.60) | `6ZpBUv2C…`, `8aqjmmse…` | ok |
 | 12 | 10 Nov | `propose` 2 USDC for 0.55 wNEAR (proposal 2) | `V6rQUkKZ…` | ok |
 | 13 | 10 Nov | `execute` proposal 2 | `GX3H8soz…` | Executed |
-| 14 | 11 Nov | DAO `set_mandate`: admit `gemini-3.1-flash-lite` (proposal 5 of the DAO) | `4sFspKrx…`, `Gd6WPZus…` | queued to 12 Nov 07:37 UTC |
+| 14 | 11 Nov | DAO `set_mandate`: admit `gemini-3.1-flash-lite` (proposal 5 of the DAO) | `4sFspKrx…`, `Gd6WPZus…` | queued to 12 Nov 07:37 UTC; applied in row 24 |
 | 15 | 11 Nov | Solver account created, key registered on verifier | `9jUQk8uq…`, `A1UQ2QYN…` | ok |
 | 16 | 11 Nov | Solver: wrap 1 NEAR, storage, verifier storage, deposit 0.99 wNEAR | `7z4LM6BU…`, `99KkXHo4…`, `Fv2YpJTR…`, `D6y8Noj9…` | ok (two earlier attempts failed, not counted) |
 | 17 | 11 Nov | `set_report` ×2, `propose` 2 USDC for 0.55 wNEAR (proposal 3), `execute` | `BWoaDazW…`, `H5QEezqw…`, `5ptybytM…`, `4a6qSdVN…` | Executed |
@@ -36,6 +36,8 @@ detailed tables and logs are in the sections below.
 | check | 11 Nov | Read-only readback, no transaction (`scripts/demo-readback.py`) | [readback-2026-11-11.txt](readback-2026-11-11.txt) | Last outcome, strikes, withdrawal and ledgers match rows 1–21 |
 | 22 | 11 Nov | Solver top-up: mint 20 USDC and deposit it for the solver; wrap 0.3 NEAR (`solver-topup`) | `Q4tUjTaj…`, `DGgVUpW1…`, `Bho28s95…` | ok |
 | 23 | 11 Nov | Deposit the wrapped 0.3 wNEAR for the solver (`solver-topup-wnear`, 100 TGas) | `3nc47Muh…` | ok |
+| 24 | 12 Nov | `apply_pending_mandate` after the delay (`mandate-apply`), 07:38 UTC | `DzUFptM81MGMUBzaCpFWv4UiEjQXwu147LPJP8SK2fF9` | Applied: `gemini-3.1-flash-lite` admitted |
+| check | 12 Nov | Read-only readback after row 24, no transaction | [readback-2026-11-12.txt](readback-2026-11-12.txt) | Allowlist has both model ids; no change queued; ledgers unchanged |
 
 **Net state at the end:** after step 18, vault2 holds 7 USDC and 0.55 wNEAR on the verifier, and the solver holds
 2 USDC and 0.44 wNEAR. Step 20 adds 60 USDC, so vault2 holds 67 USDC. Steps 19 and 21 are refused and move nothing.
@@ -43,6 +45,8 @@ The strike count is 2, no proposal is pending, and the vault is not paused.
 Steps 22 and 23 top up the solver for the model-decided trade: it then holds 22 USDC and 0.74 wNEAR, and vault2
 is unchanged. Two earlier submissions of the wNEAR deposit at 200 TGas were rejected by the RPC before execution
 (InvalidTransaction) and moved nothing; the log is [solver-topup.log](solver-topup.log).
+Step 24 applies the queued model admission. The allowlist is then `["manual-v1", "gemini-3.1-flash-lite"]`,
+no mandate change is queued, and balances, strikes (2) and the other mandate fields are unchanged.
 
 Abbreviations: a hash ending in `…` is shortened here. The full hash is in the section named in the table.
 
@@ -183,6 +187,35 @@ which `simulate_mandate_change` confirmed read-only. The change is queued for th
 
 The queued change takes effect at `effective_sec` 1794469069. The log is in [vault2-admit-model.log](vault2-admit-model.log).
 The allowlist stays `["manual-v1"]` until `mandate-apply` runs after that time.
+
+## Model admission applied on vault2, 12 November 2026
+
+The queued change became effective at 07:37:49 UTC on 12 November (`effective_sec` 1794469069), 24 hours
+after the DAO vote queued it. The script that applied it first read the vault and would have sent nothing
+before that time. At 07:38:59 UTC it sent one transaction, `apply_pending_mandate`. Anyone may call it once
+the delay has passed. Log: [vault2-mandate-apply.log](vault2-mandate-apply.log).
+
+| Step | Result | Hash / evidence |
+|---|---|---|
+| Read before: `get_mandate`, `get_pending_mandate` | model not in the allowlist; change queued and due | log line `STATE` |
+| `apply_pending_mandate` (`mandate-apply`) | receipt failures 0 | `DzUFptM81MGMUBzaCpFWv4UiEjQXwu147LPJP8SK2fF9` |
+| Read after: `get_mandate`, `get_pending_mandate` | `gemini-3.1-flash-lite` in the allowlist; nothing queued | log line `VERIFY` |
+| Readback, no transaction | allowlist `["manual-v1", "gemini-3.1-flash-lite"]`, cap 50 USD, strikes 2, ledgers unchanged | [readback-2026-11-12.txt](readback-2026-11-12.txt) |
+
+The run then made a dry run of the model path (`mandate-agent --model --dry-run`). It reads the final-block
+snapshot, sends it to the model and submits nothing. The model returned no trade, with this reason:
+"Oracle price data is currently unavailable for both assets, preventing safe trade execution." That is the
+expected answer. The last prices were written on 11 November, older than the 60-second limit, so the snapshot
+had no usable price. A model trade needs fresh prices written first, in the same run.
+
+What this shows: a loosened mandate field took effect only after the full 24-hour delay, through the DAO
+and a permissionless apply. The admitted model can now be named in a proposal. What it does not show: a
+trade decided by the model. That is a separate step and needs its own approval.
+
+The transaction was looked up on three RPC endpoints (`rpc.testnet.near.org`, `archival-rpc.testnet.near.org`
+and `test.rpc.fastnear.com`). All three returned `UNKNOWN_TRANSACTION`, and the nearblocks API returned HTTP
+410. The state change is visible in the vault's own views, read in the log and in the readback above. Use
+`python3 -B scripts/demo-readback.py` to read it yourself.
 
 ## Settled trade on vault2 with a matched counterparty, 11 November 2026
 

@@ -1,0 +1,7 @@
+== Apply the model admission on vault2 ==
+STATE | allowed_model_ids admitted: no | model: gemini-3.1-flash-lite
+TARGET | vault vault2
+TX | apply_pending_mandate on vault2.mandate-t1.testnet by mandate-t1.testnet | hash DzUFptM81MGMUBzaCpFWv4UiEjQXwu147LPJP8SK2fF9 | receipt failures: 0
+VERIFY | gemini-3.1-flash-lite admitted; no change queued
+no trade: Oracle price data is currently unavailable for both assets, preventing safe trade execution.
+DONE | stage 1 apply and dry-run finished; the model trade still needs your approval

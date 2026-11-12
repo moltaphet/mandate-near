@@ -69,7 +69,7 @@ A permitted trade can still lose money. Mandate bounds what can be authorized; i
 
 ## ⛓️ On testnet today
 
-The vault, its DAO owner and every step above are on NEAR testnet, with transaction hashes and logs. See the **[Testnet record: vault2](#testnet-record-vault2)** table: a 1 USDC withdrawal delivered after a real 24-hour wait, a matched settlement, two on-chain refusals, and the queued admission of a model ID.
+The vault, its DAO owner and every step above are on NEAR testnet, with transaction hashes and logs. See the **[Testnet record: vault2](#testnet-record-vault2)** table: a 1 USDC withdrawal delivered after a real 24-hour wait, a matched settlement, two on-chain refusals, and the admission of a model ID, applied only after its 24-hour delay.
 
 The token, the Intents verifier and the oracle are testnet stand-ins, prices are operator-fed from a public source, and the counterparty is an account the team controls.
 
@@ -675,10 +675,14 @@ source, and the counterparty is an account the team controls.
 | 11 Nov | Proposal 5: 60 USDC with 67 USDC held, valued at $59.97 against the $50 cap | `Rejected · TradeTooLarge` | [`J4RvGERY…`](https://testnet.nearblocks.io/txns/J4RvGERYiuFv2hfninTCFWxqjw4HikG6rXH7VRSsDjBM) | [vault2-cap.log](docs/evidence/testnet-vault2-2026-11-09/vault2-cap.log) |
 | 11 Nov | DAO proposal 5 queues the admission of `gemini-3.1-flash-lite` | Queued, effective 12 Nov 07:37:49 UTC | [`4sFspKrx…`](https://testnet.nearblocks.io/txns/4sFspKrxZbiwqTsstfPQCyAEKGnnaAtZnM9hU1ERe4nK) | [vault2-admit-model.log](docs/evidence/testnet-vault2-2026-11-09/vault2-admit-model.log) |
 | 11 Nov | Counterparty top-up: 20 USDC minted and deposited, 0.3 NEAR wrapped and deposited | Counterparty holds 22 USDC and 0.74 wNEAR | [`Q4tUjTaj…`](https://testnet.nearblocks.io/txns/Q4tUjTajTUyii6pxB1qfEg3LHokDGf9L58K6HSq3eUw), [`DGgVUpW1…`](https://testnet.nearblocks.io/txns/DGgVUpW1vCK5rX9hxQJHgvo4efzp2jHEvhmvNt5Y4y1U), [`Bho28s95…`](https://testnet.nearblocks.io/txns/Bho28s955Mg1K9pVaAji2wDrN3FDFQZ1SgQXcw7UGXUe), [`3nc47Muh…`](https://testnet.nearblocks.io/txns/3nc47MuhQHyRVoG94t6K33UcyeGZ97Qb72EErs9bAjHL) | [solver-topup.log](docs/evidence/testnet-vault2-2026-11-09/solver-topup.log) |
+| 12 Nov | The queued admission applied at 07:38:59 UTC, after the 24-hour delay ended at 07:37:49 | `Applied` · allowlist `manual-v1`, `gemini-3.1-flash-lite` | [`DzUFptM8…`](https://testnet.nearblocks.io/txns/DzUFptM81MGMUBzaCpFWv4UiEjQXwu147LPJP8SK2fF9) | [vault2-mandate-apply.log](docs/evidence/testnet-vault2-2026-11-09/vault2-mandate-apply.log) |
 
 State after these rows: vault2 holds 67 USDC and 0.55 wNEAR on the verifier, the strike count is 2 of 3,
-no proposal is pending, and only `manual-v1` is admitted until the queued change applies. To check the
-current state without an explorer, run `python3 -B scripts/demo-readback.py`; it makes view calls only.
+no proposal is pending, and the allowlist is `manual-v1` and `gemini-3.1-flash-lite`, with no mandate change
+queued ([readback-2026-11-12.txt](docs/evidence/testnet-vault2-2026-11-09/readback-2026-11-12.txt)). Every
+trade so far used `manual-v1`; a trade decided by the admitted model is not recorded yet. A dry run of the
+model path right after the apply returned no trade, because the snapshot's prices were older than 60 seconds.
+To check the current state without an explorer, run `python3 -B scripts/demo-readback.py`; it makes view calls only.
 Block explorers can show empty pages for older testnet transactions, and the free RPC does not return
 their status; the contract views and ledgers above are the primary check.
 
