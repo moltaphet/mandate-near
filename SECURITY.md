@@ -220,7 +220,7 @@ A line-by-line review after the testnet runs found these items. Each is listed w
 | The testnet mock oracle accepted price writes from any account | Fixed: `oracle.mandate-t1.testnet` runs the `parent-writes-only` build; a write from another account is refused on chain |
 | Price feed had one source and no jump bound | Fixed: Kraken cross-check (2%) and a 10% jump limit against the on-chain report, both fail closed |
 | CI actions were pinned by tag and cargo-near was installed with `curl \| sh` | Fixed: actions pinned by commit hash; cargo-near installed from its release binary with a SHA-256 recorded in the workflow |
-| On testnet the agent account and the owner DAO's council account share one key | Open: needs a new, propose-only key for the agent and removal of the shared key. A leaked agent key would currently also control the DAO council vote |
+| On testnet the agent account and the owner DAO's council account shared one key | Fixed on 12 November: the agent now has its own function-call key, limited to `propose` on vault2 (`E1erA7LgnvY2W7WGwFpuRMSWTAbutRi6o1MaQg5qRoVg`), and the shared key was removed from the agent account (`GDAv2iuiKAWv7R5n5p6ytmmasSXdkAcN89bNBhQJ3rpu`). The key file is outside the repository |
 | Removing a held asset from the mandate applies at once (a tightening), and that asset cannot be withdrawn until it is listed again, which waits 24 hours | Documented. Before removing an asset, withdraw it or confirm the vault holds none |
 | `token_diff` signs an exact received amount; the real `intents.near` may take a protocol fee from it | Open for mainnet: gate 4 in [MAINNET-GATES.md](docs/MAINNET-GATES.md) |
 

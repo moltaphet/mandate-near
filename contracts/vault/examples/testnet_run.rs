@@ -195,10 +195,16 @@ const WRAP: &str = "wrap.testnet";
 const SOLVER_WNEAR: &str = "990000000000000000000000";
 
 fn solver_secret() -> R<SecretKey> {
+    key_file_secret(SOLVER)
+}
+
+/// The secret key of `account` from ~/.near-credentials/testnet/<account>.json. Never printed.
+/// The agent has its own key there: a function-call key that may only call `propose` on vault2.
+fn key_file_secret(account: &str) -> R<SecretKey> {
     let home = std::env::var("HOME")?;
-    let path = format!("{home}/.near-credentials/testnet/{SOLVER}.json");
+    let path = format!("{home}/.near-credentials/testnet/{account}.json");
     let file: Value = near_sdk::serde_json::from_slice(&std::fs::read(path)?)?;
-    Ok(file["private_key"].as_str().ok_or("solver key missing")?.parse()?)
+    Ok(file["private_key"].as_str().ok_or("key missing in the credentials file")?.parse()?)
 }
 
 /// Like `call`, but signed by the given key for the given caller.
@@ -887,10 +893,13 @@ async fn step(cx: &Ctx, name: &str, rest: &[String]) -> R<()> {
             // A second optional argument sets amount_in in USDC base units (default 2 USDC).
             let min_out = rest.first().map(String::as_str).unwrap_or("450000000000000000000000");
             let amount_in = rest.get(1).map(String::as_str).unwrap_or("2000000");
-            call(
+            let agent = sub("agent");
+            let agent_signer = Signer::from_secret_key(key_file_secret(agent.as_str())?)?;
+            call_as(
                 cx,
+                &agent,
+                agent_signer,
                 &vault_id(),
-                &sub("agent"),
                 "propose",
                 json!({
                     "asset_in": usdc_asset(),
