@@ -23,7 +23,7 @@ All transactions are on `vault2.mandate-t1.testnet`, with its owner a Sputnik DA
 
 - **Model judgement.** The model chooses among quotes that code prices and checks; its recorded rationale for proposal 8 is not sound. The quotes and the vault's gates bound what it can do. Origin proof (a signed response or a TEE attestation) is not shown: the response is recorded as `UNVERIFIED`.
 - **A real counterparty.** The counterparty is an account we control, not an independent solver.
-- **A real oracle.** Prices are operator-fed testnet values from a public source, with source timestamps checked. The testnet oracle accepts reports from any caller.
+- **A real oracle.** Prices are operator-fed testnet values from a public source (CoinGecko, cross-checked against Kraken), with source timestamps checked. Since 12 November the testnet oracle accepts reports only from its parent account; before that it accepted any caller.
 - **A real Intents contract.** The verifier is the fixture build.
 - **An independent audit.** None has been done. See [audit/AUDIT-PACKAGE.md](audit/AUDIT-PACKAGE.md).
 

@@ -47,6 +47,9 @@ python3 -B scripts/inspect_deployment_test.py
 step "Local preview routing safety tests"
 python3 -B scripts/dashboard_fixture_test.py
 
+step "Price feed guards (offline: cross-check and jump limits)"
+python3 -B scripts/live_price_feed_test.py
+
 step "Unit tests (cargo test --lib)"
 cargo test --workspace --lib --locked
 

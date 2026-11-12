@@ -13,7 +13,7 @@ jobs:
   docs-check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
       - name: Claim and link references
@@ -25,7 +25,7 @@ jobs:
     outputs:
       code: ${{ steps.classify.outputs.code }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -54,18 +54,27 @@ jobs:
       # The runner context is not available in job-level env, so use a fixed temp path.
       INTENTS_ARCHIVE: /tmp/intents-reviewed.tar.gz
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
       # Match rust-toolchain.toml explicitly, including native checks and WASM target.
       - name: Install toolchain
         run: rustup toolchain install 1.95.0 --profile minimal --component rustfmt --component clippy --target wasm32-unknown-unknown
-      # Same pinned installer the `cargo near new` template uses.
+      # The pinned release binary, checked against a SHA-256 recorded here (not read from the
+      # release), so a replaced download fails instead of running.
       - name: Install cargo-near
-        # GitHub release downloads can fail transiently (HTTP 504). Retry the same pinned URL.
-        run: curl --proto '=https' --tlsv1.2 -LsSf --retry 6 --retry-all-errors --retry-delay 20 https://github.com/near/cargo-near/releases/download/cargo-near-v0.22.0/cargo-near-installer.sh | sh
-      - uses: Swatinem/rust-cache@v2
-      - uses: actions/setup-node@v4
+        run: |
+          set -euo pipefail
+          url=https://github.com/near/cargo-near/releases/download/cargo-near-v0.22.0/cargo-near-x86_64-unknown-linux-gnu.tar.gz
+          # GitHub release downloads can fail transiently (HTTP 504). Retry the same pinned URL.
+          curl --proto '=https' --tlsv1.2 -LsSf --retry 6 --retry-all-errors --retry-delay 20 -o cargo-near.tar.gz "$url"
+          echo "9429064e30a427e96523f539cb255f3688d2345e5000d7d4e4873a8247247d1a  cargo-near.tar.gz" | sha256sum -c -
+          tar -xzf cargo-near.tar.gz
+          install -m 755 cargo-near-x86_64-unknown-linux-gnu/cargo-near "$HOME/.cargo/bin/cargo-near"
+          rm -rf cargo-near.tar.gz cargo-near-x86_64-unknown-linux-gnu
+          cargo near --version
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '22'
       - name: Download and verify pinned public Intents source archive

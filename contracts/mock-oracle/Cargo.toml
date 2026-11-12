@@ -11,6 +11,11 @@ publish = false
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+[features]
+# Testnet deployments: only the parent account (for oracle.mandate-t1.testnet, mandate-t1.testnet)
+# may write prices. The sandbox build leaves writes open so tests can set any report.
+parent-writes-only = []
+
 [dependencies]
 near-sdk.workspace = true
 

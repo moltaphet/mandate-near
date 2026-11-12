@@ -50,6 +50,9 @@ detailed tables and logs are in the sections below.
 | 33 | 12 Nov | `execute` proposal 8 | `5ZMSQdRg…` | Executed |
 | 34 | 12 Nov | `execute_intents`: the vault's and the counterparty's intents settled | `BYWPTGwc…` | ledgers changed as listed |
 | check | 12 Nov | Read-only readback after row 34, no transaction | [readback-2026-11-12-after-model-trade.txt](readback-2026-11-12-after-model-trade.txt) | Last outcome Executed (proposal 8); strikes 0; ledgers match row 34 |
+| 35 | 12 Nov | Oracle redeployed with `parent-writes-only`: only `mandate-t1.testnet` may write prices | `FCRXa3rU…` | ok; a write from the agent was refused (`7gvxw9Yy…`) |
+| 36 | 12 Nov | Agent given its own key, limited to `propose` on vault2 | `E1erA7Lg…` | ok; tested with a refused `propose` (`5oXyyntq…`, model id not allowed, no state change) |
+| 37 | 12 Nov | Shared operator key removed from the agent account | `GDAv2iui…` | ok; the agent account now holds only the propose-only key |
 
 **Net state at the end:** after step 18, vault2 holds 7 USDC and 0.55 wNEAR on the verifier, and the solver holds
 2 USDC and 0.44 wNEAR. Step 20 adds 60 USDC, so vault2 holds 67 USDC. Steps 19 and 21 are refused and move nothing.
@@ -125,7 +128,7 @@ the withdrawal is not recorded in this folder.
 ## Operator-fed prices on the testnet oracle, 10 November 2026
 
 The oracle is the testnet stand-in `oracle.mandate-t1.testnet` (`contracts/mock-oracle`). Its
-`set_report` accepts a report from any caller, so these values are operator-fed testnet prices.
+`set_report` accepted a report from any caller at the time, so these values are operator-fed testnet prices. (Since 12 November the oracle accepts reports only from its parent account: redeploy `FCRXa3rUgx9QzWcxUf4J4j6qNCqz6vGA3jot73yjayUr`; a write from the agent account was then refused on chain, `7gvxw9YygQZ2GttALAmzg7yysLTa4TANeTwhwAEbq59N`.)
 They are not a verified oracle, and [gate 3 in MAINNET-GATES.md](../../MAINNET-GATES.md) stays PENDING.
 
 The prices came from the public CoinGecko `simple/price` endpoint through
