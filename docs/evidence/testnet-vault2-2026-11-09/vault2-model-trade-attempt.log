@@ -1,0 +1,20 @@
+== A trade decided by the admitted model ==
+== Preflight (read-only) ==
+allowed=['manual-v1', 'gemini-3.1-flash-lite'] pending=null strikes=2 paused=false model=gemini-3.1-flash-lite
+NOTE | strikes=2: one more refusal halts proposals
+== Model dry-run (no transaction) ==
+no trade: Oracle prices are unavailable for both assets, preventing secure valuation.
+== Fresh prices (2 transactions) ==
+WROTE | target/live-prices.json
+PRICE | NEAR $3.510000 (wNEAR e8 351000000) | USDC $0.999480 (e8 99948000)
+NOT SENT | no chain transaction was made. To write these to the testnet oracle, run the
+           driver's price step with MANDATE_PRICE_JSON=target/live-prices.json, after approval.
+PRICE | wNEAR 351000000 @ 1794469590 | USDC 99948000 @ 1794469602 | e8 units | source live: CoinGecko simple/price (public, no key); NEAR quote 33 s old, USDC quote 21 s old
+TX | set_report on oracle.mandate-t1.testnet by mandate-t1.testnet | hash 9atYNXDGu3w615cWD4azij4otMaRnhWnTkAHMNNAjjZ7 | receipt failures: 0
+TX | set_report on oracle.mandate-t1.testnet by mandate-t1.testnet | hash Dpi5XvDmdiBRWFwwrCXxGj9QxnwVvu5umuvpnBASSuhV | receipt failures: 0
+== Agent proposes (model run; the agent waits for the outcome in the background) ==
+PROPOSAL | {"id":"6","asset_in":"nep141:wrap.testnet","asset_out":"nep141:usdc.mandate-t1.testnet","amount_in":"142450142450142450142450","min_amount_out":"49750000","reason_hash":"0596dcf0c22f1f49b51b538a66b60e249683db42044ef4effb913dbd27b400d4","created_sec":1794469664,"expires_sec":1794469724,"model_id":"gemini-3.1-flash-lite"}
+== Execute ==
+TARGET | vault vault2
+Error: TransactionError(Critical(ServerError(InvalidTransaction({}))))
+DONE | command exited with code 1

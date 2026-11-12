@@ -25,7 +25,7 @@ detailed tables and logs are in the sections below.
 | 11 | 10 Nov | `set_report` ×2 (live, $3.60) | `6ZpBUv2C…`, `8aqjmmse…` | ok |
 | 12 | 10 Nov | `propose` 2 USDC for 0.55 wNEAR (proposal 2) | `V6rQUkKZ…` | ok |
 | 13 | 10 Nov | `execute` proposal 2 | `GX3H8soz…` | Executed |
-| 14 | 11 Nov | DAO `set_mandate`: admit `gemini-3.1-flash-lite` (proposal 5 of the DAO) | `4sFspKrx…`, `Gd6WPZus…` | queued to 12 Nov 07:37 UTC |
+| 14 | 11 Nov | DAO `set_mandate`: admit `gemini-3.1-flash-lite` (proposal 5 of the DAO) | `4sFspKrx…`, `Gd6WPZus…` | queued to 12 Nov 07:37 UTC; applied in row 24 |
 | 15 | 11 Nov | Solver account created, key registered on verifier | `9jUQk8uq…`, `A1UQ2QYN…` | ok |
 | 16 | 11 Nov | Solver: wrap 1 NEAR, storage, verifier storage, deposit 0.99 wNEAR | `7z4LM6BU…`, `99KkXHo4…`, `Fv2YpJTR…`, `D6y8Noj9…` | ok (two earlier attempts failed, not counted) |
 | 17 | 11 Nov | `set_report` ×2, `propose` 2 USDC for 0.55 wNEAR (proposal 3), `execute` | `BWoaDazW…`, `H5QEezqw…`, `5ptybytM…`, `4a6qSdVN…` | Executed |
@@ -36,6 +36,12 @@ detailed tables and logs are in the sections below.
 | check | 11 Nov | Read-only readback, no transaction (`scripts/demo-readback.py`) | [readback-2026-11-11.txt](readback-2026-11-11.txt) | Last outcome, strikes, withdrawal and ledgers match rows 1–21 |
 | 22 | 11 Nov | Solver top-up: mint 20 USDC and deposit it for the solver; wrap 0.3 NEAR (`solver-topup`) | `Q4tUjTaj…`, `DGgVUpW1…`, `Bho28s95…` | ok |
 | 23 | 11 Nov | Deposit the wrapped 0.3 wNEAR for the solver (`solver-topup-wnear`, 100 TGas) | `3nc47Muh…` | ok |
+| 24 | 12 Nov | `apply_pending_mandate` after the delay (`mandate-apply`), 07:38 UTC | `DzUFptM81MGMUBzaCpFWv4UiEjQXwu147LPJP8SK2fF9` | Applied: `gemini-3.1-flash-lite` admitted |
+| check | 12 Nov | Read-only readback after row 24, no transaction | [readback-2026-11-12.txt](readback-2026-11-12.txt) | Allowlist has both model ids; no change queued; ledgers unchanged |
+| 25 | 12 Nov | `set_report` ×2 (CoinGecko, live: NEAR $3.51, USDC $0.99948) | `9atYNXDG…`, `Dpi5XvDm…` | ok |
+| 26 | 12 Nov | `propose` by the agent, decided by `gemini-3.1-flash-lite` (proposal 6) | on chain via `get_pending_proposal` | proposed, 07:47:44 UTC |
+| 27 | 12 Nov | `execute` proposal 6 | not sent: the RPC returned `InvalidTransaction` | not executed; proposal 6 expired at 07:48:44 UTC, no strike |
+| check | 12 Nov | Read-only readback after row 27, no transaction | [readback-2026-11-12-after-attempt.txt](readback-2026-11-12-after-attempt.txt) | Proposal 6 still stored but expired; strikes 2; ledgers unchanged |
 
 **Net state at the end:** after step 18, vault2 holds 7 USDC and 0.55 wNEAR on the verifier, and the solver holds
 2 USDC and 0.44 wNEAR. Step 20 adds 60 USDC, so vault2 holds 67 USDC. Steps 19 and 21 are refused and move nothing.
@@ -43,6 +49,10 @@ The strike count is 2, no proposal is pending, and the vault is not paused.
 Steps 22 and 23 top up the solver for the model-decided trade: it then holds 22 USDC and 0.74 wNEAR, and vault2
 is unchanged. Two earlier submissions of the wNEAR deposit at 200 TGas were rejected by the RPC before execution
 (InvalidTransaction) and moved nothing; the log is [solver-topup.log](solver-topup.log).
+Step 24 applies the queued model admission. The allowlist is then `["manual-v1", "gemini-3.1-flash-lite"]`,
+no mandate change is queued, and balances, strikes (2) and the other mandate fields are unchanged.
+Steps 25 to 27 are the first proposal decided by the admitted model. It was proposed but not executed, so
+nothing was signed and nothing moved. Proposal 6 expired without a strike; balances and strikes are unchanged.
 
 Abbreviations: a hash ending in `…` is shortened here. The full hash is in the section named in the table.
 
@@ -184,6 +194,35 @@ which `simulate_mandate_change` confirmed read-only. The change is queued for th
 The queued change takes effect at `effective_sec` 1794469069. The log is in [vault2-admit-model.log](vault2-admit-model.log).
 The allowlist stays `["manual-v1"]` until `mandate-apply` runs after that time.
 
+## Model admission applied on vault2, 12 November 2026
+
+The queued change became effective at 07:37:49 UTC on 12 November (`effective_sec` 1794469069), 24 hours
+after the DAO vote queued it. The script that applied it first read the vault and would have sent nothing
+before that time. At 07:38:59 UTC it sent one transaction, `apply_pending_mandate`. Anyone may call it once
+the delay has passed. Log: [vault2-mandate-apply.log](vault2-mandate-apply.log).
+
+| Step | Result | Hash / evidence |
+|---|---|---|
+| Read before: `get_mandate`, `get_pending_mandate` | model not in the allowlist; change queued and due | log line `STATE` |
+| `apply_pending_mandate` (`mandate-apply`) | receipt failures 0 | `DzUFptM81MGMUBzaCpFWv4UiEjQXwu147LPJP8SK2fF9` |
+| Read after: `get_mandate`, `get_pending_mandate` | `gemini-3.1-flash-lite` in the allowlist; nothing queued | log line `VERIFY` |
+| Readback, no transaction | allowlist `["manual-v1", "gemini-3.1-flash-lite"]`, cap 50 USD, strikes 2, ledgers unchanged | [readback-2026-11-12.txt](readback-2026-11-12.txt) |
+
+The run then made a dry run of the model path (`mandate-agent --model --dry-run`). It reads the final-block
+snapshot, sends it to the model and submits nothing. The model returned no trade, with this reason:
+"Oracle price data is currently unavailable for both assets, preventing safe trade execution." That is the
+expected answer. The last prices were written on 11 November, older than the 60-second limit, so the snapshot
+had no usable price. A model trade needs fresh prices written first, in the same run.
+
+What this shows: a loosened mandate field took effect only after the full 24-hour delay, through the DAO
+and a permissionless apply. The admitted model can now be named in a proposal. What it does not show: a
+trade decided by the model. That is a separate step and needs its own approval.
+
+The transaction was looked up on three RPC endpoints (`rpc.testnet.near.org`, `archival-rpc.testnet.near.org`
+and `test.rpc.fastnear.com`). All three returned `UNKNOWN_TRANSACTION`, and the nearblocks API returned HTTP
+410. The state change is visible in the vault's own views, read in the log and in the readback above. Use
+`python3 -B scripts/demo-readback.py` to read it yourself.
+
 ## Settled trade on vault2 with a matched counterparty, 11 November 2026
 
 This is the first trade in this folder whose ledgers changed on both sides. The vault's signed intent
@@ -256,3 +295,46 @@ vault then held 67 USDC. Log: [vault2-cap.log](vault2-cap.log).
 This is the cap refusal: the balance check passed, and the per-trade cap refused the trade. Nothing moved.
 After it, `get_strikes` is 2, and there is no pending proposal. A third strike halts new proposals. The
 next approved trade resets the count to zero, so the next trade should be a successful one.
+
+## First model-decided proposal on vault2, 12 November 2026 (not executed)
+
+After the admission applied, one model-decided trade was attempted with the owner's approval. The run was
+filmed. Log: [vault2-model-trade-attempt.log](vault2-model-trade-attempt.log). The model's full response
+record, with the request and response hashes, is
+[model-response-proposal-6.json](model-response-proposal-6.json).
+
+| Step | Result | Hash / evidence |
+|---|---|---|
+| Read-only preflight | model admitted, no pending proposal, not paused, strikes 2 | log |
+| Model dry run on the old prices | no trade: "Oracle prices are unavailable for both assets" | log |
+| `set_report` wNEAR at $3.51 (quote 33 s old) | receipt failures 0 | `9atYNXDGu3w615cWD4azij4otMaRnhWnTkAHMNNAjjZ7` |
+| `set_report` USDC at $0.99948 (quote 21 s old) | receipt failures 0 | `Dpi5XvDmdiBRWFwwrCXxGj9QxnwVvu5umuvpnBASSuhV` |
+| Model decision (`gemini-3.1-flash-lite`, response `C2_1ar-PDM7m7M8PsJKV2Qs`) | sell 0.142450 wNEAR for at least 49.75 USDC | [model-response-proposal-6.json](model-response-proposal-6.json) |
+| Agent re-checks the plan against the vault's gates on a fresh snapshot | passed | log |
+| `propose` by `agent.mandate-t1.testnet` | proposal 6, `model_id` `gemini-3.1-flash-lite`, created 07:47:44 UTC, expires 07:48:44 UTC | `get_pending_proposal`, [readback](readback-2026-11-12-after-attempt.txt) |
+| `execute` | not sent: the RPC answered `InvalidTransaction` with no detail | log |
+
+**The model's decision was wrong.** It valued 0.142450 wNEAR (about $0.50 at $3.51) as if it were $50, and asked
+for at least 49.75 USDC. Its rationale says the vault holds "a significant amount of wrapped NEAR". In fact
+the vault held 67 USDC and 0.55 wNEAR. It also misread the mandate's micro-USD units as a $500,000 limit. The
+response is recorded unedited.
+
+**Why this is still safe for the vault.** The vault's gates bound what the vault may give and the least it
+may accept. They do not stop a model from asking for more than the market pays. If proposal 6 had executed,
+the vault would have signed: give at most 0.142450 wNEAR, receive at least 49.75 USDC. No honest counterparty
+fills that, so the worst case for the vault is no fill. The team's counterparty held 22 USDC, so the settle
+step would have refused before sending.
+
+**Why execute did not run.** The RPC rejected the `execute` transaction before it reached the chain. The
+returned error was `InvalidTransaction` with no detail. The cause was looked for, read-only, and two
+explanations were ruled out:
+- the operator's balance: 0.173 NEAR spendable against 0.03 NEAR prepaid for 300 TGas;
+- the protocol gas limit: 1 PGas per transaction on protocol 88.
+
+The cause is not established. Proposal 6 stayed stored until it expired at 07:48:44 UTC. An expired proposal
+cannot be executed (`the pending proposal has expired`), counts no strike, and is replaced by the agent's
+next `propose`. The agent recorded the outcome as `expired`, with settlement unverified.
+
+What this shows: an admitted model's decision reached the chain as a proposal tagged with its model ID,
+after the agent checked it against the vault's gates, and a wrong decision could not cost the vault anything.
+What it does not show: a model-decided trade that executed and settled. That remains not shown.

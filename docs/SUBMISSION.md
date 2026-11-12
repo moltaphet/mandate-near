@@ -14,11 +14,13 @@ All transactions are on `vault2.mandate-t1.testnet`, with its owner a Sputnik DA
 | Trade settles on both sides | Vault signed 2 USDC for 0.55 wNEAR. A matched intent from a counterparty we control settled in one `execute_intents`. Vault: −2 USDC, +0.55 wNEAR. Counterparty: −0.55 wNEAR, +2 USDC | [`B8nYgKKYcNCrYEuG9QZ92KUJe3vj641ZhvZTzy9VzXo5`](https://testnet.nearblocks.io/txns/B8nYgKKYcNCrYEuG9QZ92KUJe3vj641ZhvZTzy9VzXo5) |
 | Per-trade cap refuses | 60 USDC proposal with 67 USDC held. Gate result `TradeTooLarge` (59.97 > 50 USDC cap). Nothing moved | [`J4RvGERYiuFv2hfninTCFWxqjw4HikG6rXH7VRSsDjBM`](https://testnet.nearblocks.io/txns/J4RvGERYiuFv2hfninTCFWxqjw4HikG6rXH7VRSsDjBM) |
 | Balance check refuses | 60 USDC proposal with 7 USDC held. Gate result `InsufficientBalance`. Nothing moved | [`GoUU2JWXjPSWdbf5tZU2F8ypFQvxrYkPBGnuWSSNyXbc`](https://testnet.nearblocks.io/txns/GoUU2JWXjPSWdbf5tZU2F8ypFQvxrYkPBGnuWSSNyXbc) |
-| Model admission queued | `gemini-3.1-flash-lite` queued through the DAO. Effective 12 Nov 2026 07:37:49 UTC | [`4sFspKrxZbiwqTsstfPQCyAEKGnnaAtZnM9hU1ERe4nK`](https://testnet.nearblocks.io/txns/4sFspKrxZbiwqTsstfPQCyAEKGnnaAtZnM9hU1ERe4nK) |
+| Model admission waits 24 hours | `gemini-3.1-flash-lite` queued through the DAO on 11 Nov, effective 12 Nov 2026 07:37:49 UTC | [`4sFspKrxZbiwqTsstfPQCyAEKGnnaAtZnM9hU1ERe4nK`](https://testnet.nearblocks.io/txns/4sFspKrxZbiwqTsstfPQCyAEKGnnaAtZnM9hU1ERe4nK) |
+| Model admission applied | Applied at 07:38:59 UTC on 12 Nov by a permissionless `apply_pending_mandate`. Allowlist is now `manual-v1`, `gemini-3.1-flash-lite`; nothing queued | [`DzUFptM81MGMUBzaCpFWv4UiEjQXwu147LPJP8SK2fF9`](https://testnet.nearblocks.io/txns/DzUFptM81MGMUBzaCpFWv4UiEjQXwu147LPJP8SK2fF9) |
+| First model-decided proposal | Proposal 6 by `gemini-3.1-flash-lite`: 0.142450 wNEAR for at least 49.75 USDC, a wrong valuation by the model. Proposed with its model ID; `execute` was rejected by the RPC (`InvalidTransaction`), so nothing was signed. Expired with no strike | [log](evidence/testnet-vault2-2026-11-09/vault2-model-trade-attempt.log) |
 
 ## What is not shown yet
 
-- **A model-decided trade.** The model is queued, not admitted, until 12 Nov 07:37 UTC. Until then the trades above use the manual agent path (`manual-v1`).
+- **A model-decided trade that executes.** The model is admitted and made one proposal (6), but it was not executed. Every executed trade above used the manual agent path (`manual-v1`).
 - **A real counterparty.** The counterparty is an account we control, not an independent solver.
 - **A real oracle.** Prices are operator-fed testnet values from a public source, with source timestamps checked. The testnet oracle accepts reports from any caller.
 - **A real Intents contract.** The verifier is the fixture build.
@@ -40,7 +42,7 @@ Block explorers may show empty pages for older transactions. The results can be 
 python3 -B scripts/demo-readback.py
 ```
 
-This makes public view calls only. It sends no transaction and needs no key. It prints the last proposal outcome (`Executed` or `Rejected` with its reason), the strike count, the withdrawal outcome (`Delivered`), the allowed models, and the verifier ledgers for the vault and the counterparty. A recorded run is in [readback-2026-11-11.txt](evidence/testnet-vault2-2026-11-09/readback-2026-11-11.txt).
+This makes public view calls only. It sends no transaction and needs no key. It prints the last proposal outcome (`Executed` or `Rejected` with its reason), the strike count, the withdrawal outcome (`Delivered`), the allowed models, and the verifier ledgers for the vault and the counterparty. Recorded runs are in [readback-2026-11-11.txt](evidence/testnet-vault2-2026-11-09/readback-2026-11-11.txt) and, after the model admission applied, [readback-2026-11-12.txt](evidence/testnet-vault2-2026-11-09/readback-2026-11-12.txt).
 
 ## Reproduce
 
