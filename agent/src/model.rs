@@ -28,7 +28,7 @@ const MODEL_INSTRUCTIONS: &str = "Choose a trade or no trade using only the supp
 pub const DEFAULT_CANDIDATE_SIZES_USD: [u128; 4] = [1, 2, 5, 10];
 /// A model plan may not ask for more than the oracle value of what it gives, plus this margin.
 /// A request above the market can never fill, yet it still spends the vault's daily turnover.
-pub const MAX_MIN_OUT_PREMIUM_BPS: u128 = 50;
+pub const MAX_MIN_OUT_PREMIUM_BPS: u128 = 200;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ChatFailure {

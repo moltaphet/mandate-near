@@ -684,7 +684,7 @@ no proposal is pending, and the allowlist is `manual-v1` and `gemini-3.1-flash-l
 ([readback-2026-11-12-after-model-trade.txt](docs/evidence/testnet-vault2-2026-11-09/readback-2026-11-12-after-model-trade.txt)).
 Proposal 6, the model's first decision, was wrong: it priced 0.14 wNEAR as $50 and was never executed. After it,
 the agent gives the model readable values and a list of code-priced quotes, and refuses any plan that asks for
-more than the market pays (0.5% margin). Proposal 8 was one of those quotes; it executed and settled.
+more than the market pays (2% margin, to allow for oracle lag). Proposal 8 was one of those quotes; it executed and settled.
 To check the current state without an explorer, run `python3 -B scripts/demo-readback.py`; it makes view calls only.
 Every hash above is the real transaction hash and opens on the explorer. The run logs printed different values
 because of a near-api 0.8.7 bug; [TX-HASH-CORRECTIONS.md](docs/evidence/TX-HASH-CORRECTIONS.md) maps each printed

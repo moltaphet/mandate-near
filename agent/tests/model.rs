@@ -1020,11 +1020,11 @@ async fn a_plan_asking_a_hundred_times_the_market_is_refused_before_any_send() {
 
 #[tokio::test]
 async fn a_minimum_output_just_above_the_margin_is_refused_and_one_at_the_margin_passes() {
-    // 20 USDC is worth exactly 4 wNEAR at $5. The margin is 0.5%.
-    let over = plan_body(A, B, 20_000_000, 4 * NEAR * 10_051 / 10_000);
+    // 20 USDC is worth exactly 4 wNEAR at $5. The margin is 2%.
+    let over = plan_body(A, B, 20_000_000, 4 * NEAR * 10_201 / 10_000);
     let reason = refusal(ModelDecision::new(FakeClient::content(&over)).decide(&snapshot()).await);
     assert_eq!(reason, "the model asked for more than the market pays");
-    let at = plan_body(A, B, 20_000_000, 4 * NEAR * 10_050 / 10_000);
+    let at = plan_body(A, B, 20_000_000, 4 * NEAR * 10_200 / 10_000);
     assert!(matches!(
         ModelDecision::new(FakeClient::content(&at)).decide(&snapshot()).await,
         Decision::Trade { .. }

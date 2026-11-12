@@ -362,7 +362,7 @@ After proposal 6, the model path was changed in two ways (agent code, this commi
 - **Priced quotes.** Code prices a few small trades ($1 and $2 here) in both directions, at the oracle price less
   half the allowed slippage, and keeps only those that pass the vault's own gates (`check_trade`). The model
   is told to copy one of them unchanged or choose no trade. A hard check before sending refuses any plan whose
-  minimum output is worth more than its input plus 0.5%: proposal 6's request, about 100 times the market,
+  minimum output is worth more than its input plus 2% (a margin for oracle lag): proposal 6's request, about 100 times the market,
   would now stop as no trade. Tests cover both.
 
 The run was filmed. Log: [vault2-model-trade.log](vault2-model-trade.log). The model's full response record is
